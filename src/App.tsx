@@ -20,7 +20,7 @@ import { AdminCommandCenterView } from './components/views/AdminCommandCenterVie
 import { POLDA_DATA, PERLU_PERHATIAN_ITEMS } from './data/mockData';
 import { MainNavId, CurrentUserProfile } from './types';
 import { DEFAULT_USER_PROFILE, buildUserProfileFromConfig, PredefinedAccountConfig } from './data/rolesData';
-import { Menu, Shield, ArrowRight, ShieldAlert, KeyRound, ArrowLeftRight, UserCheck } from 'lucide-react';
+import { Menu, ShieldAlert, KeyRound, ArrowLeftRight, UserCheck } from 'lucide-react';
 
 export default function App() {
   const [activeNav, setActiveNav] = useState<MainNavId>('beranda');
@@ -31,7 +31,6 @@ export default function App() {
   const [targetModulePoldaFilter, setTargetModulePoldaFilter] = useState<string | undefined>(undefined);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [preselectedLoginAccount, setPreselectedLoginAccount] = useState<PredefinedAccountConfig | undefined>(undefined);
   const [isMapFullscreen, setIsMapFullscreen] = useState<boolean>(false);
 
@@ -52,12 +51,6 @@ export default function App() {
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
     setIsAuthenticated(false);
-    setIsLoggedOut(true);
-  };
-
-  const handleRelogin = () => {
-    setIsLoggedOut(false);
-    setIsAuthenticated(false);
     setPreselectedLoginAccount(undefined);
     setIsLoginViewOpen(true);
   };
@@ -65,64 +58,9 @@ export default function App() {
   // Enforce logout before login: terminate active session and open login view with targeted role
   const handleLogoutAndSwitchToRole = (account?: PredefinedAccountConfig) => {
     setIsAuthenticated(false);
-    setIsLoggedOut(false);
     setPreselectedLoginAccount(account);
     setIsLoginViewOpen(true);
   };
-
-  // Logged-out safety screen
-  if (isLoggedOut) {
-    return (
-      <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-center space-y-5 animate-in fade-in zoom-in-95">
-          <div className="w-20 h-20 rounded-2xl bg-white p-2 border border-slate-200 mx-auto flex items-center justify-center shadow-lg overflow-hidden">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" 
-              alt="Logo Itwasum POLRI" 
-              className="w-full h-full object-contain filter drop-shadow-xs"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                const target = e.currentTarget;
-                target.style.display = 'none';
-                if (target.nextElementSibling) {
-                  (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                }
-              }}
-            />
-            <div className="w-full h-full rounded-xl bg-gradient-to-br from-[#0B2B5C] to-blue-900 items-center justify-center text-amber-400" style={{ display: 'none' }}>
-              <Shield className="w-8 h-8 stroke-[2.2]" />
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-black text-[#0B2B5C] tracking-tight">
-              Satu Data Itwasum Polri
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Anda telah keluar dengan aman dari sesi pengawasan.
-            </p>
-          </div>
-
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 text-left space-y-1.5">
-            <div><strong>Pengguna:</strong> {currentUser.nama}</div>
-            <div><strong>NRP / Jabatan:</strong> {currentUser.nrp} &bull; {currentUser.sebutanPimpinan}</div>
-            <div><strong>Peran &amp; Level:</strong> {currentUser.peranLabel}</div>
-            <div><strong>Status Sesi:</strong> Selesai &amp; Terverifikasi Mabes Polri</div>
-          </div>
-
-          <div className="flex flex-col gap-2 pt-2">
-            <button
-              onClick={handleRelogin}
-              className="w-full min-h-[46px] py-2.5 rounded-2xl bg-[#0B2B5C] hover:bg-blue-900 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition cursor-pointer"
-            >
-              <span>Masuk Kembali ke Sesi</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Fullscreen Login Screen (Mandatory on entry or upon logging out to switch account)
   if (!isAuthenticated || isLoginViewOpen) {
@@ -134,7 +72,6 @@ export default function App() {
           setCurrentUser(newProfile);
           setIsAuthenticated(true);
           setIsLoginViewOpen(false);
-          setIsLoggedOut(false);
           setPreselectedLoginAccount(undefined);
           
           const validNavItems = getNavItemsForRole(newProfile, PERLU_PERHATIAN_ITEMS.length);
@@ -157,7 +94,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="min-h-screen bg-[#f4f6f8] text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
       
       {/* Top Header Command Bar */}
       {!isMapFullscreen && (
@@ -173,17 +110,17 @@ export default function App() {
 
       {/* Mobile Top Bar to trigger Sidebar drawer */}
       {!isMapFullscreen && (
-        <div className="lg:hidden bg-white px-4 py-2 border-b border-slate-200 flex items-center justify-between shadow-2xs">
+        <div className="lg:hidden bg-[#0B2B5C] text-white px-4 py-2 flex items-center justify-between">
           <button
             id="mobile-menu-toggle-btn"
             onClick={() => setMobileSidebarOpen(true)}
-            className="min-h-[44px] px-3 py-2 rounded-xl bg-slate-100 text-slate-800 font-bold text-xs flex items-center gap-2"
+            className="min-h-[44px] px-3 py-2 rounded-xl bg-[#143E78] text-white font-bold text-xs flex items-center gap-2"
           >
-            <Menu className="w-5 h-5 text-[#0B2B5C]" />
+            <Menu className="w-5 h-5 text-blue-200" />
             <span>Menu Navigasi</span>
           </button>
 
-          <span className="text-xs font-bold text-[#0B2B5C] truncate max-w-[200px]">
+          <span className="text-xs font-bold text-blue-100 truncate max-w-[200px]">
             {getNavItemsForRole(currentUser, PERLU_PERHATIAN_ITEMS.length).find(n => n.id === activeNav)?.label || 'Menu Navigasi'}
           </span>
         </div>
@@ -211,7 +148,7 @@ export default function App() {
         )}
 
         {/* Dynamic Content View Container */}
-        <main className={`flex-1 min-w-0 ${isMapFullscreen ? 'p-0 h-screen overflow-hidden' : 'p-3 sm:p-5 lg:p-6 overflow-x-hidden'}`}>
+        <main className={`flex-1 min-w-0 ${isMapFullscreen ? 'p-0 h-screen overflow-hidden' : 'p-3 sm:p-5 lg:p-6 xl:p-8 overflow-x-hidden'}`}>
           
           {activeNav === 'beranda' && (
             currentUser.dapatOverview === 'tanpa_data' ? (
@@ -219,7 +156,7 @@ export default function App() {
                 currentUser={currentUser}
                 onNavigateToPengaturan={() => setActiveNav('pengaturan')}
               />
-            ) : currentUser.peran === 'pengawas_tim' ? (
+            ) : currentUser.peran === 'pengawas_tim' || currentUser.peran === 'ketua_tim' || currentUser.peran === 'auditor' ? (
               <PengawasTimWorkspaceView
                 currentUser={currentUser}
                 onSelectPolda={handleSelectPolda}

@@ -156,6 +156,10 @@ export const ThreeAxesBar: React.FC<ThreeAxesBarProps> = ({
                 <select
                   value={jenjang.startsWith('itwil-') ? jenjang : 'itwil-1'}
                   onChange={(e) => onSelectJenjang(e.target.value as JenjangPengguna)}
+                  style={{
+                    backgroundColor: jenjang.startsWith('itwil-') ? '#0B2545' : '#ffffff',
+                    color: jenjang.startsWith('itwil-') ? '#ffffff' : '#334155'
+                  }}
                   className={`w-full appearance-none px-3 py-1.5 pr-8 rounded-lg text-xs font-medium transition cursor-pointer border ${
                     jenjang.startsWith('itwil-')
                       ? 'bg-[#0B2545] text-white border-[#0B2545] shadow-xs'

@@ -60,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
     : [];
 
   return (
-    <header id="main-header" className="sticky top-0 z-40 bg-[#0B2B5C] text-white border-b border-[#143B73] shadow-xs">
+    <header id="main-header" className="sticky top-0 z-40 bg-[#0B2B5C] text-white">
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
         
         {/* Brand & Identity Lockup */}

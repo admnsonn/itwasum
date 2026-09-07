@@ -69,26 +69,61 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
+    if (!selectedRoleConfig) {
+      setErrorMessage('Pilih role akun terlebih dahulu.');
+      return;
+    }
+
+    const expectedPassword = selectedRoleConfig.password || 'Itwasum@2025';
+    if (trimmedEmail !== selectedRoleConfig.email.toLowerCase()) {
+      setErrorMessage('Email tidak sesuai dengan role akun yang dipilih.');
+      return;
+    }
+
+    if (trimmedPassword !== expectedPassword) {
+      setErrorMessage('Kata sandi tidak sesuai.');
+      return;
+    }
+
     setIsLoading(true);
     setTimeout(() => {
-      const matchedAccount = PREDEFINED_ROLES_ACCOUNTS.find((account) => account.email.toLowerCase() === trimmedEmail) || selectedRoleConfig;
-      if (!matchedAccount) {
-        setIsLoading(false);
-        setErrorMessage('Pilih role akun terlebih dahulu.');
-        return;
-      }
-      const userProfile = buildUserProfileFromConfig(matchedAccount);
-      logBukaOverview(userProfile, matchedAccount.titikWilayahNama);
+      const userProfile = buildUserProfileFromConfig(selectedRoleConfig);
+      logBukaOverview(userProfile, selectedRoleConfig.titikWilayahNama);
       setIsLoading(false);
       onLoginSuccess(userProfile);
     }, 450);
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-slate-900 flex items-center selection:bg-[#d9a441] selection:text-slate-950">
-      <main className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] gap-8 lg:gap-16 items-start">
-          <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+    <div className="min-h-screen bg-white text-slate-900 flex selection:bg-[#d9a441] selection:text-slate-950">
+      <main className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-[minmax(0,46%)_minmax(0,54%)]">
+        <aside className="hidden lg:flex min-h-screen bg-[#0B2B5C] text-white relative overflow-hidden px-10 xl:px-16 py-12 flex-col justify-between">
+          <div className="absolute -right-24 top-24 w-80 h-80 rounded-full border border-white/10" />
+          <div className="absolute -left-32 bottom-20 w-96 h-96 rounded-full border border-white/10" />
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="w-11 h-11 rounded-lg bg-white p-1 flex items-center justify-center shrink-0">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+                alt="Logo Itwasum POLRI"
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div>
+              <p className="text-lg font-bold tracking-tight">Satu Data Itwasum</p>
+              <p className="text-xs text-blue-200 mt-0.5">Portal pengawasan dan audit internal</p>
+            </div>
+          </div>
+          <div className="relative z-10 max-w-md">
+            <div className="w-10 h-1 bg-amber-400 mb-5" />
+            <h2 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-tight">Satu Data Itwasum Polri</h2>
+            <p className="text-sm text-blue-100/80 mt-4 leading-relaxed">Gunakan akun kedinasan Anda untuk melanjutkan ke ruang kerja pengawasan.</p>
+          </div>
+          <p className="relative z-10 text-[11px] text-blue-200/70">Inspektorat Pengawasan Umum Kepolisian Negara Republik Indonesia</p>
+        </aside>
+
+        <section className="min-h-screen flex items-center justify-center bg-[#f8f9fc] px-4 sm:px-8 lg:px-12 py-8 sm:py-12">
+          <div className="w-full max-w-[440px] bg-white border border-slate-200 rounded-xl p-6 sm:p-9 shadow-sm">
             <div className="mb-7">
               <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-[#0B4A8A] mb-2">Akses pegawai</p>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">Masuk ke portal</h1>
@@ -126,8 +161,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <button type="submit" disabled={isLoading} className="w-full min-h-11 rounded-lg bg-[#0B2B5C] hover:bg-[#0B4A8A] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">{isLoading ? 'Memverifikasi...' : <>Masuk <ArrowRight className="w-4 h-4" /></>}</button>
             </form>
             <p className="pt-4 mt-6 border-t border-slate-100 text-[11px] text-slate-500">Akses dilindungi dan dicatat dalam jejak audit sistem.</p>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
     </div>
   );
