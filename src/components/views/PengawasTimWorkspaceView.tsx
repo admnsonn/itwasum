@@ -329,9 +329,7 @@ export const PengawasTimWorkspaceView: React.FC<PengawasTimWorkspaceViewProps> =
       )}
 
       {/* Top Banner Surat Tugas (ST/412) & Role Matrix Authority */}
-      <div className="bg-gradient-to-r from-[#071F42] via-[#0B2B5C] to-[#143E78] rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-blue-900/40 relative overflow-hidden">
-        <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/10 via-transparent to-transparent pointer-events-none" />
-        
+      <div className="bg-gradient-to-r from-[#071F42] via-[#0B2B5C] to-[#143E78] rounded-2xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 relative z-10">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 backdrop-blur-md flex items-center justify-center shrink-0 text-amber-300 shadow-inner">
@@ -385,7 +383,7 @@ export const PengawasTimWorkspaceView: React.FC<PengawasTimWorkspaceViewProps> =
         </div>
 
         {/* Legal / Policy Note on Scope */}
-        <div className="mt-4 pt-4 border-t border-white/10 flex items-start gap-2.5 text-[11px] text-blue-200/90 leading-relaxed">
+        <div className="mt-4 flex items-start gap-2.5 text-[11px] text-blue-200/90 leading-relaxed">
           <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <span>
             <strong>Prinsip Kepatuhan RBAC E-Audit:</strong> Kewenangan Tim Audit didasarkan pada Surat Tugas periksa. Visualisasi dibatasi pada lokus 5 Satker terperiksa guna menjaga objektivitas dan independensi pemeriksaan wasrik.

@@ -78,9 +78,7 @@ export const AdminCommandCenterView: React.FC<AdminCommandCenterViewProps> = ({
     <div id="admin-command-center-view" className="space-y-5 animate-in fade-in">
       
       {/* Top Header Card */}
-      <div className="bg-[#0B2B5C] rounded-2xl p-5 sm:p-6 text-white shadow-md relative overflow-hidden border border-blue-900">
-        <div className="absolute -right-12 -bottom-12 w-64 h-64 rounded-full bg-blue-600/10 pointer-events-none" />
-        
+      <div className="bg-[#0B2B5C] rounded-2xl p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-13 h-13 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
