@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { CurrentUserProfile } from '../../types';
 import { 
   PREDEFINED_ROLES_ACCOUNTS, 
@@ -41,9 +41,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [password, setPassword] = useState<string>(defaultAccount?.password || '');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [selectedRoleConfig, setSelectedRoleConfig] = useState<PredefinedAccountConfig | null>(defaultAccount);
+  const [selectedLevel, setSelectedLevel] = useState<string>(defaultAccount?.level || '');
+  const [selectedWilayahId, setSelectedWilayahId] = useState<string>(defaultAccount?.titikWilayahId || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
+
+  const levelOptions = [
+    { id: 'L0', label: 'L0 - Nasional / Mabes' },
+    { id: 'L1', label: 'L1 - Inspektorat Wilayah' },
+    { id: 'L2', label: 'L2 - Polda' },
+    { id: 'L3', label: 'L3 - Polres' }
+  ];
+  const wilayahOptions = useMemo(() => {
+    const wilayah = PREDEFINED_ROLES_ACCOUNTS.filter(account => account.level === selectedLevel)
+      .map(account => ({ id: account.titikWilayahId, nama: account.titikWilayahNama }));
+    return Array.from(new Map(wilayah.map(item => [item.id, item])).values());
+  }, [selectedLevel]);
+  const roleOptions = useMemo(() => PREDEFINED_ROLES_ACCOUNTS.filter(account => (
+    account.level === selectedLevel && account.titikWilayahId === selectedWilayahId
+  )), [selectedLevel, selectedWilayahId]);
 
   const handleSelectPredefinedAccount = (account: PredefinedAccountConfig) => {
     setSelectedRoleConfig(account);
@@ -132,27 +149,72 @@ export const LoginView: React.FC<LoginViewProps> = ({
             {targetAccountConfig && <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-950 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>Silakan konfirmasi kredensial untuk masuk sebagai <strong>{targetAccountConfig.peranLabel}</strong>.</p></div>}
             {errorMessage && <div role="alert" className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-start gap-2.5"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><p>{errorMessage}</p></div>}
             <form onSubmit={handleLoginSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <label htmlFor="login-role" className="text-xs font-bold text-slate-700 block">Role akun</label>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label htmlFor="login-level" className="text-xs font-bold text-slate-700 block">Tingkat akses</label>
+                  <select
+                    id="login-level"
+                    required
+                    value={selectedLevel}
+                    onChange={(event) => {
+                      setSelectedLevel(event.target.value);
+                      setSelectedWilayahId('');
+                      setSelectedRoleConfig(null);
+                      setEmail('');
+                      setPassword('');
+                      setErrorMessage(null);
+                    }}
+                    className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="" disabled>Pilih tingkat akses</option>
+                    {levelOptions.map((level) => <option key={level.id} value={level.id}>{level.label}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="login-wilayah" className="text-xs font-bold text-slate-700 block">Yurisdiksi wilayah</label>
+                  <select
+                    id="login-wilayah"
+                    required
+                    disabled={!selectedLevel}
+                    value={selectedWilayahId}
+                    onChange={(event) => {
+                      setSelectedWilayahId(event.target.value);
+                      setSelectedRoleConfig(null);
+                      setEmail('');
+                      setPassword('');
+                      setErrorMessage(null);
+                    }}
+                    className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="" disabled>Pilih yurisdiksi wilayah</option>
+                    {wilayahOptions.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.nama}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="login-role" className="text-xs font-bold text-slate-700 block">Peran akun</label>
                 <select
                   id="login-role"
                   required
+                  disabled={!selectedWilayahId}
                   value={selectedRoleConfig?.id || ''}
                   onChange={(event) => {
-                    const selectedAccount = PREDEFINED_ROLES_ACCOUNTS.find((account) => account.id === event.target.value);
+                    const selectedAccount = roleOptions.find((account) => account.id === event.target.value);
                     if (selectedAccount) {
                       handleSelectPredefinedAccount(selectedAccount);
                     }
                   }}
-                  className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
+                  className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
                 >
-                  <option value="" disabled>Pilih role akun</option>
-                  {PREDEFINED_ROLES_ACCOUNTS.map((account) => (
+                  <option value="" disabled>Pilih peran akun</option>
+                  {roleOptions.map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.peranLabel} - {account.titikWilayahNama}
+                      {account.peranLabel}
                     </option>
                   ))}
                 </select>
+                </div>
               </div>
               <div className="space-y-2"><label htmlFor="login-email" className="text-xs font-bold text-slate-700 block">Email kedinasan</label><div className="relative"><Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input id="login-email" type="email" required disabled={!selectedRoleConfig} value={email} onChange={(e) => { setEmail(e.target.value); setErrorMessage(null); }} placeholder="Pilih role terlebih dahulu" className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100" /></div></div>
               <div className="space-y-2"><label htmlFor="login-password" className="text-xs font-bold text-slate-700 block">Kata sandi</label><div className="relative"><Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input id="login-password" type={showPassword ? 'text' : 'password'} required disabled={!selectedRoleConfig} value={password} onChange={(e) => { setPassword(e.target.value); setErrorMessage(null); }} placeholder="Pilih role terlebih dahulu" className="w-full pl-10 pr-11 py-3 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100" /><button type="button" disabled={!selectedRoleConfig} onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div></div>
