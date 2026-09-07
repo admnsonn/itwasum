@@ -48,10 +48,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [rememberMe, setRememberMe] = useState<boolean>(true);
 
   const levelOptions = [
-    { id: 'L0', label: 'L0 - Nasional / Mabes' },
-    { id: 'L1', label: 'L1 - Inspektorat Wilayah' },
-    { id: 'L2', label: 'L2 - Polda' },
-    { id: 'L3', label: 'L3 - Polres' }
+    { id: 'L0', label: 'Nasional / Mabes' },
+    { id: 'L1', label: 'Inspektorat Wilayah' },
+    { id: 'L2', label: 'Polda' },
+    { id: 'L3', label: 'Polres' }
   ];
   const wilayahOptions = useMemo(() => {
     const wilayah = PREDEFINED_ROLES_ACCOUNTS.filter(account => account.level === selectedLevel)
