@@ -289,7 +289,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Container */}
       <aside 
         id="main-sidebar"
-        className={`fixed lg:sticky top-0 lg:top-16 bottom-0 left-0 z-50 lg:z-30 w-16 sm:w-18 lg:h-[calc(100vh-64px)] shrink-0 bg-[#0B2B5C] text-white flex flex-col justify-between items-center py-3.5 border-r border-[#143B73] transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:sticky top-0 lg:top-14 bottom-0 left-0 z-50 lg:z-30 w-16 sm:w-18 lg:h-[calc(100vh-56px)] shrink-0 bg-[#0B2B5C] text-white flex flex-col justify-between items-center py-3.5 border-r border-[#143B73] transition-transform duration-200 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

@@ -61,11 +61,11 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header id="main-header" className="sticky top-0 z-40 bg-[#0B2B5C] text-white border-b border-[#143B73] shadow-xs">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
         
         {/* Brand & Identity Lockup */}
         <div className="flex items-center gap-3 min-w-fit">
-          <div className="w-10 h-10 rounded-xl bg-white/10 p-1 flex items-center justify-center shrink-0 border border-white/15">
+          <div className="w-9 h-9 rounded-lg bg-white p-1 flex items-center justify-center shrink-0 border border-slate-200">
             <img 
               src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" 
               alt="Logo Itwasum POLRI" 
@@ -79,16 +79,16 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               }}
             />
-            <div className="w-full h-full rounded-lg bg-amber-500 items-center justify-center text-slate-950" style={{ display: 'none' }}>
+            <div className="w-full h-full rounded-md bg-[#0B2B5C] items-center justify-center text-amber-400" style={{ display: 'none' }}>
               <Shield className="w-5 h-5 stroke-[2.2]" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base sm:text-lg tracking-tight text-white leading-tight">
+                <span className="font-extrabold text-base sm:text-lg tracking-tight text-white leading-tight">
                 SATU DATA ITWASUM
               </span>
-              <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#143E78] text-blue-200 border border-blue-600/40">
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#143E78] text-blue-200 border border-blue-600/40">
                 PRESISI
               </span>
             </div>
@@ -312,10 +312,10 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* User Menu Dropdown with Quick Role Switcher */}
             {showUserMenu && (
-              <div className="absolute right-0 top-full mt-2 w-80 sm:w-88 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in">
+              <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-1rem))] max-h-[calc(100vh-4.5rem)] overflow-y-auto bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 z-50 animate-in fade-in">
                 {/* Profile Header */}
-                <div className="p-4 bg-slate-900 text-white flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-amber-400 shrink-0 shadow-xs bg-slate-800 flex items-center justify-center font-black text-sm text-amber-400">
+                <div className="p-3.5 bg-slate-900 text-white flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-amber-400 shrink-0 shadow-xs bg-slate-800 flex items-center justify-center font-black text-xs text-amber-400">
                     {currentUser?.avatarUrl ? (
                       <img
                         src={currentUser.avatarUrl}
@@ -334,11 +334,11 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="text-[11px] text-blue-300 font-mono mt-0.5">
                       NRP {currentUser?.nrp || '73050412'} &bull; Level {currentUser?.level || 'L1'}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#143E78] text-amber-300 border border-blue-600/40">
+                    <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#143E78] text-amber-300 border border-blue-600/40 shrink-0">
                         {currentUser?.peranLabel || 'Auditor Utama'}
                       </span>
-                      <span className="text-[10px] text-slate-300 truncate">
+                      <span className="text-[10px] text-slate-300 truncate min-w-0">
                         {currentUser?.titikWilayahNama}
                       </span>
                     </div>
@@ -346,8 +346,8 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 {/* Scope & Role Info */}
-                <div className="p-3 bg-slate-50 border-b border-slate-100 space-y-1 text-xs">
-                  <div className="flex items-center justify-between text-slate-600">
+                <div className="p-3 bg-slate-50 border-b border-slate-100 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <div className="flex flex-col gap-1 text-slate-600 min-w-0">
                     <span className="font-semibold text-[11px]">Wewenang Overview:</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       currentUser?.dapatOverview === 'penuh'
@@ -359,13 +359,13 @@ export const Header: React.FC<HeaderProps> = ({
                       {currentUser?.dapatOverview === 'penuh' ? 'Overview Penuh' : currentUser?.dapatOverview === 'tanpa_data' ? 'Admin Sistem' : 'Akses E-Audit'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex flex-col gap-1 text-slate-600 min-w-0">
                     <span className="font-semibold text-[11px]">Bidang Dihaki:</span>
                     <span className="font-bold text-[11px] text-[#0B2B5C]">
                       {currentUser?.bidang && currentUser.bidang.length > 0 ? currentUser.bidang.join(', ') : 'Kosong (Admin)'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-600">
+                  <div className="col-span-2 flex items-center justify-between gap-2 text-slate-600">
                     <span className="font-semibold text-[11px]">Status Sesi:</span>
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -374,98 +374,15 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
-                {/* Security RBAC Policy Banner */}
-                <div className="p-3 bg-amber-50/90 border-b border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900">
-                  <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                  <div className="leading-snug">
-                    <span className="font-bold text-amber-950 block">Proteksi Sesi RBAC:</span>
-                    <p className="text-[11px] text-amber-800/90 mt-0.5">
-                      Tidak dapat langsung switch akun peran dalam sesi aktif. Anda harus <strong>logout</strong> terlebih dahulu dan login sebagai peran tersebut.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Account Roles Directory (Direct switch prohibited, requires logout & login) */}
-                <div className="p-2 space-y-1">
-                  <div className="px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                    <span>Daftar Akun Matriks Peran RBAC</span>
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-
-                  <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
-                    {PREDEFINED_ROLES_ACCOUNTS.map((acc) => {
-                      const isCurrent = currentUser?.id === acc.id;
-                      return (
-                        <div
-                          key={acc.id}
-                          className={`w-full p-2 rounded-xl text-left flex items-center justify-between transition text-xs border ${
-                            isCurrent
-                              ? 'bg-emerald-50/90 text-emerald-950 font-bold border-emerald-300 shadow-2xs'
-                              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-100 hover:border-slate-200'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-black ${
-                                isCurrent ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-200 text-slate-800'
-                              }`}>
-                                {acc.level}
-                              </span>
-                              <span className="truncate font-semibold">{acc.peranLabel}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                              {acc.nama.split(',')[0]} &bull; {acc.titikWilayahNama}
-                            </div>
-                          </div>
-
-                          {isCurrent ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full shrink-0 ml-2">
-                              <Check className="w-3 h-3 text-emerald-700" />
-                              Sesi Aktif
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setAccountToSwitchConfirm(acc);
-                              }}
-                              className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 text-[10px] font-bold flex items-center gap-1 shrink-0 ml-2 transition cursor-pointer"
-                              title={`Perlu logout sesi saat ini dan login sebagai ${acc.peranLabel}`}
-                            >
-                              <Lock className="w-3 h-3 text-amber-700" />
-                              <span>Logout &amp; Login</span>
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Switch to Full Login Screen (Requires Logout First) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowLogoutLoginGeneralConfirm(true);
-                    }}
-                    className="w-full px-3 py-2 mt-1 rounded-xl text-left text-xs font-bold text-[#0B2B5C] hover:bg-blue-50 flex items-center justify-between transition cursor-pointer border border-blue-200/60"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-amber-500" />
-                      <span>Keluar &amp; Buka Layar Login Peran Lain</span>
-                    </div>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-black">
-                      8 Roles
-                    </span>
-                  </button>
-
-                  {/* Log Out Current Session */}
+                {/* Log Out Current Session */}
+                <div className="p-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setShowUserMenu(false);
                       onOpenLogoutModal();
                     }}
-                    className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-lg text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer border-t border-slate-100"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Keluar dari Sesi (Logout)</span>

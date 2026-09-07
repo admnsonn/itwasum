@@ -258,14 +258,14 @@ export const SatkerSlideOver: React.FC<SatkerSlideOverProps> = ({
   // Status Badge terstandarisasi Status Atensi & Progres TLHP (Itwasum Polri)
   const statusBadge = (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <span className={`px-2.5 py-1 rounded-md text-xs font-black ${atensiInfo.badgeBg} ${atensiInfo.badgeText} flex items-center gap-1.5 shadow-xs uppercase tracking-wider`}>
+      <span className={`app-badge ${atensiInfo.badgeBg} ${atensiInfo.badgeText} shadow-xs`}>
         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
         <span>{atensiInfo.statusAtensiShort}</span>
       </span>
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/15 text-amber-200 border border-white/20">
+      <span className="app-metric px-2 py-0.5 rounded text-[10px] font-bold bg-white/15 text-amber-200 border border-white/20">
         Skor Risiko: <strong>{atensiInfo.score}/25</strong> ({atensiInfo.def.label})
       </span>
-      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+      <span className="app-metric px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
         TLHP: <strong>{atensiInfo.persenTLHP}% Selesai</strong>
       </span>
     </div>
