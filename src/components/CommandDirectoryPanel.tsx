@@ -16,6 +16,7 @@ import {
 import { MABES_SATKERS_DATA } from '../data/mabesSatkerData';
 import { PoldaLogo } from './PoldaLogo';
 import { CurrentUserProfile } from '../types';
+import { getRoleScopedSatkers } from '../utils/roleScope';
 import { 
   getDefinisiRisikoByScore, 
   getDefinisiRisikoFromLegacy, 
@@ -74,33 +75,8 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
     const query = searchQuery.trim().toLowerCase();
     let items: SatkerMapItem[] = [];
 
-    // Role-specific structures
-    if (currentUser?.level === 'L2' && currentUser.titikWilayahId === 'polda-riau') {
-      // Irwasda Polda Riau & Admin Polda: 1 Polda Riau + 12 Polres Riau = 13 Satker
-      const poldaRiau = ALL_COMBINED_SATKERS_DATA.find(s => s.id === 'polda-riau');
-      const polresRiau = ALL_POLRES_MAP_DATA.filter(p => p.parentPoldaId === 'polda-riau');
-      items = [poldaRiau, ...polresRiau].filter(Boolean) as SatkerMapItem[];
-    } else if (currentUser?.level === 'L1' && currentUser.titikWilayahId === 'itwil-3') {
-      // Irwil III: 7 Polda Regional & Polres jajaran
-      const itwil3Poldas = ['polda-diy', 'polda-jatim', 'polda-bali', 'polda-ntb', 'polda-ntt', 'polda-kalbar', 'polda-kalteng'];
-      items = ALL_COMBINED_SATKERS_DATA.filter(s => 
-        itwil3Poldas.includes(s.id) || (s.parentPoldaId && itwil3Poldas.includes(s.parentPoldaId))
-      );
-    } else if (currentUser?.level === 'L1' && currentUser.titikWilayahId === 'itwil-1') {
-      // Koordinator Itwil I: 6 Polda Regional
-      const itwil1Poldas = ['polda-aceh', 'polda-sumut', 'polda-sumbar', 'polda-riau', 'polda-kepri', 'polda-jambi'];
-      items = ALL_COMBINED_SATKERS_DATA.filter(s => 
-        itwil1Poldas.includes(s.id) || (s.parentPoldaId && itwil1Poldas.includes(s.parentPoldaId))
-      );
-    } else if (currentUser?.level === 'L3' && currentUser.titikWilayahId === 'polres-kampar') {
-      // Auditee Polres Kampar: Polres Kampar & Polsek jajaran
-      const polresKampar = ALL_POLRES_MAP_DATA.find(p => p.id === 'polres-kampar');
-      const polsekKampar = ALL_COMBINED_SATKERS_DATA.filter(s => s.tingkat === 'Polsek' && s.wilayahHukum.includes('Riau'));
-      items = [polresKampar, ...polsekKampar].filter(Boolean) as SatkerMapItem[];
-    } else if (currentUser?.peran === 'pengawas_tim') {
-      // Pengawas Tim Audit Lapangan: 5 Satker Objek Periksa
-      const targetIds = ['polda-riau', 'polres-pekanbaru', 'polres-kampar', 'polres-dumai', 'polres-bengkalis'];
-      items = ALL_COMBINED_SATKERS_DATA.filter(s => targetIds.includes(s.id));
+    if (currentUser && currentUser.level !== 'L0') {
+      items = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
     } else {
       // L0 Nasional
       if (strukturSubTab === 'itwil') {
@@ -112,6 +88,11 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       }
     }
 
+    const scopedIds = new Set(getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek).map(item => item.id));
+    if (activeBidang !== 'semua' || tingkatObjek !== 'semua' || (currentUser && currentUser.level !== 'L0')) {
+      items = items.filter(item => scopedIds.has(item.id));
+    }
+
     if (!query) return items;
 
     return items.filter(item => 
@@ -121,7 +102,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.pimpinanJabatan.toLowerCase().includes(query) ||
       (item.wilayahHukum && item.wilayahHukum.toLowerCase().includes(query))
     );
-  }, [strukturSubTab, searchQuery, currentUser]);
+  }, [strukturSubTab, searchQuery, currentUser, activeBidang, tingkatObjek]);
 
   // Attention Items List with 5-Tier Risk Matrix (20-25 Sangat Tinggi, 16-19 Tinggi, 12-15 Sedang, 6-11 Rendah, 1-5 Sangat Rendah)
   const attentionItems = useMemo(() => {
@@ -432,9 +413,9 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       items = mapped;
     }
 
-    // Filter by Atensi 5-tier sub filter
-    if (atensiSubFilter !== 'semua') {
-      items = items.filter(item => item.risikoDef.key === atensiSubFilter);
+    const scopedIds = new Set(getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek).map(item => item.id));
+    if (currentUser && (currentUser.level !== 'L0' || tingkatObjek !== 'semua')) {
+      items = items.filter(item => scopedIds.has(item.id));
     }
 
     // Sort descending by calculated risk score
@@ -447,12 +428,19 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.singkatan.toLowerCase().includes(query) ||
       item.pesanKhusus.toLowerCase().includes(query)
     );
-  }, [poldaList, urgentItems, atensiSubFilter, searchQuery, tingkatObjek, currentUser]);
+  }, [poldaList, urgentItems, searchQuery, tingkatObjek, activeBidang, currentUser]);
+
+  const filteredAttentionItems = useMemo(
+    () => atensiSubFilter === 'semua'
+      ? attentionItems
+      : attentionItems.filter(item => item.risikoDef.key === atensiSubFilter),
+    [attentionItems, atensiSubFilter]
+  );
 
   // Mabes Items List
   const mabesItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    let list = MABES_SATKERS_DATA;
+    let list = tingkatObjek === 'wilayah' ? [] : MABES_SATKERS_DATA;
     if (activeBidang !== 'semua') {
       list = list.filter(m => m.bidangPrioritas.toLowerCase() === activeBidang.toLowerCase());
     }
@@ -463,7 +451,18 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.pimpinan.toLowerCase().includes(query) ||
       item.deskripsi.toLowerCase().includes(query)
     );
-  }, [activeBidang, searchQuery]);
+  }, [activeBidang, searchQuery, tingkatObjek]);
+
+  const hasStructureData = structureItems.length > 0;
+  const hasAttentionData = filteredAttentionItems.length > 0;
+  const hasMabesData = mabesItems.length > 0;
+
+  const getStructureSubTabCount = (subTab: 'itwil' | 'polda' | 'mabes') => {
+    if (subTab === 'mabes') return tingkatObjek === 'wilayah' ? 0 : mabesItems.length;
+    const scopedItems = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
+    if (subTab === 'itwil') return scopedItems.filter(item => item.tingkat === 'Itwil').length;
+    return scopedItems.filter(item => item.tingkat === 'Polda').length;
+  };
 
   return (
     <div id="command-directory-panel" className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
@@ -499,14 +498,15 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
         {currentUser && currentUser.level !== 'L0' ? (
           <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-xl border border-slate-200">
             <button
+              disabled={!hasStructureData}
               onClick={() => {
                 setMainNavTab('struktur');
                 setSearchQuery('');
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5 ${
                 mainNavTab === 'struktur'
                   ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  : hasStructureData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
               }`}
             >
               <span>
@@ -521,14 +521,15 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
             </button>
 
             <button
+              disabled={!hasAttentionData}
               onClick={() => {
                 setMainNavTab('atensi');
                 setSearchQuery('');
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5 ${
                 mainNavTab === 'atensi'
                   ? 'bg-rose-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  : hasAttentionData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
               }`}
             >
               <span>
@@ -538,49 +539,52 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                 {currentUser.peran === 'pengawas_tim' && 'KKA Temuan ST/412'}
               </span>
               <span className={`px-1.5 py-0.2 rounded text-[10px] ${mainNavTab === 'atensi' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                {attentionItems.length}
+                {filteredAttentionItems.length}
               </span>
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-1 p-1 bg-white rounded-xl border border-slate-200">
             <button
+              disabled={!hasStructureData}
               onClick={() => {
                 setMainNavTab('struktur');
                 setSearchQuery('');
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition cursor-pointer ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition ${
                 mainNavTab === 'struktur'
                   ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  : hasStructureData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
               }`}
             >
               Struktur
             </button>
 
             <button
+              disabled={!hasAttentionData}
               onClick={() => {
                 setMainNavTab('atensi');
                 setSearchQuery('');
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition cursor-pointer ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition ${
                 mainNavTab === 'atensi'
                   ? 'bg-rose-700 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  : hasAttentionData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
               }`}
             >
               Atensi &amp; TLHP
             </button>
 
             <button
+              disabled={!hasMabesData}
               onClick={() => {
                 setMainNavTab('mabes');
                 setSearchQuery('');
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition cursor-pointer ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition ${
                 mainNavTab === 'mabes'
                   ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  : hasMabesData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
               }`}
             >
               Satker Mabes
@@ -624,14 +628,17 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
             ].map((sub) => (
               <button
                 key={sub.id}
+                disabled={getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes') === 0}
                 onClick={() => setStrukturSubTab(sub.id as any)}
-                className={`py-1 px-2.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                className={`py-1 px-2.5 rounded-md text-[11px] font-bold transition ${
                   strukturSubTab === sub.id
                     ? 'bg-slate-800 text-white'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    : getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes') > 0
+                      ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 cursor-pointer'
+                      : 'bg-slate-100 text-slate-300 border border-slate-100 cursor-not-allowed'
                 }`}
               >
-                {sub.label}
+                {sub.label} ({getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes')})
               </button>
             ))}
           </div>
@@ -695,11 +702,12 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
             {/* Filter Pills for the 5 Risk Levels */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
               <button
+                disabled={attentionItems.length === 0}
                 onClick={() => setAtensiSubFilter('semua')}
-                className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
+                className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition whitespace-nowrap ${
                   atensiSubFilter === 'semua'
                     ? 'bg-[#0B2B5C] text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                    : attentionItems.length > 0 ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 cursor-pointer' : 'bg-slate-100 text-slate-300 border border-slate-100 cursor-not-allowed'
                 }`}
               >
                 Semua ({attentionItems.length})
@@ -707,14 +715,16 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
 
               {MATRIKS_RENTANG_RISIKO.map((def) => {
                 const isSelected = atensiSubFilter === def.key;
+                    const hasRiskData = attentionItems.some(item => item.risikoDef.key === def.key);
                 return (
                   <button
                     key={def.key}
+                    disabled={!hasRiskData}
                     onClick={() => setAtensiSubFilter(def.key)}
-                    className={`py-1 px-2 rounded-lg text-[11px] font-bold transition whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
+                    className={`py-1 px-2 rounded-lg text-[11px] font-bold transition whitespace-nowrap flex items-center gap-1.5 border ${
                       isSelected
                         ? `${def.badgeBg} ${def.badgeText} ${def.badgeBorder} shadow-xs`
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : hasRiskData ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer' : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'
                     }`}
                   >
                     <span className={`w-2 h-2 rounded-full ${def.dotColor}`} />
@@ -827,12 +837,12 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
         {/* TAB 2: ATENSI & PRIORITAS TLHP (5-Tier Risk Matrix) */}
         {mainNavTab === 'atensi' && (
           <>
-            {attentionItems.length === 0 ? (
+            {filteredAttentionItems.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400">
                 Tidak ada data atensi atau TLHP yang sesuai dengan tingkat risiko ini.
               </div>
             ) : (
-              attentionItems.map((item) => {
+              filteredAttentionItems.map((item) => {
                 const isSelected = selectedSatkerId === item.id;
                 const risiko = item.risikoDef;
 

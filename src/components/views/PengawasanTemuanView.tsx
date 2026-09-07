@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Search, 
   Filter, 
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { PoldaSatker, CurrentUserProfile } from '../../types';
 import { PoldaLogo } from '../PoldaLogo';
+import { getRoleScopedPoldas } from '../../utils/roleScope';
 
 interface PengawasanTemuanViewProps {
   poldaList: PoldaSatker[];
@@ -44,8 +45,13 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
   const [selectedTemuanModal, setSelectedTemuanModal] = useState<any | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
+  const scopedPoldaList = useMemo(
+    () => getRoleScopedPoldas(poldaList, currentUser),
+    [poldaList, currentUser]
+  );
+
   // Flatten all temuan across Polda with satker context
-  const allTemuan = poldaList.flatMap(p => 
+  const allTemuan = scopedPoldaList.flatMap(p => 
     p.rincianTemuan.map(t => ({
       ...t,
       poldaId: p.id,
@@ -174,8 +180,8 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
                   onChange={(e) => setSelectedPoldaId(e.target.value)}
                   className="w-full min-h-[40px] px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0B2B5C]"
                 >
-                  <option value="all">Semua Satker ({poldaList.length} Polda)</option>
-                  {poldaList.map(p => (
+                  <option value="all">Semua Satker ({scopedPoldaList.length} Polda)</option>
+                  {scopedPoldaList.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.nama} ({p.temuanTerbuka} Temuan)
                     </option>
@@ -319,7 +325,7 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
         /* PENUGASAN AUDIT SUBTAB */
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {poldaList.filter(p => p.auditBerjalan).map((polda) => (
+            {scopedPoldaList.filter(p => p.auditBerjalan).map((polda) => (
               <div key={polda.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-[#0B2B5C]">

@@ -23,22 +23,25 @@ import {
   Truck, 
   ShieldAlert 
 } from 'lucide-react';
-import { PoldaSatker } from '../../types';
+import { CurrentUserProfile, PoldaSatker } from '../../types';
 import { PoldaLogo } from '../PoldaLogo';
+import { getRoleScopedPoldas } from '../../utils/roleScope';
 
 interface KinerjaSatkerViewProps {
   poldaList: PoldaSatker[];
+  currentUser?: CurrentUserProfile;
 }
 
-export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList }) => {
+export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList, currentUser }) => {
+  const scopedPoldaList = getRoleScopedPoldas(poldaList, currentUser);
   const [activeTab, setActiveTab] = useState<'iku' | 'irsus' | 'eprofil' | 'rbs'>('iku');
   const [selectedPulau, setSelectedPulau] = useState<string>('Semua');
   const [showAdvancedAnalysis, setShowAdvancedAnalysis] = useState(false);
-  const [selectedPoldaForDetail, setSelectedPoldaForDetail] = useState<PoldaSatker>(poldaList[10] || poldaList[0]); // Default Metro or first
+  const [selectedPoldaForDetail, setSelectedPoldaForDetail] = useState<PoldaSatker>(scopedPoldaList[0]);
 
   const filteredPolda = selectedPulau === 'Semua' 
-    ? poldaList 
-    : poldaList.filter(p => p.pulau === selectedPulau);
+    ? scopedPoldaList
+    : scopedPoldaList.filter(p => p.pulau === selectedPulau);
 
   const chartData = filteredPolda.map(p => ({
     name: p.singkatan,

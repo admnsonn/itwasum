@@ -31,6 +31,7 @@ import { ALL_COMBINED_SATKERS_DATA } from '../data/allSatkersData';
 import { MABES_SATKERS_DATA } from '../data/mabesSatkerData';
 import { PoldaLogo } from './PoldaLogo';
 import { getSatkerAtensiTLHP, MATRIKS_RENTANG_RISIKO } from '../utils/riskRatingUtils';
+import { getRoleScopedSatkers } from '../utils/roleScope';
 
 interface IndonesiaMapProps {
   poldaList: PoldaSatker[];
@@ -153,17 +154,22 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const [showCriticalCard, setShowCriticalCard] = useState<boolean>(false);
   const [showLegendCard, setShowLegendCard] = useState<boolean>(false);
 
+  const roleScopedSatkers = useMemo(
+    () => getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek),
+    [activeBidang, currentUser, tingkatObjek]
+  );
+
   // Critical satkers for fullscreen Atensi & Risiko card
   const criticalSatkersList = useMemo(() => {
-    return ALL_COMBINED_SATKERS_DATA.filter(s => s.status === 'kritis' || s.status === 'perhatian');
-  }, []);
+    return roleScopedSatkers.filter(s => s.status === 'kritis' || s.status === 'perhatian');
+  }, [roleScopedSatkers]);
 
   const satkerStatusCounts = useMemo(() => {
-    const kritis = ALL_COMBINED_SATKERS_DATA.filter(s => s.status === 'kritis').length;
-    const perhatian = ALL_COMBINED_SATKERS_DATA.filter(s => s.status === 'perhatian').length;
-    const aman = ALL_COMBINED_SATKERS_DATA.filter(s => s.status === 'aman').length;
-    return { kritis, perhatian, aman, total: ALL_COMBINED_SATKERS_DATA.length };
-  }, []);
+    const kritis = roleScopedSatkers.filter(s => s.status === 'kritis').length;
+    const perhatian = roleScopedSatkers.filter(s => s.status === 'perhatian').length;
+    const aman = roleScopedSatkers.filter(s => s.status === 'aman').length;
+    return { kritis, perhatian, aman, total: roleScopedSatkers.length };
+  }, [roleScopedSatkers]);
 
   // Toggle Maximized / Full-Screen View
   const toggleMaximize = () => {
@@ -341,7 +347,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   }, [tingkatObjek]);
 
   // Filter combined satkers based on Status, Tingkat, Island, and Search Query
-  const filteredSatkers = ALL_COMBINED_SATKERS_DATA.filter((satker) => {
+  const filteredSatkers = roleScopedSatkers.filter((satker) => {
     // Poros 3 Enforcement (Tingkat Objek: Gabungan, Wilayah, Pusat)
     const isMabesPusat = (
       satker.tingkat === 'Mabes' || 
@@ -389,42 +395,6 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     }
     if (statusFilter === 'audit' && !satker.auditBerjalan) {
       return false;
-    }
-
-    // Role-based Jurisdiction Enforcement (8 Peran Resmi Dokumen E-Audit)
-    if (currentUser) {
-      if (currentUser.level === 'L2' && currentUser.titikWilayahId === 'polda-riau') {
-        // L2 Irwasda Riau & Admin Polda Riau: Strictly Polda Riau & 12 Polres Riau
-        if (satker.id !== 'polda-riau' && satker.parentPoldaId !== 'polda-riau') {
-          return false;
-        }
-      } else if (currentUser.level === 'L1' && currentUser.titikWilayahId === 'itwil-3') {
-        // L1 Irwil III: 7 Polda Regional (DIY, Jatim, Bali, NTB, NTT, Kalbar, Kalteng) & Polres jajaran
-        const itwil3Poldas = ['polda-diy', 'polda-jatim', 'polda-bali', 'polda-ntb', 'polda-ntt', 'polda-kalbar', 'polda-kalteng'];
-        const isPoldaInItwil = itwil3Poldas.includes(satker.id);
-        const isPolresInItwil = satker.parentPoldaId && itwil3Poldas.includes(satker.parentPoldaId);
-        if (!isPoldaInItwil && !isPolresInItwil && satker.id !== 'itwil-3') {
-          return false;
-        }
-      } else if (currentUser.level === 'L1' && currentUser.titikWilayahId === 'itwil-1') {
-        // L1 Koordinator Itwil I: 6 Polda Regional (Aceh, Sumut, Sumbar, Riau, Kepri, Jambi) & Polres jajaran
-        const itwil1Poldas = ['polda-aceh', 'polda-sumut', 'polda-sumbar', 'polda-riau', 'polda-kepri', 'polda-jambi'];
-        const isPoldaInItwil = itwil1Poldas.includes(satker.id);
-        const isPolresInItwil = satker.parentPoldaId && itwil1Poldas.includes(satker.parentPoldaId);
-        if (!isPoldaInItwil && !isPolresInItwil && satker.id !== 'itwil-1') {
-          return false;
-        }
-      } else if (currentUser.level === 'L3' && currentUser.titikWilayahId === 'polres-kampar') {
-        // L3 Auditee Polres Kampar: Objek periksa Polres Kampar & Satker induk Polda Riau
-        if (satker.id !== 'polres-kampar' && satker.id !== 'polda-riau' && satker.parentPoldaId !== 'polda-riau') {
-          return false;
-        }
-      } else if (currentUser.peran === 'pengawas_tim') {
-        // Pengawas Tim (Audit Lapangan ST/412 di Wilayah Riau): Objek periksa Polda Riau & jajaran
-        if (satker.id !== 'polda-riau' && satker.parentPoldaId !== 'polda-riau') {
-          return false;
-        }
-      }
     }
 
     // Island / Region filter
@@ -631,7 +601,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
           </div>
 
           <!-- Bottom Micro Tag (Satker name & Atensi Status) -->
-          <div class="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-1.5 py-0.2 rounded-md ${tierBadgeBg} border text-[9px] font-black tracking-tight whitespace-nowrap shadow-md pointer-events-none flex items-center gap-1">
+          <div class="satker-marker-label absolute top-full left-1/2 -translate-x-1/2 mt-1 px-1.5 py-0.2 rounded-md ${tierBadgeBg} border text-[9px] font-black tracking-tight whitespace-nowrap shadow-md pointer-events-none flex items-center gap-1 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-150">
             <span>${safeSingkatan}</span>
             <span class="w-1.5 h-1.5 rounded-full ${statusBg}"></span>
           </div>
@@ -1517,7 +1487,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
         {isMaximized && activeInspectedSatker && (() => {
           const inspectedAtensi = getSatkerAtensiTLHP(activeInspectedSatker);
           return (
-            <div className="absolute bottom-16 left-4 z-[1006] max-w-sm w-[calc(100%-32px)] sm:w-88 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-3.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-150 pointer-events-auto">
+            <div className={`absolute bottom-16 ${showCriticalCard ? 'right-4 left-auto' : 'left-4'} z-[1006] max-w-sm w-[calc(100%-32px)] sm:w-88 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-3.5 text-xs animate-in fade-in slide-in-from-bottom-2 duration-150 pointer-events-auto`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-xs">
@@ -2052,7 +2022,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
           const inspectedAtensi = getSatkerAtensiTLHP(satkerToDisplay);
 
           return (
-            <div className="absolute bottom-3.5 left-3.5 z-[1001] max-w-md w-[calc(100%-28px)] sm:w-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-3.5 sm:p-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <div className="absolute bottom-3.5 right-3.5 z-[1001] max-w-md w-[calc(100%-28px)] sm:w-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-3.5 sm:p-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
 
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">

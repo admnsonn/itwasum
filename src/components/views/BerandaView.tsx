@@ -14,6 +14,7 @@ import { DokumenGapsModal } from '../DokumenGapsModal';
 import { KPICustomizerModal } from '../KPICustomizerModal';
 import { UsulanHakAksesModal } from '../UsulanHakAksesModal';
 import { SecurityRejectionModal } from '../SecurityRejectionModal';
+import { getRoleScopedPoldas } from '../../utils/roleScope';
 
 import { 
   PoldaSatker, 
@@ -113,12 +114,13 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
 
   // Filtered Polda list by Jenjang (if Itwil selected, filter to that Itwil's Polda)
   const displayPoldaList = useMemo(() => {
+    const roleScopedPoldaList = getRoleScopedPoldas(simulatedPoldaList, currentUser);
     if (jenjang.startsWith('itwil-')) {
       const allowedPoldaIds = ITWIL_POLDA_MAPPING[jenjang] || [];
-      return simulatedPoldaList.filter(p => allowedPoldaIds.includes(p.id));
+      return roleScopedPoldaList.filter(p => allowedPoldaIds.includes(p.id));
     }
-    return simulatedPoldaList;
-  }, [jenjang, simulatedPoldaList]);
+    return roleScopedPoldaList;
+  }, [currentUser, jenjang, simulatedPoldaList]);
 
   // Selected active Polda
   const selectedPolda = displayPoldaList.find((p) => p.id === selectedPoldaId) || null;

@@ -314,7 +314,7 @@ export const Header: React.FC<HeaderProps> = ({
             {showUserMenu && (
               <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-1rem))] max-h-[calc(100vh-4.5rem)] overflow-y-auto bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 z-50 animate-in fade-in">
                 {/* Profile Header */}
-                <div className="p-3.5 bg-slate-900 text-white flex items-center gap-3">
+                <div className="p-3.5 bg-[#0B2B5C] text-white flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 shadow-xs bg-slate-800 flex items-center justify-center font-black text-xs text-amber-400">
                     {currentUser?.avatarUrl ? (
                       <img
@@ -331,7 +331,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="font-extrabold text-xs sm:text-sm text-white leading-tight truncate">
                       {currentUser?.nama || 'Kombes Pol. Bambang Suryo, S.I.K.'}
                     </div>
-                    <div className="text-[11px] text-blue-300 font-mono mt-0.5">
+                    <div className="text-[11px] text-blue-200 font-mono mt-0.5">
                       NRP {currentUser?.nrp || '73050412'} &bull; Level {currentUser?.level || 'L1'}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1 min-w-0">

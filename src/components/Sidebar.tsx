@@ -31,12 +31,12 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
   // Peran admin hanya mengelola akun, sistem & log. Dihapus: Pengawasan, Kinerja, Auditor.
   if (role === 'super_admin') {
     return [
-      {
-        id: 'pengaturan',
-        label: 'Tata Kelola Pengguna & RBAC',
-        icon: Settings,
-        subtitle: 'Manajemen Akun & Hak Akses'
-      },
+      // {
+      //   id: 'pengaturan',
+      //   label: 'Tata Kelola Pengguna & RBAC',
+      //   icon: Settings,
+      //   subtitle: 'Manajemen Akun & Hak Akses'
+      // },
       {
         id: 'beranda',
         label: 'Pusat Kendali Admin & Log Sistem',
@@ -50,12 +50,12 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
   // Peran admin polda mengelola akun jajaran Polda Riau & usulan wewenang. Dihapus: Pengawasan, Kinerja, Auditor.
   if (role === 'admin_polda') {
     return [
-      {
-        id: 'pengaturan',
-        label: 'Kelola Pengguna Polda Riau',
-        icon: Settings,
-        subtitle: 'Akun Satker & 12 Polres'
-      },
+      // {
+      //   id: 'pengaturan',
+      //   label: 'Kelola Pengguna Polda Riau',
+      //   icon: Settings,
+      //   subtitle: 'Akun Satker & 12 Polres'
+      // },
       {
         id: 'beranda',
         label: 'Pusat Kendali Admin Wilayah Riau',
@@ -75,18 +75,18 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
         icon: Home,
         subtitle: 'KKA, 5 Satker & NHAS'
       },
-      {
-        id: 'pengawasan',
-        label: 'KKA & Temuan 5 Satker Objek',
-        icon: Search,
-        subtitle: 'Lembar Pemeriksaan & Sanggahan'
-      },
-      {
-        id: 'auditor',
-        label: 'Susunan Tim & Surat Tugas ST/412',
-        icon: Users,
-        subtitle: 'Pemeriksa & Penugasan'
-      }
+      // {
+      //   id: 'pengawasan',
+      //   label: 'KKA & Temuan 5 Satker Objek',
+      //   icon: Search,
+      //   subtitle: 'Lembar Pemeriksaan & Sanggahan'
+      // },
+      // {
+      //   id: 'auditor',
+      //   label: 'Susunan Tim & Surat Tugas ST/412',
+      //   icon: Users,
+      //   subtitle: 'Pemeriksa & Penugasan'
+      // }
     ];
   }
 
@@ -100,12 +100,12 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
         icon: Home,
         subtitle: 'Rekomendasi & Bukti Eviden'
       },
-      {
-        id: 'pengawasan',
-        label: 'Lembar Temuan & Rekomendasi Satker',
-        icon: Search,
-        subtitle: 'Status Temuan Wasrik'
-      }
+      // {
+      //   id: 'pengawasan',
+      //   label: 'Lembar Temuan & Rekomendasi Satker',
+      //   icon: Search,
+      //   subtitle: 'Status Temuan Wasrik'
+      // }
     ];
   }
 
@@ -120,18 +120,18 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
         badge: urgentCount > 0 ? urgentCount : undefined,
         subtitle: 'Peta Satker Mapolda & 12 Polres'
       },
-      {
-        id: 'pengawasan',
-        label: 'Pengawasan Temuan Jajaran Riau',
-        icon: Search,
-        subtitle: 'Temuan & Tindak Lanjut'
-      },
-      {
-        id: 'kinerja',
-        label: 'Kinerja Satker & Polres Riau',
-        icon: BarChart3,
-        subtitle: 'Capaian IKU Jajaran Riau'
-      }
+      // {
+      //   id: 'pengawasan',
+      //   label: 'Pengawasan Temuan Jajaran Riau',
+      //   icon: Search,
+      //   subtitle: 'Temuan & Tindak Lanjut'
+      // },
+      // {
+      //   id: 'kinerja',
+      //   label: 'Kinerja Satker & Polres Riau',
+      //   icon: BarChart3,
+      //   subtitle: 'Capaian IKU Jajaran Riau'
+      // }
     ];
   }
 
@@ -146,24 +146,24 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
         badge: urgentCount > 0 ? urgentCount : undefined,
         subtitle: 'Peta 6 Polda Binaan'
       },
-      {
-        id: 'pengawasan',
-        label: 'Matriks Mutu Pengawasan Itwil I',
-        icon: Search,
-        subtitle: 'Quality Assurance Temuan'
-      },
-      {
-        id: 'kinerja',
-        label: 'Evaluasi IKU Jajaran Itwil I',
-        icon: BarChart3,
-        subtitle: 'Kinerja Satker Wilayah I'
-      },
-      {
-        id: 'auditor',
-        label: 'Daftar Auditor & ST Itwil I',
-        icon: Users,
-        subtitle: 'Beban Kerja Auditor Itwil I'
-      }
+      // {
+      //   id: 'pengawasan',
+      //   label: 'Matriks Mutu Pengawasan Itwil I',
+      //   icon: Search,
+      //   subtitle: 'Quality Assurance Temuan'
+      // },
+      // {
+      //   id: 'kinerja',
+      //   label: 'Evaluasi IKU Jajaran Itwil I',
+      //   icon: BarChart3,
+      //   subtitle: 'Kinerja Satker Wilayah I'
+      // },
+      // {
+      //   id: 'auditor',
+      //   label: 'Daftar Auditor & ST Itwil I',
+      //   icon: Users,
+      //   subtitle: 'Beban Kerja Auditor Itwil I'
+      // }
     ];
   }
 
@@ -178,24 +178,24 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
         badge: urgentCount > 0 ? urgentCount : undefined,
         subtitle: 'Peta 7 Polda Binaan'
       },
-      {
-        id: 'pengawasan',
-        label: 'Pengawasan Temuan Wilayah III',
-        icon: Search,
-        subtitle: 'Temuan Satker Wilayah III'
-      },
-      {
-        id: 'kinerja',
-        label: 'Kinerja Satker Jajaran Wilayah III',
-        icon: BarChart3,
-        subtitle: 'Capaian IKU 7 Polda Binaan'
-      },
-      {
-        id: 'auditor',
-        label: 'Tim Auditor Wilayah III',
-        icon: Users,
-        subtitle: 'Personel Auditor Itwil III'
-      }
+      // {
+      //   id: 'pengawasan',
+      //   label: 'Pengawasan Temuan Wilayah III',
+      //   icon: Search,
+      //   subtitle: 'Temuan Satker Wilayah III'
+      // },
+      // {
+      //   id: 'kinerja',
+      //   label: 'Kinerja Satker Jajaran Wilayah III',
+      //   icon: BarChart3,
+      //   subtitle: 'Capaian IKU 7 Polda Binaan'
+      // },
+      // {
+      //   id: 'auditor',
+      //   label: 'Tim Auditor Wilayah III',
+      //   icon: Users,
+      //   subtitle: 'Personel Auditor Itwil III'
+      // }
     ];
   }
 
@@ -209,24 +209,24 @@ export function getNavItemsForRole(currentUser: CurrentUserProfile, urgentCount:
       badge: urgentCount > 0 ? urgentCount : undefined,
       subtitle: 'Peta Komando 34 Polda & Mabes'
     },
-    {
-      id: 'pengawasan',
-      label: 'Pengawasan & Temuan Nasional',
-      icon: Search,
-      subtitle: 'Temuan Wasrik, BPK & Irsus'
-    },
-    {
-      id: 'kinerja',
-      label: 'Kinerja Satker (IKU Nasional)',
-      icon: BarChart3,
-      subtitle: 'Capaian IKU 34 Polda'
-    },
-    {
-      id: 'auditor',
-      label: 'Tim Auditor Itwasum',
-      icon: Users,
-      subtitle: 'Struktur Irwil & Penugasan'
-    }
+    // {
+    //   id: 'pengawasan',
+    //   label: 'Pengawasan & Temuan Nasional',
+    //   icon: Search,
+    //   subtitle: 'Temuan Wasrik, BPK & Irsus'
+    // },
+    // {
+    //   id: 'kinerja',
+    //   label: 'Kinerja Satker (IKU Nasional)',
+    //   icon: BarChart3,
+    //   subtitle: 'Capaian IKU 34 Polda'
+    // },
+    // {
+    //   id: 'auditor',
+    //   label: 'Tim Auditor Itwasum',
+    //   icon: Users,
+    //   subtitle: 'Struktur Irwil & Penugasan'
+    // }
   ];
 }
 

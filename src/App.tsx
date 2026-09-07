@@ -193,6 +193,7 @@ export default function App() {
           {activeNav === 'kinerja' && (
             <KinerjaSatkerView
               poldaList={POLDA_DATA}
+              currentUser={currentUser}
             />
           )}
 
