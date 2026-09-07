@@ -320,7 +320,7 @@ export function getQuarterlyHeatmapColor(score: number): {
       hexCode: '#2563EB',
       statusKey: 'sangat_rendah',
       statusLabel: 'Patuh Sempurna',
-      atensiBadge: 'Nihil Atensi (≥90%)'
+      atensiBadge: 'Sangat Rendah (≥90%)'
     };
   }
   if (rounded >= 80) {
@@ -330,7 +330,7 @@ export function getQuarterlyHeatmapColor(score: number): {
       hexCode: '#16A34A',
       statusKey: 'rendah',
       statusLabel: 'Kepatuhan Baik',
-      atensiBadge: 'Standar Mutu (80-89%)'
+      atensiBadge: 'Rendah (80-89%)'
     };
   }
   if (rounded >= 65) {
@@ -340,7 +340,7 @@ export function getQuarterlyHeatmapColor(score: number): {
       hexCode: '#FACC15',
       statusKey: 'sedang',
       statusLabel: 'Atensi Pengawasan',
-      atensiBadge: 'Atensi Sedang (65-79%)'
+      atensiBadge: 'Sedang (65-79%)'
     };
   }
   if (rounded >= 50) {
@@ -350,7 +350,7 @@ export function getQuarterlyHeatmapColor(score: number): {
       hexCode: '#F97316',
       statusKey: 'tinggi',
       statusLabel: 'Atensi Khusus',
-      atensiBadge: 'Atensi Khusus (50-64%)'
+      atensiBadge: 'Tinggi (50-64%)'
     };
   }
   return {
@@ -359,7 +359,7 @@ export function getQuarterlyHeatmapColor(score: number): {
     hexCode: '#DC2626',
     statusKey: 'sangat_tinggi',
     statusLabel: 'Atensi Kritis',
-    atensiBadge: 'Atensi Kritis (<50%)'
+    atensiBadge: 'Sangat Tinggi (<50%)'
   };
 }
 

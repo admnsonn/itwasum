@@ -392,17 +392,7 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
 
   return (
     <div className="w-full space-y-2">
-      {onOpenKPICustomizer && (
-        <div className="flex items-center justify-end px-1 text-xs">
-          <button
-            onClick={onOpenKPICustomizer}
-            className="text-[11px] font-bold text-blue-700 hover:text-blue-900 flex items-center gap-1 cursor-pointer transition"
-          >
-            <Sliders className="w-3 h-3" />
-            <span>Kustomisasi Metrik</span>
-          </button>
-        </div>
-      )}
+      {/* Tombol Kustomisasi Metrik dihapus sesuai permintaan UI */}
 
       {/* Responsive Grid that shrinks cards appropriately */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-flow-col lg:auto-cols-fr gap-3">

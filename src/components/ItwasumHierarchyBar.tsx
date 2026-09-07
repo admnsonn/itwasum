@@ -67,14 +67,14 @@ export const ItwasumHierarchyBar: React.FC<ItwasumHierarchyBarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-extrabold text-sm sm:text-base text-white tracking-tight">
-                Struktur Komando & Inspektorat Pengawasan (Itwasum & Itwil I - V)
+                Inspektorat Pengawasan — Itwil I–V
               </h3>
               <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 uppercase tracking-wide">
                 Tingkat Mabes
               </span>
             </div>
             <p className="text-xs text-blue-200">
-              Hierarki Pengawasan Fungsional, Wilayah Kerja (Itwil I - V), Audit Akuntabilitas & Satker Utama Mabes Polri
+              Ringkasan pengawasan regional dan akses cepat ke profil Itwil.
             </p>
           </div>
         </div>
@@ -195,11 +195,11 @@ export const ItwasumHierarchyBar: React.FC<ItwasumHierarchyBarProps> = ({
                       style={{ backgroundColor: activeItwil.warnaTema }}
                     />
                     <h5 className="font-black text-sm text-slate-900">
-                      {activeItwil.nama} — {activeItwil.jabatan}: {activeItwil.pimpinan}
+                      {activeItwil.nama}
                     </h5>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    {activeItwil.deskripsi}
+                    {activeItwil.pimpinan} — {activeItwil.jabatan}
                   </p>
                   
                   {/* Supervised Polda Badges */}

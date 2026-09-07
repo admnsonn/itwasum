@@ -350,7 +350,6 @@ export const SatkerTrendHeatmap: React.FC<SatkerTrendHeatmapProps> = ({
         <div className="lg:col-span-7 space-y-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-[#0B2B5C]" />
               <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">
                 Grafik Tren 12 Bulan ({activeSatker.singkatan})
               </h4>
@@ -488,30 +487,28 @@ export const SatkerTrendHeatmap: React.FC<SatkerTrendHeatmapProps> = ({
         <div className="lg:col-span-5 space-y-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <Grid3X3 className="w-4 h-4 text-[#0B2B5C]" />
               <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">
                 Heatmap Kepatuhan Triwulan
               </h4>
             </div>
 
-            {/* Scale indicator Terstandarisasi */}
-            <div className="flex items-center gap-1.5 text-[10px] font-bold flex-wrap">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded bg-emerald-600"></span>
-                <span className="text-slate-600 mr-1">&ge;90% (Sangat Baik)</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded bg-amber-500"></span>
-                <span className="text-slate-600 mr-1">80-89% (Baik)</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded bg-rose-500"></span>
-                <span className="text-slate-600 mr-1">70-79% (Perhatian)</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded bg-red-900"></span>
-                <span className="text-slate-600">&lt;70% (Kritis)</span>
-              </span>
+            {/* Scale indicator based on Itwasum TLHP / Tingkat Risiko categories */}
+            <div className="flex items-center gap-2 text-[10px] font-bold flex-wrap">
+              {[
+                95, // >=90
+                85, // 80-89
+                72, // 65-79
+                57, // 50-64
+                30  // <50
+              ].map((sample) => {
+                const info = getQuarterlyHeatmapColor(sample);
+                return (
+                  <div key={sample} className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: info.hexCode }} />
+                    <span className="text-slate-600 mr-1">{info.atensiBadge}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -546,10 +543,11 @@ export const SatkerTrendHeatmap: React.FC<SatkerTrendHeatmapProps> = ({
                           period: cell.quarter,
                           score: cell.score,
                           status: cell.status,
-                          label: cell.colorInfo.statusLabel
+                          label: cell.colorInfo.atensiBadge
                         })}
                         onMouseLeave={() => setHoveredCell(null)}
                         className={`h-8 rounded-lg flex items-center justify-center font-black text-[11px] transition-all cursor-pointer shadow-2xs ${cell.colorInfo.bgClass} ${cell.colorInfo.textClass}`}
+                        title={`${row.domainName} • ${cell.quarter} • ${cell.colorInfo.statusLabel}`}
                       >
                         {cell.score}%
                       </div>
