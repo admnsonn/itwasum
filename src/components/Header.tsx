@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Brand & Identity Lockup */}
         <div className="flex items-center gap-3 min-w-fit">
-          <div className="w-9 h-9 rounded-lg bg-white p-1 flex items-center justify-center shrink-0 border border-slate-200">
+          <div className="w-9 h-9 flex items-center justify-center shrink-0">
             <img 
               src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" 
               alt="Logo Itwasum POLRI" 
@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               }}
             />
-            <div className="w-full h-full rounded-md bg-[#0B2B5C] items-center justify-center text-amber-400" style={{ display: 'none' }}>
+            <div className="w-full h-full items-center justify-center text-amber-400" style={{ display: 'none' }}>
               <Shield className="w-5 h-5 stroke-[2.2]" />
             </div>
           </div>

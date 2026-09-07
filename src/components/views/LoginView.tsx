@@ -101,7 +101,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <div className="absolute -right-24 top-24 w-80 h-80 rounded-full border border-white/10" />
           <div className="absolute -left-32 bottom-20 w-96 h-96 rounded-full border border-white/10" />
           <div className="relative z-10 flex items-center gap-3">
-            <div className="w-11 h-11 rounded-lg bg-white p-1 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 flex items-center justify-center shrink-0">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
                 alt="Logo Itwasum POLRI"
