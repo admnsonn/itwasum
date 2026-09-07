@@ -1,0 +1,8 @@
+{
+  "name": "Lanjutan Penerapan",
+  "description": "Dashboard Peta Komando Nasional Pengawasan dan Kinerja Satker Itwasum Polri dengan peta interaktif, KPI mengambang, slide-over detail satker, dan aksesibilitas tinggi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
