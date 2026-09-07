@@ -32,6 +32,7 @@ import { MABES_SATKERS_DATA } from '../data/mabesSatkerData';
 import { PoldaLogo } from './PoldaLogo';
 import { getSatkerAtensiTLHP, MATRIKS_RENTANG_RISIKO } from '../utils/riskRatingUtils';
 import { getRoleScopedSatkers } from '../utils/roleScope';
+import { ITWIL_POLDA_MAPPING } from '../data/mabesSatkerData';
 
 interface IndonesiaMapProps {
   poldaList: PoldaSatker[];
@@ -50,6 +51,8 @@ interface IndonesiaMapProps {
   activeJenjang?: JenjangPengguna;
   onSelectJenjang?: (jenjang: JenjangPengguna) => void;
   onSelectTingkatObjek?: (tingkat: TingkatObjek) => void;
+  selectedIsland?: string;
+  onSelectIsland?: (island: string) => void;
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
 }
@@ -75,6 +78,8 @@ const ISLAND_BOUNDS: Record<string, [[number, number], [number, number]]> = {
   'Bali-Nusa': [[-11.1, 114.3], [-7.9, 125.5]],
   'Maluku-Papua': [[-9.2, 125.5], [2.5, 141.1]],
 };
+
+const ISLAND_NAMES = ['Semua', 'Sumatera', 'Jawa', 'Kalimantan', 'Sulawesi', 'Bali-Nusa', 'Maluku-Papua'] as const;
 
 type BasemapStyle = 'streets' | 'osm' | 'satellite' | 'topo' | 'canvas';
 
@@ -128,6 +133,8 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   activeJenjang = 'irwasum',
   onSelectJenjang,
   onSelectTingkatObjek,
+  selectedIsland: controlledSelectedIsland,
+  onSelectIsland,
   isMaximized: controlledIsMaximized,
   onToggleMaximize,
 }) => {
@@ -138,7 +145,12 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const heatLayerRef = useRef<L.LayerGroup | null>(null);
 
   // States
-  const [selectedIsland, setSelectedIsland] = useState<string>('Semua');
+  const [internalSelectedIsland, setInternalSelectedIsland] = useState<string>('Semua');
+  const selectedIsland = controlledSelectedIsland ?? internalSelectedIsland;
+  const setSelectedIsland = (island: string) => {
+    setInternalSelectedIsland(island);
+    onSelectIsland?.(island);
+  };
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [basemap, setBasemap] = useState<BasemapStyle>('streets');
   const [showBasemapMenu, setShowBasemapMenu] = useState(false);
@@ -154,10 +166,80 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const [showCriticalCard, setShowCriticalCard] = useState<boolean>(false);
   const [showLegendCard, setShowLegendCard] = useState<boolean>(false);
 
-  const roleScopedSatkers = useMemo(
-    () => getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek),
-    [activeBidang, currentUser, tingkatObjek]
+  const roleScopedSatkers = useMemo(() => {
+    const scopedSatkers = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
+    if (!activeJenjang?.startsWith('itwil-') || tingkatObjek === 'pusat') return scopedSatkers;
+
+    const allowedPoldaIds = new Set(ITWIL_POLDA_MAPPING[activeJenjang] || []);
+    return scopedSatkers.filter((satker) => (
+      allowedPoldaIds.has(satker.id) || allowedPoldaIds.has(satker.parentPoldaId)
+    ));
+  }, [activeBidang, activeJenjang, currentUser, tingkatObjek]
   );
+  const mapFilterBaseSatkers = roleScopedSatkers.filter((satker) => {
+    if (tingkatFilter === 'mabes' && !['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)) {
+      return false;
+    }
+    if (tingkatFilter === 'polda' && satker.tingkat !== 'Polda') {
+      return false;
+    }
+    if (tingkatFilter === 'polres' && !['Polres', 'Polrestabes', 'Polresta'].includes(satker.tingkat)) {
+      return false;
+    }
+    if (statusFilter === 'perhatian' && satker.status === 'aman') {
+      return false;
+    }
+    if (statusFilter === 'audit' && !satker.auditBerjalan) {
+      return false;
+    }
+    return satker.tingkat !== 'Polsek';
+  });
+  const islandFilterOptions = useMemo(() => {
+    return ISLAND_NAMES.map((island) => ({
+      id: island,
+      count: island === 'Semua'
+        ? mapFilterBaseSatkers.length
+        : mapFilterBaseSatkers.filter(s => s.pulau === island).length
+    })).filter(option => option.count > 0);
+  }, [mapFilterBaseSatkers]);
+  useEffect(() => {
+    if (islandFilterOptions.some(option => option.id === selectedIsland)) return;
+    setSelectedIsland(islandFilterOptions[0]?.id || 'Semua');
+  }, [islandFilterOptions, selectedIsland]);
+  const islandScopedSatkers = mapFilterBaseSatkers.filter(
+    (satker) => selectedIsland === 'Semua' || satker.pulau === selectedIsland
+  );
+  const tingkatFilterOptions = useMemo(() => {
+    const options = [
+      {
+        id: 'all' as const,
+        label: 'Semua',
+        count: islandScopedSatkers.filter(s => s.tingkat !== 'Polsek').length
+      },
+      {
+        id: 'mabes' as const,
+        label: 'Mabes',
+        count: islandScopedSatkers.filter(s => ['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(s.tingkat)).length
+      },
+      {
+        id: 'polda' as const,
+        label: 'Polda',
+        count: islandScopedSatkers.filter(s => s.tingkat === 'Polda').length
+      },
+      {
+        id: 'polres' as const,
+        label: 'Polres',
+        count: islandScopedSatkers.filter(s => ['Polres', 'Polrestabes', 'Polresta'].includes(s.tingkat)).length
+      }
+    ];
+
+    return options.filter(option => option.count > 0);
+  }, [islandScopedSatkers]);
+
+  useEffect(() => {
+    if (tingkatFilterOptions.some(option => option.id === tingkatFilter)) return;
+    setTingkatFilter(tingkatFilterOptions[0]?.id || 'all');
+  }, [tingkatFilter, tingkatFilterOptions]);
 
   // Critical satkers for fullscreen Atensi & Risiko card
   const criticalSatkersList = useMemo(() => {
@@ -830,6 +912,14 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     }
   }, [selectedPoldaId]);
 
+  // Zoom to a satker selected from the directory list.
+  useEffect(() => {
+    if (!selectedSatkerItem || !mapInstanceRef.current) return;
+    mapInstanceRef.current.flyTo([selectedSatkerItem.lat, selectedSatkerItem.lng], 10, {
+      duration: 0.8
+    });
+  }, [selectedSatkerItem]);
+
   // Auto-focus map based on user's active role jurisdiction
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -927,71 +1017,29 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
               Tingkat:
             </span>
 
-            <button
-              id="map-filter-tingkat-all"
-              onClick={() => setTingkatFilter('all')}
-              className={`min-h-[32px] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                tingkatFilter === 'all'
-                  ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <span>Semua</span>
-              <span className="px-1.5 py-0.2 rounded-md text-[10px] bg-slate-200/60 text-slate-700">
-                {ALL_COMBINED_SATKERS_DATA.filter(s => s.tingkat !== 'Polsek').length}
-              </span>
-            </button>
-
-            <button
-              id="map-filter-tingkat-mabes"
-              onClick={() => setTingkatFilter('mabes')}
-              className={`min-h-[32px] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                tingkatFilter === 'mabes'
-                  ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <span>Mabes</span>
-              <span className="px-1.5 py-0.2 rounded-md text-[10px] bg-slate-100 text-slate-600">
-                {ALL_COMBINED_SATKERS_DATA.filter(s => ['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(s.tingkat)).length}
-              </span>
-            </button>
-
-            <button
-              id="map-filter-tingkat-polda"
-              onClick={() => setTingkatFilter('polda')}
-              className={`min-h-[32px] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                tingkatFilter === 'polda'
-                  ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <span>Polda</span>
-              <span className="px-1.5 py-0.2 rounded-md text-[10px] bg-slate-100 text-slate-600">
-                {ALL_COMBINED_SATKERS_DATA.filter(s => s.tingkat === 'Polda').length}
-              </span>
-            </button>
-
-            <button
-              id="map-filter-tingkat-polres"
-              onClick={() => setTingkatFilter('polres')}
-              className={`min-h-[32px] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                tingkatFilter === 'polres'
-                  ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <span>Polres</span>
-              <span className="px-1.5 py-0.2 rounded-md text-[10px] bg-slate-100 text-slate-600">
-                {ALL_COMBINED_SATKERS_DATA.filter(s => s.tingkat === 'Polres' || s.tingkat === 'Polrestabes' || s.tingkat === 'Polresta').length}
-              </span>
-            </button>
+            {tingkatFilterOptions.map((option) => (
+              <button
+                key={option.id}
+                id={`map-filter-tingkat-${option.id}`}
+                onClick={() => setTingkatFilter(option.id)}
+                className={`min-h-[32px] px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  tingkatFilter === option.id
+                    ? 'bg-[#0B2B5C] text-white shadow-xs'
+                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <span>{option.label}</span>
+                <span className="px-1.5 py-0.2 rounded-md text-[10px] bg-slate-100 text-slate-600">
+                  {option.count}
+                </span>
+              </button>
+            ))}
           </div>
 
           {/* Right Side: Island Quick Focus Tabs & Fullscreen Switcher */}
           <div className="flex items-center gap-2 max-w-full overflow-x-auto">
             <div className="flex items-center gap-1 p-1 rounded-xl border overflow-x-auto bg-slate-100 border-slate-200">
-              {['Semua', 'Sumatera', 'Jawa', 'Kalimantan', 'Sulawesi', 'Bali-Nusa', 'Maluku-Papua'].map((island) => (
+              {islandFilterOptions.map(({ id: island }) => (
                 <button
                   key={island}
                   id={`btn-island-${island.toLowerCase()}`}
@@ -1253,7 +1301,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
             {/* Floating Card 1: Indikator Kondisi Terintegrasi (6 KPI Cards) */}
             {showKpiCard && (
-              <div className="absolute top-16 sm:top-18 left-3 right-3 sm:left-4 sm:right-4 z-[1004] max-w-7xl mx-auto pointer-events-auto animate-in fade-in slide-in-from-top-3 duration-200">
+              <div className="absolute top-28 sm:top-30 left-3 right-3 sm:left-4 sm:right-4 z-[1004] max-w-7xl mx-auto pointer-events-auto animate-in fade-in slide-in-from-top-3 duration-200">
                 <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 p-3 sm:p-4 space-y-2.5">
                   {/* Header row & interactive quick filter */}
                   <div className="flex items-center justify-between gap-3 text-xs flex-wrap border-b border-slate-100 pb-2">
@@ -1591,7 +1639,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
         {/* Fullscreen Floating Card 2: Ringkasan Satker Kritis & Atensi Wasrik */}
         {isMaximized && showCriticalCard && (
-              <div className={`absolute ${showKpiCard ? 'top-[19rem] sm:top-[18rem]' : 'top-16 sm:top-18'} left-3 sm:left-4 z-[1004] max-w-sm w-[calc(100%-24px)] sm:w-96 max-h-[calc(100vh-140px)] flex flex-col bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 animate-in fade-in slide-in-from-left-3 duration-200 pointer-events-auto`}>
+              <div className={`absolute ${showKpiCard ? 'top-[21rem] sm:top-[20rem]' : 'top-28 sm:top-30'} left-3 sm:left-4 z-[1004] max-w-sm w-[calc(100%-24px)] sm:w-96 max-h-[calc(100vh-140px)] flex flex-col bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 animate-in fade-in slide-in-from-left-3 duration-200 pointer-events-auto`}>
             <div className="p-3 border-b border-slate-100 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
@@ -1732,10 +1780,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
           </div>
         )}
 
-        {/* Fullscreen Quick Jump Island Tabs at Bottom Center */}
+        {/* Fullscreen Quick Jump Island Tabs at Top Center */}
         {isMaximized && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1003] flex items-center gap-1 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1.5 pointer-events-auto">
-            {(['Semua', 'Sumatera', 'Jawa', 'Kalimantan', 'Sulawesi', 'Bali-Nusa', 'Maluku-Papua'] as const).map((island) => (
+          <div className="absolute top-16 sm:top-18 left-1/2 -translate-x-1/2 z-[1003] max-w-[calc(100%-2rem)] overflow-x-auto flex items-center gap-1 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-1.5 pointer-events-auto">
+            {islandFilterOptions.map(({ id: island }) => (
               <button
                 key={island}
                 onClick={() => {

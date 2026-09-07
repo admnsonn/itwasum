@@ -22,8 +22,14 @@ export function getRoleScopedSatkers(
   const scopedByRole = !currentUser || currentUser.level === 'L0'
     ? satkers
     : getRoleJurisdiction(satkers, currentUser);
+  const centralSatkers = satkers.filter((satker) => (
+    ['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)
+  ));
+  const jurisdictionScoped = tingkatObjek === 'pusat'
+    ? [...scopedByRole, ...centralSatkers]
+    : scopedByRole;
 
-  const levelFiltered = scopedByRole.filter((satker) => {
+  const levelFiltered = jurisdictionScoped.filter((satker) => {
     const isMabes = ['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat);
     const isRegional = ['Polda', 'Polrestabes', 'Polresta', 'Polres'].includes(satker.tingkat);
     if (tingkatObjek === 'pusat') return isMabes;

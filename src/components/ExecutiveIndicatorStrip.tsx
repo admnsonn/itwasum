@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PoldaSatker, BidangAudit, JenjangPengguna, TingkatObjek, CurrentUserProfile, BidangName } from '../types';
+import { PoldaSatker, SatkerMapItem, BidangAudit, JenjangPengguna, TingkatObjek, CurrentUserProfile, BidangName } from '../types';
 import { MABES_SATKERS_DATA } from '../data/mabesSatkerData';
 import { Sliders, CheckCircle2, Clock, ShieldCheck, Database } from 'lucide-react';
 
@@ -9,6 +9,7 @@ interface ExecutiveIndicatorStripProps {
   onSelectBidang: (b: BidangAudit) => void;
   activeJenjang: JenjangPengguna;
   tingkatObjek?: TingkatObjek;
+  activeIsland?: SatkerMapItem['pulau'] | 'Semua';
   totalSatkerCount?: number;
   currentUser?: CurrentUserProfile;
   onOpenKPICustomizer?: () => void;
@@ -20,6 +21,7 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
   onSelectBidang,
   activeJenjang,
   tingkatObjek = 'semua',
+  activeIsland = 'Semua',
   currentUser,
   onOpenKPICustomizer
 }) => {
@@ -40,12 +42,15 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
   const isWilayah = tingkatObjek === 'wilayah';
 
   // Wilayah Data
-  const totalPolda = poldaList.length;
-  const poldaTemuan = poldaList.reduce((acc, curr) => acc + curr.temuanTerbuka, 0);
-  const poldaTemuanSelesai = poldaList.reduce((acc, curr) => acc + curr.temuanSelesai, 0);
-  const poldaIKU = (poldaList.reduce((acc, curr) => acc + curr.capaianIKU, 0) / (totalPolda || 1));
-  const poldaRbs = (poldaList.reduce((acc, curr) => acc + (curr.analisisLanjutan?.rbsScore || 65), 0) / (totalPolda || 1));
-  const poldaSerapan = (poldaList.reduce((acc, curr) => acc + (curr.eProfil?.persenSerapan || 88), 0) / (totalPolda || 1));
+  const visiblePoldaList = activeIsland === 'Semua'
+    ? poldaList
+    : poldaList.filter((polda) => polda.pulau === activeIsland);
+  const totalPolda = visiblePoldaList.length;
+  const poldaTemuan = visiblePoldaList.reduce((acc, curr) => acc + curr.temuanTerbuka, 0);
+  const poldaTemuanSelesai = visiblePoldaList.reduce((acc, curr) => acc + curr.temuanSelesai, 0);
+  const poldaIKU = (visiblePoldaList.reduce((acc, curr) => acc + curr.capaianIKU, 0) / (totalPolda || 1));
+  const poldaRbs = (visiblePoldaList.reduce((acc, curr) => acc + (curr.analisisLanjutan?.rbsScore || 65), 0) / (totalPolda || 1));
+  const poldaSerapan = (visiblePoldaList.reduce((acc, curr) => acc + (curr.eProfil?.persenSerapan || 88), 0) / (totalPolda || 1));
 
   // Mabes Data
   const totalMabes = MABES_SATKERS_DATA.length;

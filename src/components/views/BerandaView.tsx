@@ -7,14 +7,13 @@ import { IndonesiaMap } from '../IndonesiaMap';
 import { TacticalAnalyticsDock } from '../TacticalAnalyticsDock';
 import { ExecutiveBottomTicker } from '../ExecutiveBottomTicker';
 import { SatkerSlideOver } from '../SatkerSlideOver';
-import { LogoSatkerExplorerModal } from '../LogoSatkerExplorerModal';
 import { MetodologiModal } from '../MetodologiModal';
 import { InMemoryDataEditorModal } from '../InMemoryDataEditorModal';
 import { DokumenGapsModal } from '../DokumenGapsModal';
 import { KPICustomizerModal } from '../KPICustomizerModal';
 import { UsulanHakAksesModal } from '../UsulanHakAksesModal';
 import { SecurityRejectionModal } from '../SecurityRejectionModal';
-import { getRoleScopedPoldas } from '../../utils/roleScope';
+import { getRoleScopedPoldas, getRoleScopedSatkers } from '../../utils/roleScope';
 
 import { 
   PoldaSatker, 
@@ -57,6 +56,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   const [jenjang, setJenjang] = useState<JenjangPengguna>('irwasum');
   const [bidang, setBidang] = useState<BidangAudit>('semua');
   const [tingkatObjek, setTingkatObjek] = useState<TingkatObjek>('semua');
+  const [selectedIsland, setSelectedIsland] = useState<SatkerMapItem['pulau'] | 'Semua'>('Semua');
 
   // Status map filter
   const [statusFilter, setStatusFilter] = useState<'all' | 'perhatian' | 'audit'>('all');
@@ -64,8 +64,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   // Modals state
   const [metodologiOpen, setMetodologiOpen] = useState(false);
   const [dataEditorOpen, setDataEditorOpen] = useState(false);
-  const [logoExplorerOpen, setLogoExplorerOpen] = useState(false);
-  const [logoExplorerPoldaId, setLogoExplorerPoldaId] = useState<string | undefined>(undefined);
 
   // Document Gaps, KPI Customizer, Usulan Hak Akses, and Security Rejection States
   const [dokumenGapsOpen, setDokumenGapsOpen] = useState(false);
@@ -115,12 +113,19 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   // Filtered Polda list by Jenjang (if Itwil selected, filter to that Itwil's Polda)
   const displayPoldaList = useMemo(() => {
     const roleScopedPoldaList = getRoleScopedPoldas(simulatedPoldaList, currentUser);
+    const roleScopedSatkers = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, bidang, tingkatObjek);
+    const scopedSatkerIds = new Set(
+      roleScopedSatkers
+        .filter((satker) => selectedIsland === 'Semua' || satker.pulau === selectedIsland)
+        .map((satker) => satker.parentPoldaId || satker.id)
+    );
+    const scopedPoldaList = roleScopedPoldaList.filter((polda) => scopedSatkerIds.has(polda.id));
     if (jenjang.startsWith('itwil-')) {
       const allowedPoldaIds = ITWIL_POLDA_MAPPING[jenjang] || [];
-      return roleScopedPoldaList.filter(p => allowedPoldaIds.includes(p.id));
+      return scopedPoldaList.filter(p => allowedPoldaIds.includes(p.id));
     }
-    return roleScopedPoldaList;
-  }, [currentUser, jenjang, simulatedPoldaList]);
+    return scopedPoldaList;
+  }, [bidang, currentUser, jenjang, selectedIsland, simulatedPoldaList, tingkatObjek]);
 
   // Selected active Polda
   const selectedPolda = displayPoldaList.find((p) => p.id === selectedPoldaId) || null;
@@ -153,11 +158,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
   } : null);
 
   const activeSatkerId = activeSatkerItem?.id || null;
-
-  const handleOpenLogoExplorer = (poldaId?: string) => {
-    setLogoExplorerPoldaId(poldaId || selectedPoldaId || undefined);
-    setLogoExplorerOpen(true);
-  };
 
   const handleSelectFromMap = (id: string | null) => {
     onSelectPolda(id);
@@ -227,7 +227,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           currentUser={currentUser}
           onOpenMetodologi={() => setMetodologiOpen(true)}
           onOpenDataEditor={() => setDataEditorOpen(true)}
-          onOpenLogoExplorer={handleOpenLogoExplorer}
           onOpenGapsModal={() => setDokumenGapsOpen(true)}
           onOpenKPICustomizer={() => setKpiCustomizerOpen(true)}
           onOpenUsulanModal={() => setUsulanHakAksesOpen(true)}
@@ -243,6 +242,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           onSelectBidang={(b) => setBidang(b)}
           activeJenjang={jenjang}
           tingkatObjek={tingkatObjek}
+          activeIsland={selectedIsland}
           currentUser={currentUser}
           onOpenKPICustomizer={() => setKpiCustomizerOpen(true)}
         />
@@ -263,9 +263,9 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
                 onSelectPolda(id);
                 setSelectedSatkerMapItem(null);
               }}
-              onOpenLogoExplorer={handleOpenLogoExplorer}
               activeBidang={bidang}
               tingkatObjek={tingkatObjek}
+              activeJenjang={jenjang}
               currentUser={currentUser}
             />
           </div>
@@ -307,6 +307,8 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             setStatusFilter={setStatusFilter}
             tingkatObjek={tingkatObjek}
             onSelectTingkatObjek={setTingkatObjek}
+            selectedIsland={selectedIsland}
+            onSelectIsland={setSelectedIsland}
             activeJenjang={jenjang}
             onSelectJenjang={setJenjang}
             currentUser={currentUser}
@@ -354,16 +356,8 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           isOpen={slideOverOpen}
           onClose={() => setSlideOverOpen(false)}
           onNavigateToModule={onNavigateToModule}
-          onOpenLogoExplorer={handleOpenLogoExplorer}
         />
       )}
-
-      <LogoSatkerExplorerModal
-        isOpen={logoExplorerOpen}
-        onClose={() => setLogoExplorerOpen(false)}
-        initialPoldaId={logoExplorerPoldaId}
-        poldaList={displayPoldaList}
-      />
 
       <MetodologiModal
         isOpen={metodologiOpen}

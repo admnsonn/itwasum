@@ -17,6 +17,7 @@ import { MABES_SATKERS_DATA } from '../data/mabesSatkerData';
 import { PoldaLogo } from './PoldaLogo';
 import { CurrentUserProfile } from '../types';
 import { getRoleScopedSatkers } from '../utils/roleScope';
+import { ITWIL_POLDA_MAPPING } from '../data/mabesSatkerData';
 import { 
   getDefinisiRisikoByScore, 
   getDefinisiRisikoFromLegacy, 
@@ -34,6 +35,7 @@ interface CommandDirectoryPanelProps {
   onOpenLogoExplorer?: (satkerId?: string) => void;
   activeBidang?: BidangAudit;
   tingkatObjek?: TingkatObjek;
+  activeJenjang?: string;
   currentUser?: CurrentUserProfile;
 }
 
@@ -46,6 +48,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   onOpenLogoExplorer,
   activeBidang = 'semua',
   tingkatObjek = 'semua',
+  activeJenjang = 'irwasum',
   currentUser
 }) => {
   const [mainNavTab, setMainNavTab] = useState<'struktur' | 'atensi' | 'mabes'>('struktur');
@@ -73,24 +76,21 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   // Structure Items List
   const structureItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    let items: SatkerMapItem[] = [];
+    const allowedPoldaIds = activeJenjang.startsWith('itwil-') && tingkatObjek !== 'pusat'
+      ? new Set(ITWIL_POLDA_MAPPING[activeJenjang] || [])
+      : null;
+    const scopedItems = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
+    let items = scopedItems.filter((item) => {
+      if (!allowedPoldaIds) return true;
+      return allowedPoldaIds.has(item.id) || allowedPoldaIds.has(item.parentPoldaId);
+    });
 
-    if (currentUser && currentUser.level !== 'L0') {
-      items = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
+    if (strukturSubTab === 'itwil') {
+      items = items.filter(s => s.tingkat === 'Itwil');
+    } else if (strukturSubTab === 'mabes') {
+      items = items.filter(s => ['Mabes', 'Itwasum', 'Biro-Mabes', 'Satker-Mabes'].includes(s.tingkat));
     } else {
-      // L0 Nasional
-      if (strukturSubTab === 'itwil') {
-        items = ALL_MABES_ITWASUM_MAP_DATA.filter(s => s.tingkat === 'Itwil');
-      } else if (strukturSubTab === 'mabes') {
-        items = ALL_MABES_ITWASUM_MAP_DATA.filter(s => s.tingkat === 'Mabes' || s.tingkat === 'Itwasum' || s.tingkat === 'Biro-Mabes');
-      } else {
-        items = ALL_COMBINED_SATKERS_DATA.filter(s => s.tingkat === 'Polda');
-      }
-    }
-
-    const scopedIds = new Set(getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek).map(item => item.id));
-    if (activeBidang !== 'semua' || tingkatObjek !== 'semua' || (currentUser && currentUser.level !== 'L0')) {
-      items = items.filter(item => scopedIds.has(item.id));
+      items = items.filter(s => s.tingkat === 'Polda');
     }
 
     if (!query) return items;
@@ -102,7 +102,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.pimpinanJabatan.toLowerCase().includes(query) ||
       (item.wilayahHukum && item.wilayahHukum.toLowerCase().includes(query))
     );
-  }, [strukturSubTab, searchQuery, currentUser, activeBidang, tingkatObjek]);
+  }, [strukturSubTab, searchQuery, currentUser, activeBidang, tingkatObjek, activeJenjang]);
 
   // Attention Items List with 5-Tier Risk Matrix (20-25 Sangat Tinggi, 16-19 Tinggi, 12-15 Sedang, 6-11 Rendah, 1-5 Sangat Rendah)
   const attentionItems = useMemo(() => {
@@ -440,9 +440,20 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   // Mabes Items List
   const mabesItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    let list = tingkatObjek === 'wilayah' ? [] : MABES_SATKERS_DATA;
+    const allowedPoldaIds = activeJenjang.startsWith('itwil-') && tingkatObjek !== 'pusat'
+      ? new Set(ITWIL_POLDA_MAPPING[activeJenjang] || [])
+      : null;
+    const scopedIds = new Set(
+      getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek)
+        .filter(item => !allowedPoldaIds || allowedPoldaIds.has(item.id) || allowedPoldaIds.has(item.parentPoldaId))
+        .map(item => item.id)
+    );
+    let list = tingkatObjek === 'wilayah'
+      ? []
+      : MABES_SATKERS_DATA.filter(item => scopedIds.has(item.id.replace(/^mabes-/, '')));
     if (activeBidang !== 'semua') {
-      list = list.filter(m => m.bidangPrioritas.toLowerCase() === activeBidang.toLowerCase());
+      const bidang = activeBidang === 'sarpras' ? 'logistik' : activeBidang;
+      list = list.filter(m => m.bidangPrioritas.toLowerCase() === bidang);
     }
     if (!query) return list;
     return list.filter(item => 
@@ -451,7 +462,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.pimpinan.toLowerCase().includes(query) ||
       item.deskripsi.toLowerCase().includes(query)
     );
-  }, [activeBidang, searchQuery, tingkatObjek]);
+  }, [activeBidang, activeJenjang, currentUser, searchQuery, tingkatObjek]);
 
   const hasStructureData = structureItems.length > 0;
   const hasAttentionData = filteredAttentionItems.length > 0;
@@ -908,7 +919,10 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                 <div
                   key={satker.id}
                   onClick={() => {
-                    if (onOpenLogoExplorer) onOpenLogoExplorer(satker.id);
+                    const mapItem = ALL_COMBINED_SATKERS_DATA.find(item =>
+                      item.id === satker.id || item.id === satker.id.replace('mabes-', '')
+                    );
+                    if (mapItem) onSelectSatkerItem(mapItem);
                   }}
                   className="p-2.5 rounded-xl border border-slate-200 hover:border-[#0B2B5C] bg-white transition cursor-pointer flex flex-col gap-1.5"
                 >
@@ -953,21 +967,6 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
         )}
 
       </div>
-
-      {/* Footer Quick Action */}
-      {onOpenLogoExplorer && (
-        <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-          <span className="text-[11px] text-slate-500 font-medium">
-            Katalog Lambang &amp; Motto
-          </span>
-          <button
-            onClick={() => onOpenLogoExplorer(selectedSatkerId || undefined)}
-            className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-800 text-[11px] font-bold transition cursor-pointer"
-          >
-            Buka Katalog Logo
-          </button>
-        </div>
-      )}
 
     </div>
   );
