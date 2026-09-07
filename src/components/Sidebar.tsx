@@ -308,13 +308,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Role Chip Pill with Tooltip showing active authenticated role (Non-interactive status pill) */}
           <div className="relative group w-full flex justify-center mb-3">
-            <div
+            {/* <div
               id="sidebar-role-indicator"
               className={`px-1.5 py-1 rounded-lg border text-[10px] font-black tracking-tight flex items-center justify-center select-none shadow-xs ${roleBadge.color}`}
               aria-label={`Peran Aktif: ${currentUser.peranLabel}`}
             >
               <span>{roleBadge.label}</span>
-            </div>
+            </div> */}
 
             {/* Hover Tooltip for Role Indicator */}
             <div className="hidden lg:group-hover:flex absolute left-full ml-2.5 top-1/2 -translate-y-1/2 z-50 pointer-events-none items-center">

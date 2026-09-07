@@ -592,6 +592,17 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     markersLayerRef.current.clearLayers();
     heatLayerRef.current.clearLayers();
 
+    const coordinateGroups = new Map<string, SatkerMapItem[]>();
+    filteredSatkers.forEach((satker) => {
+      if (!satker || typeof satker.lat !== 'number' || typeof satker.lng !== 'number' || isNaN(satker.lat) || isNaN(satker.lng)) {
+        return;
+      }
+      const coordinateKey = `${satker.lat.toFixed(4)}:${satker.lng.toFixed(4)}`;
+      const group = coordinateGroups.get(coordinateKey) || [];
+      group.push(satker);
+      coordinateGroups.set(coordinateKey, group);
+    });
+
     filteredSatkers.forEach((satker) => {
       if (!satker || typeof satker.lat !== 'number' || typeof satker.lng !== 'number' || isNaN(satker.lat) || isNaN(satker.lng)) {
         return;
@@ -606,6 +617,14 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       const isPolda = satker.tingkat === 'Polda';
       const isPolres = satker.tingkat === 'Polres' || satker.tingkat === 'Polrestabes' || satker.tingkat === 'Polresta';
       const isPolsek = satker.tingkat === 'Polsek';
+      const coordinateKey = `${satker.lat.toFixed(4)}:${satker.lng.toFixed(4)}`;
+      const coordinateGroup = coordinateGroups.get(coordinateKey) || [];
+      const duplicateIndex = coordinateGroup.findIndex(item => item.id === satker.id);
+      const hasDuplicateCoordinates = coordinateGroup.length > 1;
+      const markerAngle = hasDuplicateCoordinates ? (duplicateIndex * (Math.PI * 2)) / coordinateGroup.length : 0;
+      const markerRadius = hasDuplicateCoordinates ? 0.012 : 0;
+      const markerLat = satker.lat + markerRadius * Math.cos(markerAngle);
+      const markerLng = satker.lng + (markerRadius * Math.sin(markerAngle)) / Math.max(Math.cos((satker.lat * Math.PI) / 180), 0.2);
 
       // Dimensions based on hierarchy
       const markerSize = isMabes ? 52 : isItwil ? 46 : isPolda ? 44 : isSatkerMabes ? 40 : isPolres ? 36 : 28;
@@ -703,7 +722,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
         popupAnchor: [0, -markerSize - 8]
       });
 
-      const marker = L.marker([satker.lat, satker.lng], {
+      const marker = L.marker([markerLat, markerLng], {
         icon: markerIcon,
         title: `${satker.tingkat || 'Satker'}: ${satker.nama || ''} (${satker.singkatan || ''}) - ${atensiInfo.statusAtensiShort}`
       });
@@ -1235,7 +1254,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   }`}
                   title="Tampilkan atau sembunyikan 6 Indikator KPI"
                 >
-                  <BarChart3 className={`w-3.5 h-3.5 ${showKpiCard ? 'text-amber-400' : 'text-blue-700'}`} />
+                  {/* <BarChart3 className={`w-3.5 h-3.5 ${showKpiCard ? 'text-amber-400' : 'text-blue-700'}`} /> */}
                   <span className="hidden sm:inline">Indikator KPI</span>
                 </button>
 
@@ -1249,7 +1268,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   }`}
                   title="Tampilkan Satker Perlu Atensi & Risiko"
                 >
-                  <AlertTriangle className={`w-3.5 h-3.5 ${showCriticalCard ? 'text-amber-300' : 'text-rose-600'}`} />
+                  {/* <AlertTriangle className={`w-3.5 h-3.5 ${showCriticalCard ? 'text-amber-300' : 'text-rose-600'}`} /> */}
                   <span className="hidden md:inline">Atensi &amp; Risiko</span>
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                     showCriticalCard ? 'bg-white text-rose-800' : 'bg-rose-100 text-rose-800'
@@ -1268,7 +1287,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   }`}
                   title="Tampilkan Legenda Simbol & Rentang Risiko"
                 >
-                  <Activity className={`w-3.5 h-3.5 ${showLegendCard ? 'text-emerald-400' : 'text-slate-600'}`} />
+                  {/* <Activity className={`w-3.5 h-3.5 ${showLegendCard ? 'text-emerald-400' : 'text-slate-600'}`} /> */}
                   <span className="hidden xl:inline">Legenda</span>
                 </button>
 
@@ -1282,7 +1301,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   }`}
                   title="Tampilkan Zona Radius Risiko Temuan"
                 >
-                  <Flame className={`w-3.5 h-3.5 ${showRiskHeatmap ? 'text-amber-200' : 'text-amber-600'}`} />
+                  {/* <Flame className={`w-3.5 h-3.5 ${showRiskHeatmap ? 'text-amber-200' : 'text-amber-600'}`} /> */}
                   <span className="hidden xl:inline">Zona Risiko</span>
                 </button>
 
@@ -1293,7 +1312,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   className="min-h-[38px] px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#0B2B5C] to-[#123972] hover:from-[#071D3F] hover:to-[#0B2B5C] text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-xl border border-blue-400/40 cursor-pointer hover:scale-[1.02] active:scale-95 group ring-2 ring-blue-500/20"
                   title="Kembali ke tampilan standar dashboard (Esc)"
                 >
-                  <Minimize2 className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                  {/* <Minimize2 className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" /> */}
                   <span className="tracking-wide">Kembali ke Mode Biasa</span>
                 </button>
               </div>
@@ -1718,7 +1737,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
         {/* Fullscreen Floating Card 3: Legenda Peta & Rentang Risiko */}
         {isMaximized && showLegendCard && (
-          <div className="absolute bottom-16 right-3 sm:right-4 z-[1004] max-w-xs w-[calc(100%-24px)] sm:w-80 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-2xl border border-slate-200/90 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-auto">
+          <div className={`absolute bottom-16 ${activeInspectedSatker && showCriticalCard ? 'left-3 sm:left-4' : 'right-3 sm:right-4'} z-[1007] max-w-xs w-[calc(100%-24px)] sm:w-80 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-2xl border border-slate-200/90 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-auto`}>
             <div className="font-extrabold text-[11px] text-[#0B2B5C] uppercase tracking-wider mb-2 flex items-center justify-between">
               <span>Keterangan Satker &amp; Status</span>
               <button
@@ -2070,7 +2089,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
           const inspectedAtensi = getSatkerAtensiTLHP(satkerToDisplay);
 
           return (
-            <div className="absolute bottom-3.5 right-3.5 z-[1001] max-w-md w-[calc(100%-28px)] sm:w-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-3.5 sm:p-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
+            <div className="absolute bottom-3.5 left-3.5 z-[1001] max-w-md w-[calc(100%-28px)] sm:w-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200 p-3.5 sm:p-4 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
 
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">

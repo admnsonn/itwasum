@@ -382,10 +382,10 @@ export const Header: React.FC<HeaderProps> = ({
                       setShowUserMenu(false);
                       onOpenLogoutModal();
                     }}
-                    className="w-full px-3 py-2.5 rounded-lg text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer border-t border-slate-100"
+                    className="w-full min-h-11 px-3 py-2.5 rounded-xl text-left text-xs font-bold bg-rose-600 border border-rose-600 text-white hover:bg-rose-700 hover:border-rose-700 flex items-center gap-2 transition-colors duration-150 cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Keluar dari Sesi (Logout)</span>
+                    <span>Keluar Sistem</span>
                   </button>
                 </div>
               </div>
