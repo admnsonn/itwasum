@@ -1621,7 +1621,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
         {/* Fullscreen Floating Card 2: Ringkasan Satker Kritis & Atensi Wasrik */}
         {isMaximized && showCriticalCard && (
-          <div className="absolute top-16 sm:top-18 left-3 sm:left-4 z-[1004] max-w-sm w-[calc(100%-24px)] sm:w-96 max-h-[calc(100vh-140px)] flex flex-col bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 animate-in fade-in slide-in-from-left-3 duration-200 pointer-events-auto">
+              <div className={`absolute ${showKpiCard ? 'top-[19rem] sm:top-[18rem]' : 'top-16 sm:top-18'} left-3 sm:left-4 z-[1004] max-w-sm w-[calc(100%-24px)] sm:w-96 max-h-[calc(100vh-140px)] flex flex-col bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 animate-in fade-in slide-in-from-left-3 duration-200 pointer-events-auto`}>
             <div className="p-3 border-b border-slate-100 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">

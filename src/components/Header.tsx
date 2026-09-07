@@ -280,7 +280,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="flex items-center gap-2.5 p-1 sm:pl-1.5 sm:pr-3 py-1 rounded-xl bg-[#071F42] hover:bg-[#0E2E5E] border border-[#1A4278] transition text-left cursor-pointer"
             >
-              <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-amber-400/90 shadow-xs shrink-0 bg-slate-800 flex items-center justify-center text-white font-black text-xs">
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden shadow-xs shrink-0 bg-slate-800 flex items-center justify-center text-white font-black text-xs">
                 {currentUser?.avatarUrl ? (
                   <img
                     src={currentUser.avatarUrl}
@@ -315,7 +315,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-1rem))] max-h-[calc(100vh-4.5rem)] overflow-y-auto bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 z-50 animate-in fade-in">
                 {/* Profile Header */}
                 <div className="p-3.5 bg-slate-900 text-white flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden border-2 border-amber-400 shrink-0 shadow-xs bg-slate-800 flex items-center justify-center font-black text-xs text-amber-400">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 shadow-xs bg-slate-800 flex items-center justify-center font-black text-xs text-amber-400">
                     {currentUser?.avatarUrl ? (
                       <img
                         src={currentUser.avatarUrl}

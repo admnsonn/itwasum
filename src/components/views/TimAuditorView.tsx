@@ -189,7 +189,7 @@ export const TimAuditorView: React.FC<TimAuditorViewProps> = ({ currentUser }) =
                       <td className="px-4 py-3.5 align-middle">
                         <div className="flex items-center gap-3">
                           {a.id === 'aud-1' ? (
-                            <div className="w-9 h-9 rounded-lg overflow-hidden border border-slate-300 shadow-2xs shrink-0 bg-slate-800">
+                            <div className="w-9 h-9 rounded-lg overflow-hidden shadow-2xs shrink-0 bg-slate-800">
                               <img
                                 src={auditorProfileImg}
                                 alt={a.nama}

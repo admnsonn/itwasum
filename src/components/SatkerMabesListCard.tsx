@@ -11,6 +11,7 @@ import {
   Search
 } from 'lucide-react';
 import { SatkerMabesItem, BidangAudit } from '../types';
+import { getSatkerLogoUrl } from '../data/satkerLogosData';
 
 interface SatkerMabesListCardProps {
   satkers: SatkerMabesItem[];
@@ -56,6 +57,7 @@ export const SatkerMabesListCard: React.FC<SatkerMabesListCardProps> = ({
         {filteredSatkers.map((satker) => {
           const isKritis = satker.status === 'kritis';
           const isPerhatian = satker.status === 'perhatian';
+          const logoUrl = getSatkerLogoUrl(satker.id.replace(/^mabes-/, ''), satker.logoUrl);
 
           return (
             <div
@@ -68,13 +70,14 @@ export const SatkerMabesListCard: React.FC<SatkerMabesListCardProps> = ({
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-2xs">
                       <img 
-                        src={satker.logoUrl} 
+                        src={logoUrl} 
                         alt={satker.singkatan}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-contain"
                         onError={(e) => {
                           const target = e.currentTarget;
-                          target.style.display = 'none';
+                          target.src = getSatkerLogoUrl('mabes-polri');
+                          target.onerror = null;
                         }}
                       />
                     </div>
