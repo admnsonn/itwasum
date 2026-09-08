@@ -63,7 +63,10 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
     if (tingkatObjek === 'pusat') {
       setMainNavTab('struktur');
       setStrukturSubTab('mabes');
-    } else if (tingkatObjek === 'wilayah' || (currentUser?.level === 'L1' && tingkatObjek !== 'pusat')) {
+    } else if (
+      tingkatObjek === 'wilayah' ||
+      ((currentUser?.level === 'L1' || currentUser?.level === 'L2') && tingkatObjek !== 'pusat')
+    ) {
       setMainNavTab('struktur');
       setStrukturSubTab('polda');
     }
@@ -91,7 +94,10 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
     } else if (strukturSubTab === 'mabes') {
       items = items.filter(s => ['Mabes', 'Itwasum', 'Biro-Mabes', 'Satker-Mabes'].includes(s.tingkat));
     } else {
-      items = items.filter(s => s.tingkat === 'Polda');
+      const regionalLevels = currentUser?.level === 'L2'
+        ? ['Polda', 'Polrestabes', 'Polresta', 'Polres']
+        : ['Polda'];
+      items = items.filter(s => regionalLevels.includes(s.tingkat));
     }
 
     if (!query) return items;
@@ -617,13 +623,19 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
         </div>
 
         {/* Sub-Filters based on Active Main Tab (Show only for L0 or when relevant) */}
-        {mainNavTab === 'struktur' && (!currentUser || currentUser.level === 'L0') && (
+        {mainNavTab === 'struktur' && (!currentUser || currentUser.level === 'L0' || currentUser.level === 'L1') && (
           <div className="flex items-center gap-1.5 mt-2">
-            {[
-              { id: 'itwil', label: 'Itwil I - V' },
-              { id: 'polda', label: '34 Polda' },
-              { id: 'mabes', label: 'Itwasum & Mabes' }
-            ].map((sub) => (
+            {(currentUser?.level === 'L1'
+              ? [
+                  { id: 'polda', label: 'Polda Itwil' },
+                  { id: 'mabes', label: 'Mabes & Satker' }
+                ]
+              : [
+                  { id: 'itwil', label: 'Itwil I - V' },
+                  { id: 'polda', label: '34 Polda' },
+                  { id: 'mabes', label: 'Itwasum & Mabes' }
+                ]
+            ).map((sub) => (
               <button
                 key={sub.id}
                 disabled={getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes') === 0}
