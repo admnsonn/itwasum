@@ -1,9 +1,5 @@
 import { BidangAudit, CurrentUserProfile, PoldaSatker, SatkerMapItem, TingkatObjek } from '../types';
-
-const ITWIL_SCOPE: Record<string, string[]> = {
-  'itwil-1': ['polda-aceh', 'polda-sumut', 'polda-sumbar', 'polda-riau', 'polda-kepri', 'polda-jambi'],
-  'itwil-3': ['polda-diy', 'polda-jatim', 'polda-bali', 'polda-ntb', 'polda-ntt', 'polda-kalbar', 'polda-kalteng']
-};
+import { ITWIL_POLDA_MAPPING } from '../data/mabesSatkerData';
 
 const AUDIT_TARGET_IDS = new Set([
   'polda-riau',
@@ -52,8 +48,8 @@ function getRoleJurisdiction(satkers: SatkerMapItem[], currentUser: CurrentUserP
     scoped = satkers.filter((satker) => AUDIT_TARGET_IDS.has(satker.id));
   } else if (level === 'L3' && titikWilayahId === 'polres-kampar') {
     scoped = satkers.filter((satker) => satker.id === 'polres-kampar');
-  } else if ((level === 'L1' || level === 'L2') && ITWIL_SCOPE[titikWilayahId]) {
-    const poldaIds = new Set(ITWIL_SCOPE[titikWilayahId]);
+  } else if ((level === 'L1' || level === 'L2') && ITWIL_POLDA_MAPPING[titikWilayahId]) {
+    const poldaIds = new Set(ITWIL_POLDA_MAPPING[titikWilayahId]);
     scoped = satkers.filter((satker) => poldaIds.has(satker.id) || Boolean(satker.parentPoldaId && poldaIds.has(satker.parentPoldaId)));
   } else if (level === 'L2' && titikWilayahId === 'polda-riau') {
     scoped = satkers.filter((satker) => satker.id === 'polda-riau' || satker.parentPoldaId === 'polda-riau');
@@ -78,7 +74,7 @@ export function getRoleScopedPoldas(
     return dedupePoldas(poldas.filter((polda) => polda.id === 'polda-riau'));
   }
 
-  const allowedPoldaIds = ITWIL_SCOPE[currentUser.titikWilayahId];
+  const allowedPoldaIds = ITWIL_POLDA_MAPPING[currentUser.titikWilayahId];
   if (allowedPoldaIds) {
     return dedupePoldas(poldas.filter((polda) => allowedPoldaIds.includes(polda.id)));
   }

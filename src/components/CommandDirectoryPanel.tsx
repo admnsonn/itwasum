@@ -51,7 +51,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   activeJenjang = 'irwasum',
   currentUser
 }) => {
-  const [mainNavTab, setMainNavTab] = useState<'struktur' | 'atensi' | 'mabes'>('struktur');
+  const [mainNavTab, setMainNavTab] = useState<'struktur' | 'atensi'>('struktur');
   const [strukturSubTab, setStrukturSubTab] = useState<'itwil' | 'polda' | 'mabes'>('itwil');
   const [atensiSubFilter, setAtensiSubFilter] = useState<'semua' | TingkatRisikoKey>('semua');
   const [showMatriksRisikoModal, setShowMatriksRisikoModal] = useState(false);
@@ -61,12 +61,13 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   // React to external Tingkat Objek changes from Poros 3
   useEffect(() => {
     if (tingkatObjek === 'pusat') {
-      setMainNavTab('mabes');
-    } else if (tingkatObjek === 'wilayah') {
+      setMainNavTab('struktur');
+      setStrukturSubTab('mabes');
+    } else if (tingkatObjek === 'wilayah' || (currentUser?.level === 'L1' && tingkatObjek !== 'pusat')) {
       setMainNavTab('struktur');
       setStrukturSubTab('polda');
     }
-  }, [tingkatObjek]);
+  }, [currentUser?.level, tingkatObjek]);
 
   // Active Itwil
   const activeItwil = useMemo(() => {
@@ -522,7 +523,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
             >
               <span>
                 {currentUser.level === 'L2' && 'Polda & 12 Polres'}
-                {currentUser.level === 'L1' && 'Polda Binaan'}
+                {currentUser.level === 'L1' && 'Struktur'}
                 {currentUser.level === 'L3' && 'Polres & Polsek'}
                 {currentUser.peran === 'pengawas_tim' && '5 Objek Audit'}
               </span>
@@ -555,7 +556,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-1 p-1 bg-white rounded-xl border border-slate-200">
+          <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-xl border border-slate-200">
             <button
               disabled={!hasStructureData}
               onClick={() => {
@@ -586,20 +587,6 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
               Atensi &amp; TLHP
             </button>
 
-            <button
-              disabled={!hasMabesData}
-              onClick={() => {
-                setMainNavTab('mabes');
-                setSearchQuery('');
-              }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition ${
-                mainNavTab === 'mabes'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : hasMabesData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
-              }`}
-            >
-              Satker Mabes
-            </button>
           </div>
         )}
 
@@ -613,7 +600,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                 ? "Cari polda, polres, pejabat..."
                 : mainNavTab === 'atensi'
                 ? "Cari satker atensi, masalah..."
-                : "Cari satker mabes, pejabat..."
+                : "Cari satker, pejabat..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -908,61 +895,6 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                 );
               })
             )}
-          </>
-        )}
-
-        {/* TAB 3: SATKER MABES */}
-        {mainNavTab === 'mabes' && (
-          <>
-            {mabesItems.map((satker) => {
-              return (
-                <div
-                  key={satker.id}
-                  onClick={() => {
-                    const mapItem = ALL_COMBINED_SATKERS_DATA.find(item =>
-                      item.id === satker.id || item.id === satker.id.replace('mabes-', '')
-                    );
-                    if (mapItem) onSelectSatkerItem(mapItem);
-                  }}
-                  className="p-2.5 rounded-xl border border-slate-200 hover:border-[#0B2B5C] bg-white transition cursor-pointer flex flex-col gap-1.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 p-0.5 flex items-center justify-center shrink-0">
-                        <img 
-                          src={satker.logoUrl} 
-                          alt={satker.singkatan}
-                          className="w-full h-full object-contain"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-extrabold text-xs text-slate-900 truncate">
-                          {satker.nama}
-                        </h4>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {satker.pimpinanJabatan}: {satker.pimpinan}
-                        </p>
-                      </div>
-                    </div>
-
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-700 uppercase shrink-0">
-                      {satker.bidangPrioritas}
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
-                    {satker.deskripsi}
-                  </p>
-
-                  <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-600">
-                    <span>Temuan: <strong>{satker.temuanTerbuka}</strong></span>
-                    <span>IKU: <strong className="text-[#0B2B5C]">{satker.capaianIKU}%</strong></span>
-                    <span>Serapan: <strong>{satker.serapanAnggaran}%</strong></span>
-                  </div>
-                </div>
-              );
-            })}
           </>
         )}
 

@@ -25,6 +25,7 @@ import {
   User
 } from 'lucide-react';
 import { ITWIL_METADATA } from '../data/mabesSatkerData';
+import { ITWIL_POLDA_MAPPING } from '../data/mabesSatkerData';
 
 interface ThreeAxesBarProps {
   jenjang: JenjangPengguna;
@@ -67,6 +68,9 @@ export const ThreeAxesBar: React.FC<ThreeAxesBarProps> = ({
   const isL1 = userLevel === 'L1';
   const isL2 = userLevel === 'L2';
   const isL3 = userLevel === 'L3';
+  const poldaBinaanCount = currentUser?.titikWilayahId
+    ? ITWIL_POLDA_MAPPING[currentUser.titikWilayahId]?.length || 0
+    : 0;
 
   const hasBidangGarkeu = allowedBidang.includes('Garkeu');
   const hasBidangOpsnal = allowedBidang.includes('Opsnal');
@@ -453,7 +457,7 @@ export const ThreeAxesBar: React.FC<ThreeAxesBarProps> = ({
                           ? 'bg-[#0B2545] text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
                       }`}
-                      title="6 Polda Binaan Itwil I"
+                      title={`${poldaBinaanCount} Polda Binaan ${currentUser?.titikWilayahNama || 'Itwil'}`}
                     >
                       Polda Binaan
                     </button>
