@@ -968,7 +968,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       }
     >
       {/* Contextual Focus Banner for Poros 3 (Only in Embedded Mode) */}
-      {!isMaximized && tingkatObjek === 'pusat' && (
+      {/* {!isMaximized && tingkatObjek === 'pusat' && (
         <div className="relative z-30 px-3.5 py-2 bg-gradient-to-r from-amber-600 via-amber-700 to-[#0B2B5C] text-white flex items-center justify-between gap-2 shadow-xs text-xs flex-wrap">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse"></span>
@@ -1013,7 +1013,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
             Supervisi Itwil I - V
           </span>
         </div>
-      )}
+      )} */}
 
       {/* Top Filter Bar: Status Pills & Tingkat Satker (Only in Embedded Mode) */}
       {!isMaximized && (
