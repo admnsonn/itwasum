@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ALL_COMBINED_SATKERS_DATA } from '../data/allSatkersData';
 import { POLDA_LOGOS_DATA, SATKER_JAJARAN_DATA, getSatkerLogo } from '../data/satkerLogosData';
 
 interface PoldaLogoProps {
@@ -431,8 +432,38 @@ export const PoldaLogo: React.FC<PoldaLogoProps> = ({
   const config = EMBLEM_CONFIGS[poldaId] || DEFAULT_CONFIG;
   const label = poldaSingkatan || config.code;
 
+  // Lookup actual live registry first so Polres/Polsek/Satker items use their real emblem
+  const registryMatch = ALL_COMBINED_SATKERS_DATA.find((item) => {
+    const idMatch = item.id.toLowerCase() === poldaId.toLowerCase();
+    const nameMatch = !!poldaNama && item.nama.toLowerCase() === poldaNama.toLowerCase();
+    const singkatanMatch = !!poldaSingkatan && item.singkatan.toLowerCase() === poldaSingkatan.toLowerCase();
+    return idMatch || nameMatch || singkatanMatch;
+  });
+
   // Lookup scraped satker data from Google/Wikimedia repository
-  const satkerData = getSatkerLogo(poldaId) || POLDA_LOGOS_DATA[poldaId] || SATKER_JAJARAN_DATA.find(s => s.id === poldaId) || (poldaNama ? getSatkerLogo(poldaNama) : undefined);
+  const satkerData =
+    getSatkerLogo(poldaId) ||
+    POLDA_LOGOS_DATA[poldaId] ||
+    SATKER_JAJARAN_DATA.find(s => s.id === poldaId) ||
+    (poldaNama ? getSatkerLogo(poldaNama) : undefined) ||
+    (registryMatch ? {
+      id: registryMatch.id,
+      nama: registryMatch.nama,
+      singkatan: registryMatch.singkatan,
+      tingkat: registryMatch.tingkat,
+      parentPoldaId: registryMatch.parentPoldaId,
+      parentPoldaNama: registryMatch.parentPoldaNama,
+      pulau: registryMatch.pulau,
+      imageUrl: registryMatch.wikiLogoUrl,
+      source: 'Data struktur live satker',
+      motto: registryMatch.motto || 'Tri Brata & Catur Prasetya',
+      deskripsi: registryMatch.wilayahHukum || registryMatch.nama,
+      warnaUtama: '#0B2B5C',
+      warnaAksen: '#F59E0B',
+      wilayahHukum: registryMatch.wilayahHukum
+    } : undefined);
+
+  const liveLogoUrl = registryMatch?.wikiLogoUrl || satkerData?.imageUrl;
 
   // Dimensions mapping
   const sizeMap = {
@@ -445,7 +476,7 @@ export const PoldaLogo: React.FC<PoldaLogoProps> = ({
   };
 
   const currentSize = sizeMap[size];
-  const hasScrapedImage = preferScrapedImage && !imageError && satkerData?.imageUrl;
+  const hasScrapedImage = preferScrapedImage && !imageError && !!liveLogoUrl;
 
   return (
     <div 
@@ -456,8 +487,8 @@ export const PoldaLogo: React.FC<PoldaLogoProps> = ({
       {hasScrapedImage ? (
         <div className="relative w-full h-full flex items-center justify-center">
           <img
-            src={satkerData.imageUrl}
-            alt={poldaNama || satkerData.nama || `Lambang ${label}`}
+            src={liveLogoUrl}
+            alt={poldaNama || satkerData?.nama || `Lambang ${label}`}
             referrerPolicy="no-referrer"
             loading="lazy"
             onError={() => setImageError(true)}
