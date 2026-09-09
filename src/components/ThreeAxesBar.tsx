@@ -158,7 +158,7 @@ export const ThreeAxesBar: React.FC<ThreeAxesBarProps> = ({
               {/* Dropdown Itwil with explicit regions */}
               <div className="relative w-full sm:flex-1">
                 <select
-                  value={jenjang.startsWith('itwil-') ? jenjang : 'itwil-1'}
+                  value={jenjang.startsWith('itwil-') ? jenjang : ''}
                   onChange={(e) => onSelectJenjang(e.target.value as JenjangPengguna)}
                   style={{
                     backgroundColor: jenjang.startsWith('itwil-') ? '#0B2545' : '#ffffff',
@@ -170,6 +170,7 @@ export const ThreeAxesBar: React.FC<ThreeAxesBarProps> = ({
                       : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
                   }`}
                 >
+                  <option value="" className="text-slate-500 bg-white">Pilih Itwil</option>
                   <option value="itwil-1" className="text-slate-900 bg-white">Itwil I (Sumut, Aceh, Riau, Sumbar, Kepri, Jambi)</option>
                   <option value="itwil-2" className="text-slate-900 bg-white">Itwil II (Jawa, Lampung, Sumbagsel, Banten)</option>
                   <option value="itwil-3" className="text-slate-900 bg-white">Itwil III (Jatim, Bali, NTB, NTT, Kalbar, Kalteng)</option>

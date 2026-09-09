@@ -187,7 +187,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
     <div id="beranda-view" className={isMapFullscreen ? "w-full h-full overflow-hidden" : "space-y-4"}>
 
       {/* If an Itwil is specifically selected, show Itwil Leadership Banner */}
-      {!isMapFullscreen && jenjang.startsWith('itwil-') && ITWIL_METADATA[jenjang] && (
+      {/* {!isMapFullscreen && jenjang.startsWith('itwil-') && ITWIL_METADATA[jenjang] && (
         <div className="p-3 bg-[#0B2B5C] text-white rounded-2xl border border-blue-800 shadow-xs flex items-center justify-between gap-3 animate-in fade-in">
           <div>
             <div className="flex items-center gap-2">
@@ -198,9 +198,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
                 {ITWIL_METADATA[jenjang].nama} - {ITWIL_METADATA[jenjang].pimpinan}
               </h3>
             </div>
-            <p className="text-xs text-blue-200 mt-0.5">
-              {ITWIL_METADATA[jenjang].wilayahDeskripsi}
-            </p>
           </div>
           <button
             onClick={() => setJenjang('irwasum')}
@@ -209,6 +206,20 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             Kembali ke Nasional (34 Polda)
           </button>
         </div>
+      )} */}
+
+      {/* Executive Indicator Strip */}
+      {!isMapFullscreen && (
+        <ExecutiveIndicatorStrip
+          poldaList={displayPoldaList}
+          activeBidang={bidang}
+          onSelectBidang={(b) => setBidang(b)}
+          activeJenjang={jenjang}
+          tingkatObjek={tingkatObjek}
+          activeIsland={selectedIsland}
+          currentUser={currentUser}
+          onOpenKPICustomizer={() => setKpiCustomizerOpen(true)}
+        />
       )}
 
       {/* Tiga Poros Pengawasan Presisi (Yurisdiksi Wilayah, Bidang Pengawasan, Tingkat Objek) */}
@@ -227,20 +238,6 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           onOpenKPICustomizer={() => setKpiCustomizerOpen(true)}
           onOpenUsulanModal={() => setUsulanHakAksesOpen(true)}
           onTriggerSecurityRejection={handleTriggerSecurityRejection}
-        />
-      )}
-
-      {/* Executive Indicator Strip */}
-      {!isMapFullscreen && (
-        <ExecutiveIndicatorStrip
-          poldaList={displayPoldaList}
-          activeBidang={bidang}
-          onSelectBidang={(b) => setBidang(b)}
-          activeJenjang={jenjang}
-          tingkatObjek={tingkatObjek}
-          activeIsland={selectedIsland}
-          currentUser={currentUser}
-          onOpenKPICustomizer={() => setKpiCustomizerOpen(true)}
         />
       )}
 

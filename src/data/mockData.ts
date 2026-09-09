@@ -21,8 +21,8 @@ export const POLDA_DATA: PoldaSatker[] = [
     dokumenTerkumpul: 10,
     totalDokumen: 10,
     auditBerjalan: false,
-    kapolda: 'Irjen Pol. Achmad Kartiko, S.I.K., M.H.',
-    irwasda: 'Kombes Pol. Misbahul Munauwar, S.H.',
+    kapolda: 'Komjen Pol. Asep Edi Suheri, S.I.K., M.Si.',
+    irwasda: 'Brigjen Pol. Sri Satyatama, S.I.K., M.H., M.M., M.Han.',
     rincianTemuan: [
       {
         id: 't-aceh-1',

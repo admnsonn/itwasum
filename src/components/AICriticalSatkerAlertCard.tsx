@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { PoldaSatker, SatkerMapItem, TingkatObjek } from '../types';
 import { ALL_COMBINED_SATKERS_DATA } from '../data/allSatkersData';
+import { getSatkerAtensiTLHP } from '../utils/riskRatingUtils';
 import { ShieldAlert, ShieldCheck, AlertCircle, FileText, CheckCircle2, ChevronRight, Building2, Building } from 'lucide-react';
 
 interface AICriticalSatkerAlertCardProps {
@@ -21,54 +22,56 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
 }) => {
   // Identify currently selected satker
   const activeSelectedSatker = useMemo(() => {
-    const currentExternal = satkerItem || selectedPolda;
-    if (!currentExternal) return null;
-
-    const match = ALL_COMBINED_SATKERS_DATA.find(s => s.id === currentExternal.id);
-    if (match) return match;
-
-    if ('kapolda' in currentExternal) {
-      const p = currentExternal as PoldaSatker;
-      return {
-        id: p.id,
-        nama: p.nama,
-        singkatan: p.singkatan,
-        tingkat: 'Polda' as const,
-        parentPoldaId: p.id,
-        parentPoldaNama: p.nama,
-        pulau: p.pulau,
-        ibukota: p.ibukota,
-        lat: p.lat,
-        lng: p.lng,
-        status: p.status,
-        temuanTerbuka: p.temuanTerbuka,
-        temuanSelesai: p.temuanSelesai,
-        totalTemuan: p.totalTemuan,
-        capaianIKU: p.capaianIKU,
-        targetIKU: p.targetIKU,
-        dokumenTerkumpul: p.dokumenTerkumpul,
-        totalDokumen: p.totalDokumen,
-        auditBerjalan: p.auditBerjalan,
-        pimpinanNama: p.kapolda,
-        pimpinanJabatan: 'Kapolda',
-        irwasdaOrKasiwas: p.irwasda,
-        wikiLogoUrl: '',
-        wilayahHukum: `Provinsi ${p.singkatan}`
-      };
+    if (satkerItem) {
+      return satkerItem;
     }
 
-    return currentExternal as SatkerMapItem;
+    if (!selectedPolda) {
+      return null;
+    }
+
+    return {
+      id: selectedPolda.id,
+      nama: selectedPolda.nama,
+      singkatan: selectedPolda.singkatan,
+      tingkat: 'Polda' as const,
+      parentPoldaId: selectedPolda.id,
+      parentPoldaNama: selectedPolda.nama,
+      pulau: selectedPolda.pulau,
+      ibukota: selectedPolda.ibukota,
+      lat: selectedPolda.lat,
+      lng: selectedPolda.lng,
+      status: selectedPolda.status,
+      temuanTerbuka: selectedPolda.temuanTerbuka,
+      temuanSelesai: selectedPolda.temuanSelesai,
+      totalTemuan: selectedPolda.totalTemuan,
+      capaianIKU: selectedPolda.capaianIKU,
+      targetIKU: selectedPolda.targetIKU,
+      dokumenTerkumpul: selectedPolda.dokumenTerkumpul,
+      totalDokumen: selectedPolda.totalDokumen,
+      auditBerjalan: selectedPolda.auditBerjalan,
+      pimpinanNama: selectedPolda.kapolda,
+      pimpinanJabatan: 'Kapolda',
+      irwasdaOrKasiwas: selectedPolda.irwasda,
+      wikiLogoUrl: '',
+      wilayahHukum: `Provinsi ${selectedPolda.singkatan}`
+    } satisfies SatkerMapItem;
   }, [satkerItem, selectedPolda]);
 
-  const isAman = useMemo(() => {
-    if (!activeSelectedSatker) return false;
-    return activeSelectedSatker.status === 'aman';
+  const atensiInfo = useMemo(() => {
+    if (!activeSelectedSatker) return null;
+    return getSatkerAtensiTLHP(activeSelectedSatker);
   }, [activeSelectedSatker]);
 
+  const isAman = useMemo(() => {
+    if (!atensiInfo) return false;
+    return atensiInfo.def.key === 'rendah' || atensiInfo.def.key === 'sangat_rendah';
+  }, [atensiInfo]);
+
   const conditionTheme = useMemo(() => {
-    if (!activeSelectedSatker) return null;
-    const s = activeSelectedSatker.status;
-    if (s === 'kritis') {
+    if (!activeSelectedSatker || !atensiInfo) return null;
+    const key = atensiInfo.def.key;
+    if (key === 'sangat_tinggi') {
       return {
         cardBorder: 'border-red-300',
         badgeBg: 'bg-red-800 text-white',
@@ -77,7 +80,7 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
         iconColor: 'text-red-700'
       };
     }
-    if (s === 'tinggi') {
+    if (key === 'tinggi') {
       return {
         cardBorder: 'border-rose-300',
         badgeBg: 'bg-rose-700 text-white',
@@ -86,35 +89,44 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
         iconColor: 'text-rose-600'
       };
     }
-    if (s === 'perhatian') {
+    if (key === 'sedang') {
       return {
         cardBorder: 'border-amber-300',
         badgeBg: 'bg-amber-600 text-white',
-        badgeText: 'PERLU ATENSI KHUSUS',
+        badgeText: 'STATUS SEDANG',
         icon: AlertCircle,
         iconColor: 'text-amber-600'
+      };
+    }
+    if (key === 'sangat_rendah') {
+      return {
+        cardBorder: 'border-blue-300',
+        badgeBg: 'bg-blue-700 text-white',
+        badgeText: 'STATUS SANGAT RENDAH / OPTIMAL',
+        icon: ShieldCheck,
+        iconColor: 'text-blue-700'
       };
     }
     return {
       cardBorder: 'border-emerald-300',
       badgeBg: 'bg-emerald-700 text-white',
-      badgeText: 'STANDAR WTP / TERKENDALI',
+      badgeText: 'STATUS RENDAH / TERKENDALI',
       icon: ShieldCheck,
       iconColor: 'text-emerald-700'
     };
-  }, [activeSelectedSatker]);
+  }, [activeSelectedSatker, atensiInfo]);
 
   const analysisList = useMemo(() => {
-    if (!activeSelectedSatker || isAman) return [];
+    if (!activeSelectedSatker || isAman || !atensiInfo) return [];
 
     const temuanTerbuka = activeSelectedSatker.temuanTerbuka;
     const capaianIKU = activeSelectedSatker.capaianIKU;
     const pimpinanNama = activeSelectedSatker.pimpinanNama;
     const pimpinanJabatan = activeSelectedSatker.pimpinanJabatan;
-    const status = activeSelectedSatker.status;
+    const riskKey = atensiInfo.def.key;
 
-    const isCritical = status === 'kritis';
-    const isTinggi = status === 'tinggi';
+    const isCritical = riskKey === 'sangat_tinggi';
+    const isTinggi = riskKey === 'tinggi';
 
     const items: { title: string; detail: string; category: string }[] = [];
 
@@ -154,7 +166,7 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
     }
 
     return items;
-  }, [activeSelectedSatker, isAman]);
+  }, [activeSelectedSatker, atensiInfo, isAman]);
 
   // If no satker is selected, display high-level executive strategic overview tailored by Tingkat Objek
   if (!activeSelectedSatker) {
