@@ -52,7 +52,7 @@ interface IndonesiaMapProps {
   onSelectJenjang?: (jenjang: JenjangPengguna) => void;
   onSelectTingkatObjek?: (tingkat: TingkatObjek) => void;
   selectedIsland?: string;
-  onSelectIsland?: (island: string) => void;
+  onSelectIsland?: (island: SatkerMapItem['pulau'] | 'Semua') => void;
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
 }
@@ -145,9 +145,9 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const heatLayerRef = useRef<L.LayerGroup | null>(null);
 
   // States
-  const [internalSelectedIsland, setInternalSelectedIsland] = useState<string>('Semua');
+  const [internalSelectedIsland, setInternalSelectedIsland] = useState<SatkerMapItem['pulau'] | 'Semua'>('Semua');
   const selectedIsland = controlledSelectedIsland ?? internalSelectedIsland;
-  const setSelectedIsland = (island: string) => {
+  const setSelectedIsland = (island: SatkerMapItem['pulau'] | 'Semua') => {
     setInternalSelectedIsland(island);
     onSelectIsland?.(island);
   };
@@ -167,23 +167,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const [showLegendCard, setShowLegendCard] = useState<boolean>(false);
 
   const roleScopedSatkers = useMemo(() => {
-    const scopedSatkers = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
-    if (!activeJenjang?.startsWith('itwil-') || tingkatObjek === 'pusat') return scopedSatkers;
-
-    const allowedPoldaIds = new Set(ITWIL_POLDA_MAPPING[activeJenjang] || []);
-    return scopedSatkers.filter((satker) => (
-      allowedPoldaIds.has(satker.id) || allowedPoldaIds.has(satker.parentPoldaId)
-    ));
-  }, [activeBidang, activeJenjang, currentUser, tingkatObjek]
-  );
+    return getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek, activeJenjang);
+  }, [activeBidang, activeJenjang, currentUser, tingkatObjek]);
   const mapFilterBaseSatkers = roleScopedSatkers.filter((satker) => {
-    if (tingkatFilter === 'mabes' && !['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)) {
-      return false;
-    }
-    if (tingkatFilter === 'polda' && satker.tingkat !== 'Polda') {
-      return false;
-    }
-    if (tingkatFilter === 'polres' && !['Polres', 'Polrestabes', 'Polresta'].includes(satker.tingkat)) {
+    if (satker.tingkat === 'Polsek') {
       return false;
     }
     if (statusFilter === 'perhatian' && satker.status === 'aman') {
@@ -192,7 +179,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     if (statusFilter === 'audit' && !satker.auditBerjalan) {
       return false;
     }
-    return satker.tingkat !== 'Polsek';
+    return true;
   });
   const islandFilterOptions = useMemo(() => {
     return ISLAND_NAMES.map((island) => ({
@@ -458,7 +445,8 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       return false;
     }
 
-    // Local Tingkat filter (Semua, Mabes, Polda, Polres)
+    // Local Tingkat filter acts as the actual map scope: selecting Polda shows only Polda,
+    // selecting Polres shows only Polres, and Polsek is excluded entirely.
     if (tingkatFilter !== 'all') {
       if (tingkatFilter === 'mabes' && !['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)) {
         return false;
@@ -888,7 +876,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   }, [onOpenDetailDrawer]);
 
   // 4. Island Region FlyTo Navigation
-  const handleSelectIsland = (island: string) => {
+  const handleSelectIsland = (island: SatkerMapItem['pulau'] | 'Semua') => {
     setSelectedIsland(island);
     if (!mapInstanceRef.current) return;
     

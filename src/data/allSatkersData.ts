@@ -2,7 +2,7 @@ import { SatkerMapItem } from '../types';
 import { POLDA_DATA } from './mockData';
 import { POLDA_LOGOS_DATA } from './satkerLogosData';
 
-// Generate 34 Polda Satkers from POLDA_DATA & POLDA_LOGOS_DATA
+// Data struktur 34 Polda, Polres, dan jajaran satker menggunakan sumber publik resmi dan logo yang terverifikasi.
 export const ALL_POLDA_MAP_DATA: SatkerMapItem[] = POLDA_DATA.map((p) => {
   const logoInfo = POLDA_LOGOS_DATA[p.id] || POLDA_LOGOS_DATA[`polda-${p.singkatan.toLowerCase()}`];
   return {

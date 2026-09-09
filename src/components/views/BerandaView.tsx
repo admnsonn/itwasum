@@ -112,19 +112,15 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
 
   // Filtered Polda list by Jenjang (if Itwil selected, filter to that Itwil's Polda)
   const displayPoldaList = useMemo(() => {
-    const roleScopedPoldaList = getRoleScopedPoldas(simulatedPoldaList, currentUser);
-    const roleScopedSatkers = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, bidang, tingkatObjek);
+    const roleScopedPoldaList = getRoleScopedPoldas(simulatedPoldaList, currentUser, jenjang);
+    const roleScopedSatkers = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, bidang, tingkatObjek, jenjang);
     const scopedSatkerIds = new Set(
       roleScopedSatkers
         .filter((satker) => selectedIsland === 'Semua' || satker.pulau === selectedIsland)
         .map((satker) => satker.parentPoldaId || satker.id)
     );
-    const scopedPoldaList = roleScopedPoldaList.filter((polda) => scopedSatkerIds.has(polda.id));
-    if (jenjang.startsWith('itwil-')) {
-      const allowedPoldaIds = ITWIL_POLDA_MAPPING[jenjang] || [];
-      return scopedPoldaList.filter(p => allowedPoldaIds.includes(p.id));
-    }
-    return scopedPoldaList;
+
+    return roleScopedPoldaList.filter((polda) => scopedSatkerIds.has(polda.id));
   }, [bidang, currentUser, jenjang, selectedIsland, simulatedPoldaList, tingkatObjek]);
 
   // Selected active Polda
@@ -263,6 +259,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
                 onSelectPolda(id);
                 setSelectedSatkerMapItem(null);
               }}
+              onSelectJenjang={setJenjang}
               activeBidang={bidang}
               tingkatObjek={tingkatObjek}
               activeJenjang={jenjang}

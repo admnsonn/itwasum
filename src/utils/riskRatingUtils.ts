@@ -226,10 +226,10 @@ export function getSatkerAtensiTLHP(item: {
 
   switch (def.key) {
     case 'sangat_tinggi':
-      statusAtensi = 'Atensi Kritis (Pengawasan Prioritas Utama)';
-      statusAtensiShort = 'Atensi Kritis';
-      statusTLHP = `TLHP Kritis (<50%) • ${terbuka} Temuan Menunggak`;
-      keterangan = 'Memerlukan sidang pengawasan khusus dan akselerasi dokumen TLHP.';
+      statusAtensi = 'Sangat Tinggi';
+      statusAtensiShort = 'Sangat Tinggi';
+      statusTLHP = 'TLHP <50%';
+      keterangan = 'Sangat tinggi: indikator pengawasan prioritas utama dengan pencapaian TLHP di bawah 50%.';
       ringClass = 'ring-red-600';
       borderClass = 'border-red-600';
       heatRadiusKm = 70;
@@ -237,10 +237,10 @@ export function getSatkerAtensiTLHP(item: {
       break;
 
     case 'tinggi':
-      statusAtensi = 'Atensi Khusus (Percepatan Tindak Lanjut)';
-      statusAtensiShort = 'Atensi Khusus';
-      statusTLHP = `TLHP Lambat (50-69%) • Progres ${persenTLHP}%`;
-      keterangan = 'Terdapat temuan terbuka yang mendekati batas jatuh tempo pengawasan.';
+      statusAtensi = 'Tinggi';
+      statusAtensiShort = 'Tinggi';
+      statusTLHP = 'TLHP 50-69%';
+      keterangan = 'Tinggi: penanganan tindak lanjut perlu dipercepat agar target TLHP segera naik.';
       ringClass = 'ring-orange-500';
       borderClass = 'border-orange-500';
       heatRadiusKm = 50;
@@ -248,10 +248,10 @@ export function getSatkerAtensiTLHP(item: {
       break;
 
     case 'sedang':
-      statusAtensi = 'Atensi Pengawasan (Pemantauan Berkala)';
-      statusAtensiShort = 'Atensi Pengawasan';
-      statusTLHP = `TLHP Cukup (70-84%) • Progres ${persenTLHP}%`;
-      keterangan = 'Sebagian besar temuan sedang dalam proses verifikasi dokumen Itwasum.';
+      statusAtensi = 'Sedang';
+      statusAtensiShort = 'Sedang';
+      statusTLHP = 'TLHP 70-84%';
+      keterangan = 'Sedang: pemantauan tetap diperlukan agar penyelesaian TLHP konsisten.';
       ringClass = 'ring-amber-400';
       borderClass = 'border-amber-400';
       heatRadiusKm = 35;
@@ -259,10 +259,10 @@ export function getSatkerAtensiTLHP(item: {
       break;
 
     case 'rendah':
-      statusAtensi = 'Kepatuhan Baik (Standar Mutu Terpenuhi)';
-      statusAtensiShort = 'Kepatuhan Baik';
-      statusTLHP = `TLHP Progresif (85-94%) • Progres ${persenTLHP}%`;
-      keterangan = 'Penyelesaian tindak lanjut berjalan tertib sesuai SOP Itwasum.';
+      statusAtensi = 'Rendah';
+      statusAtensiShort = 'Rendah';
+      statusTLHP = 'TLHP 85-94%';
+      keterangan = 'Rendah: kinerja tindak lanjut sudah baik dan berada dalam zona aman.';
       ringClass = 'ring-emerald-500';
       borderClass = 'border-emerald-500';
       heatRadiusKm = 22;
@@ -270,10 +270,10 @@ export function getSatkerAtensiTLHP(item: {
       break;
 
     case 'sangat_rendah':
-      statusAtensi = 'Patuh Sempurna (Nihil Atensi Khusus)';
-      statusAtensiShort = 'Patuh Sempurna';
-      statusTLHP = `TLHP Tuntas Paripurna (≥95%) • Progres ${persenTLHP}%`;
-      keterangan = 'Seluruh rekomendasi audit telah ditindaklanjuti secara akuntabel.';
+      statusAtensi = 'Sangat Rendah';
+      statusAtensiShort = 'Sangat Rendah';
+      statusTLHP = 'TLHP ≥95%';
+      keterangan = 'Sangat rendah: seluruh rekomendasi audit telah ditindaklanjuti secara akuntabel.';
       ringClass = 'ring-blue-600';
       borderClass = 'border-blue-600';
       heatRadiusKm = 15;

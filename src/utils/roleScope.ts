@@ -1,4 +1,4 @@
-import { BidangAudit, CurrentUserProfile, PoldaSatker, SatkerMapItem, TingkatObjek } from '../types';
+import { BidangAudit, CurrentUserProfile, JenjangPengguna, PoldaSatker, SatkerMapItem, TingkatObjek } from '../types';
 import { ITWIL_POLDA_MAPPING } from '../data/mabesSatkerData';
 
 const AUDIT_TARGET_IDS = new Set([
@@ -9,15 +9,36 @@ const AUDIT_TARGET_IDS = new Set([
   'polres-bengkalis'
 ]);
 
+function applyJenjangScopeToSatkers(
+  satkers: SatkerMapItem[],
+  activeJenjang?: JenjangPengguna,
+  tingkatObjek: TingkatObjek = 'semua'
+): SatkerMapItem[] {
+  if (!activeJenjang?.startsWith('itwil-')) return satkers;
+  if (tingkatObjek === 'pusat') return satkers;
+
+  const allowedPoldaIds = new Set(ITWIL_POLDA_MAPPING[activeJenjang] || []);
+  const isRegionalLevel = (item: SatkerMapItem) => ['Polda', 'Polrestabes', 'Polresta', 'Polres'].includes(item.tingkat);
+
+  return satkers.filter((satker) => {
+    if (!isRegionalLevel(satker)) return true;
+    return allowedPoldaIds.has(satker.id) || (Boolean(satker.parentPoldaId) && allowedPoldaIds.has(satker.parentPoldaId));
+  });
+}
+
 export function getRoleScopedSatkers(
   satkers: SatkerMapItem[],
   currentUser?: CurrentUserProfile,
   activeBidang: BidangAudit = 'semua',
-  tingkatObjek: TingkatObjek = 'semua'
+  tingkatObjek: TingkatObjek = 'semua',
+  activeJenjang?: JenjangPengguna
 ): SatkerMapItem[] {
-  const scopedByRole = !currentUser || currentUser.level === 'L0'
+  let scopedByRole = !currentUser || currentUser.level === 'L0'
     ? satkers
     : getRoleJurisdiction(satkers, currentUser);
+
+  scopedByRole = applyJenjangScopeToSatkers(scopedByRole, activeJenjang, tingkatObjek);
+
   const centralSatkers = satkers.filter((satker) => (
     ['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)
   ));
@@ -62,24 +83,38 @@ function getRoleJurisdiction(satkers: SatkerMapItem[], currentUser: CurrentUserP
 
 export function getRoleScopedPoldas(
   poldas: PoldaSatker[],
-  currentUser?: CurrentUserProfile
+  currentUser?: CurrentUserProfile,
+  activeJenjang?: JenjangPengguna
 ): PoldaSatker[] {
-  if (!currentUser || currentUser.level === 'L0') return dedupePoldas(poldas);
+  let scoped = !currentUser || currentUser.level === 'L0'
+    ? poldas
+    : getRoleJurisdictionPolda(poldas, currentUser);
 
-  if (currentUser.peran === 'pengawas_tim' || currentUser.peran === 'ketua_tim' || currentUser.peran === 'auditor' || currentUser.peran === 'auditee') {
-    return dedupePoldas(poldas.filter((polda) => polda.id === 'polda-riau'));
+  if (activeJenjang?.startsWith('itwil-')) {
+    const allowedPoldaIds = new Set(ITWIL_POLDA_MAPPING[activeJenjang] || []);
+    scoped = scoped.filter((polda) => allowedPoldaIds.has(polda.id));
   }
 
-  if (currentUser.level === 'L2' && currentUser.titikWilayahId === 'polda-riau') {
-    return dedupePoldas(poldas.filter((polda) => polda.id === 'polda-riau'));
+  return dedupePoldas(scoped);
+}
+
+function getRoleJurisdictionPolda(poldas: PoldaSatker[], currentUser: CurrentUserProfile): PoldaSatker[] {
+  const { level, titikWilayahId, peran } = currentUser;
+
+  if (peran === 'pengawas_tim' || peran === 'ketua_tim' || peran === 'auditor' || peran === 'auditee') {
+    return poldas.filter((polda) => polda.id === 'polda-riau');
   }
 
-  const allowedPoldaIds = ITWIL_POLDA_MAPPING[currentUser.titikWilayahId];
+  if (level === 'L2' && titikWilayahId === 'polda-riau') {
+    return poldas.filter((polda) => polda.id === 'polda-riau');
+  }
+
+  const allowedPoldaIds = ITWIL_POLDA_MAPPING[titikWilayahId];
   if (allowedPoldaIds) {
-    return dedupePoldas(poldas.filter((polda) => allowedPoldaIds.includes(polda.id)));
+    return poldas.filter((polda) => allowedPoldaIds.includes(polda.id));
   }
 
-  return dedupePoldas(poldas);
+  return poldas;
 }
 
 function dedupeSatkers(satkers: SatkerMapItem[]): SatkerMapItem[] {

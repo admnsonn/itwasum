@@ -4,7 +4,7 @@ import {
   Search, 
   X
 } from 'lucide-react';
-import { SatkerMapItem, PoldaSatker, PerluPerhatianItem, SatkerMabesItem, BidangAudit, TingkatObjek } from '../types';
+import { SatkerMapItem, PoldaSatker, PerluPerhatianItem, SatkerMabesItem, BidangAudit, TingkatObjek, JenjangPengguna } from '../types';
 import { 
   ALL_MABES_ITWASUM_MAP_DATA, 
   ALL_SATKER_MABES_MAP_DATA, 
@@ -23,7 +23,8 @@ import {
   getDefinisiRisikoFromLegacy, 
   MATRIKS_RENTANG_RISIKO, 
   TingkatRisikoKey,
-  RentangRisikoDef 
+  RentangRisikoDef,
+  getSatkerAtensiTLHP
 } from '../utils/riskRatingUtils';
 
 interface CommandDirectoryPanelProps {
@@ -32,10 +33,11 @@ interface CommandDirectoryPanelProps {
   selectedSatkerId?: string | null;
   onSelectSatkerItem: (item: SatkerMapItem) => void;
   onSelectPolda: (poldaId: string) => void;
+  onSelectJenjang?: (jenjang: JenjangPengguna) => void;
   onOpenLogoExplorer?: (satkerId?: string) => void;
   activeBidang?: BidangAudit;
   tingkatObjek?: TingkatObjek;
-  activeJenjang?: string;
+  activeJenjang?: JenjangPengguna;
   currentUser?: CurrentUserProfile;
 }
 
@@ -45,6 +47,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   selectedSatkerId,
   onSelectSatkerItem,
   onSelectPolda,
+  onSelectJenjang,
   onOpenLogoExplorer,
   activeBidang = 'semua',
   tingkatObjek = 'semua',
@@ -56,7 +59,15 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   const [atensiSubFilter, setAtensiSubFilter] = useState<'semua' | TingkatRisikoKey>('semua');
   const [showMatriksRisikoModal, setShowMatriksRisikoModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItwilId, setSelectedItwilId] = useState<string | null>('itwil-1');
+  const [selectedItwilId, setSelectedItwilId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeJenjang?.startsWith('itwil-')) {
+      setSelectedItwilId(activeJenjang);
+    } else {
+      setSelectedItwilId(null);
+    }
+  }, [activeJenjang]);
 
   // React to external Tingkat Objek changes from Poros 3
   useEffect(() => {
@@ -65,31 +76,44 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       setStrukturSubTab('mabes');
     } else if (
       tingkatObjek === 'wilayah' ||
-      ((currentUser?.level === 'L1' || currentUser?.level === 'L2') && tingkatObjek !== 'pusat')
+      (currentUser?.level === 'L1' || currentUser?.level === 'L2')
     ) {
       setMainNavTab('struktur');
       setStrukturSubTab('polda');
     }
   }, [currentUser?.level, tingkatObjek]);
 
-  // Active Itwil
+  // Active Itwil follows the current global jurisdiction filter
   const activeItwil = useMemo(() => {
-    return ITWIL_JURISDICTIONS.find(it => it.id === selectedItwilId) || ITWIL_JURISDICTIONS[0];
-  }, [selectedItwilId]);
+    const activeId = activeJenjang?.startsWith('itwil-') ? activeJenjang : selectedItwilId;
+    return ITWIL_JURISDICTIONS.find(it => it.id === activeId) || null;
+  }, [activeJenjang, selectedItwilId]);
 
   // Structure Items List
   const structureItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    const allowedPoldaIds = activeJenjang.startsWith('itwil-') && tingkatObjek !== 'pusat'
-      ? new Set(ITWIL_POLDA_MAPPING[activeJenjang] || [])
+    const shouldApplyItwilScope = tingkatObjek !== 'pusat';
+    const effectiveItwilId = shouldApplyItwilScope && (activeJenjang?.startsWith('itwil-') ? activeJenjang : selectedItwilId);
+    const allowedPoldaIds = effectiveItwilId
+      ? new Set(ITWIL_POLDA_MAPPING[effectiveItwilId] || [])
       : null;
-    const scopedItems = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
+    const scopedItems = getRoleScopedSatkers(
+      ALL_COMBINED_SATKERS_DATA,
+      currentUser,
+      activeBidang,
+      tingkatObjek,
+      (effectiveItwilId as JenjangPengguna | undefined) || undefined
+    );
     let items = scopedItems.filter((item) => {
       if (!allowedPoldaIds) return true;
       return allowedPoldaIds.has(item.id) || allowedPoldaIds.has(item.parentPoldaId);
     });
 
-    if (strukturSubTab === 'itwil') {
+    if (tingkatObjek === 'semua') {
+      items = items.filter(s =>
+        ['Itwil', 'Polda', 'Polrestabes', 'Polresta', 'Polres', 'Mabes', 'Itwasum', 'Biro-Mabes', 'Satker-Mabes'].includes(s.tingkat)
+      );
+    } else if (strukturSubTab === 'itwil') {
       items = items.filter(s => s.tingkat === 'Itwil');
     } else if (strukturSubTab === 'mabes') {
       items = items.filter(s => ['Mabes', 'Itwasum', 'Biro-Mabes', 'Satker-Mabes'].includes(s.tingkat));
@@ -100,6 +124,11 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       items = items.filter(s => regionalLevels.includes(s.tingkat));
     }
 
+    items = [...items].sort((a, b) => {
+      const order = { 'Itwil': 0, 'Polda': 1, 'Polrestabes': 2, 'Polresta': 3, 'Polres': 4, 'Mabes': 5, 'Itwasum': 6, 'Biro-Mabes': 7, 'Satker-Mabes': 8 };
+      return (order[a.tingkat as keyof typeof order] ?? 99) - (order[b.tingkat as keyof typeof order] ?? 99) || a.nama.localeCompare(b.nama);
+    });
+
     if (!query) return items;
 
     return items.filter(item => 
@@ -109,7 +138,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.pimpinanJabatan.toLowerCase().includes(query) ||
       (item.wilayahHukum && item.wilayahHukum.toLowerCase().includes(query))
     );
-  }, [strukturSubTab, searchQuery, currentUser, activeBidang, tingkatObjek, activeJenjang]);
+  }, [strukturSubTab, searchQuery, currentUser, activeBidang, tingkatObjek, activeJenjang, selectedItwilId]);
 
   // Attention Items List with 5-Tier Risk Matrix (20-25 Sangat Tinggi, 16-19 Tinggi, 12-15 Sedang, 6-11 Rendah, 1-5 Sangat Rendah)
   const attentionItems = useMemo(() => {
@@ -420,8 +449,15 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       items = mapped;
     }
 
-    const scopedIds = new Set(getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek).map(item => item.id));
-    if (currentUser && (currentUser.level !== 'L0' || tingkatObjek !== 'semua')) {
+    const shouldApplyActiveScope = (!!activeJenjang?.startsWith('itwil-') && tingkatObjek !== 'pusat') || (currentUser && (currentUser.level !== 'L0' || tingkatObjek !== 'semua'));
+    const scopedIds = new Set(getRoleScopedSatkers(
+      ALL_COMBINED_SATKERS_DATA,
+      currentUser,
+      activeBidang,
+      tingkatObjek,
+      activeJenjang as JenjangPengguna
+    ).map(item => item.id));
+    if (shouldApplyActiveScope) {
       items = items.filter(item => scopedIds.has(item.id));
     }
 
@@ -447,11 +483,19 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   // Mabes Items List
   const mabesItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    const allowedPoldaIds = activeJenjang.startsWith('itwil-') && tingkatObjek !== 'pusat'
-      ? new Set(ITWIL_POLDA_MAPPING[activeJenjang] || [])
+    const shouldApplyItwilScope = tingkatObjek !== 'pusat';
+    const effectiveItwilId = shouldApplyItwilScope && (activeJenjang?.startsWith('itwil-') ? activeJenjang : selectedItwilId);
+    const allowedPoldaIds = effectiveItwilId
+      ? new Set(ITWIL_POLDA_MAPPING[effectiveItwilId] || [])
       : null;
     const scopedIds = new Set(
-      getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek)
+      getRoleScopedSatkers(
+        ALL_COMBINED_SATKERS_DATA,
+        currentUser,
+        activeBidang,
+        tingkatObjek,
+        (effectiveItwilId as JenjangPengguna | undefined) || undefined
+      )
         .filter(item => !allowedPoldaIds || allowedPoldaIds.has(item.id) || allowedPoldaIds.has(item.parentPoldaId))
         .map(item => item.id)
     );
@@ -469,7 +513,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
       item.pimpinan.toLowerCase().includes(query) ||
       item.deskripsi.toLowerCase().includes(query)
     );
-  }, [activeBidang, activeJenjang, currentUser, searchQuery, tingkatObjek]);
+  }, [activeBidang, activeJenjang, currentUser, searchQuery, tingkatObjek, selectedItwilId]);
 
   const hasStructureData = structureItems.length > 0;
   const hasAttentionData = filteredAttentionItems.length > 0;
@@ -477,7 +521,13 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
 
   const getStructureSubTabCount = (subTab: 'itwil' | 'polda' | 'mabes') => {
     if (subTab === 'mabes') return tingkatObjek === 'wilayah' ? 0 : mabesItems.length;
-    const scopedItems = getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek);
+    const scopedItems = getRoleScopedSatkers(
+      ALL_COMBINED_SATKERS_DATA,
+      currentUser,
+      activeBidang,
+      tingkatObjek,
+      activeJenjang?.startsWith('itwil-') ? activeJenjang as JenjangPengguna : undefined
+    );
     if (subTab === 'itwil') return scopedItems.filter(item => item.tingkat === 'Itwil').length;
     return scopedItems.filter(item => item.tingkat === 'Polda').length;
   };
@@ -512,90 +562,6 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
           </span>
         </div>
 
-        {/* Main Segmented Controls - Role Aware */}
-        {currentUser && currentUser.level !== 'L0' ? (
-          <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-xl border border-slate-200">
-            <button
-              disabled={!hasStructureData}
-              onClick={() => {
-                setMainNavTab('struktur');
-                setSearchQuery('');
-              }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5 ${
-                mainNavTab === 'struktur'
-                  ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : hasStructureData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
-              }`}
-            >
-              <span>
-                {currentUser.level === 'L2' && 'Polda & 12 Polres'}
-                {currentUser.level === 'L1' && 'Struktur'}
-                {currentUser.level === 'L3' && 'Polres & Polsek'}
-                {currentUser.peran === 'pengawas_tim' && '5 Objek Audit'}
-              </span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] ${mainNavTab === 'struktur' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                {structureItems.length}
-              </span>
-            </button>
-
-            <button
-              disabled={!hasAttentionData}
-              onClick={() => {
-                setMainNavTab('atensi');
-                setSearchQuery('');
-              }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition flex items-center justify-center gap-1.5 ${
-                mainNavTab === 'atensi'
-                  ? 'bg-rose-700 text-white shadow-xs'
-                  : hasAttentionData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
-              }`}
-            >
-              <span>
-                {currentUser.level === 'L2' && 'Atensi & TLHP Riau'}
-                {currentUser.level === 'L1' && 'Atensi & TLHP Wilayah'}
-                {currentUser.level === 'L3' && 'Temuan & Sanggah'}
-                {currentUser.peran === 'pengawas_tim' && 'KKA Temuan ST/412'}
-              </span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] ${mainNavTab === 'atensi' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                {filteredAttentionItems.length}
-              </span>
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-xl border border-slate-200">
-            <button
-              disabled={!hasStructureData}
-              onClick={() => {
-                setMainNavTab('struktur');
-                setSearchQuery('');
-              }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition ${
-                mainNavTab === 'struktur'
-                  ? 'bg-[#0B2B5C] text-white shadow-xs'
-                  : hasStructureData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
-              }`}
-            >
-              Struktur
-            </button>
-
-            <button
-              disabled={!hasAttentionData}
-              onClick={() => {
-                setMainNavTab('atensi');
-                setSearchQuery('');
-              }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold text-center transition ${
-                mainNavTab === 'atensi'
-                  ? 'bg-rose-700 text-white shadow-xs'
-                  : hasAttentionData ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 cursor-pointer' : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
-              }`}
-            >
-              Atensi &amp; TLHP
-            </button>
-
-          </div>
-        )}
-
         {/* Live Search Box */}
         <div className="relative mt-2">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -622,130 +588,6 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
           )}
         </div>
 
-        {/* Sub-Filters based on Active Main Tab (Show only for L0 or when relevant) */}
-        {mainNavTab === 'struktur' && (!currentUser || currentUser.level === 'L0' || currentUser.level === 'L1') && (
-          <div className="flex items-center gap-1.5 mt-2">
-            {(currentUser?.level === 'L1'
-              ? [
-                  { id: 'polda', label: 'Polda Itwil' },
-                  { id: 'mabes', label: 'Mabes & Satker' }
-                ]
-              : [
-                  { id: 'itwil', label: 'Itwil I - V' },
-                  { id: 'polda', label: '34 Polda' },
-                  { id: 'mabes', label: 'Itwasum & Mabes' }
-                ]
-            ).map((sub) => (
-              <button
-                key={sub.id}
-                disabled={getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes') === 0}
-                onClick={() => setStrukturSubTab(sub.id as any)}
-                className={`py-1 px-2.5 rounded-md text-[11px] font-bold transition ${
-                  strukturSubTab === sub.id
-                    ? 'bg-slate-800 text-white'
-                    : getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes') > 0
-                      ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 cursor-pointer'
-                      : 'bg-slate-100 text-slate-300 border border-slate-100 cursor-not-allowed'
-                }`}
-              >
-                {sub.label} ({getStructureSubTabCount(sub.id as 'itwil' | 'polda' | 'mabes')})
-              </button>
-            ))}
-          </div>
-        )}
-
-        {mainNavTab === 'atensi' && (
-          <div className="space-y-2 mt-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Tingkat Risiko Temuan / TLHP:
-              </span>
-              <button
-                onClick={() => setShowMatriksRisikoModal(!showMatriksRisikoModal)}
-                className="text-[10px] font-bold text-[#0B2B5C] hover:underline cursor-pointer flex items-center gap-1"
-              >
-                {showMatriksRisikoModal ? 'Tutup Matriks' : 'Lihat Matriks Risiko'}
-              </button>
-            </div>
-
-            {/* Matriks Reference Panel from Pedoman E-Audit */}
-            {showMatriksRisikoModal && (
-              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 animate-in fade-in duration-150">
-                <div className="flex items-center justify-between">
-                  <h5 className="text-[11px] font-extrabold text-slate-900">
-                    Matriks Penetapan Rentang Nilai Risiko
-                  </h5>
-                  <span className="text-[9px] font-semibold text-slate-500">
-                    Acuan Resmi Audit
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[10px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-slate-600 bg-slate-100/70">
-                        <th className="py-1 px-1.5 font-bold">No</th>
-                        <th className="py-1 px-1.5 font-bold">Rentang Nilai</th>
-                        <th className="py-1 px-1.5 font-bold">Pernyataan Risiko</th>
-                        <th className="py-1 px-1.5 font-bold">Simbol Warna</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {MATRIKS_RENTANG_RISIKO.map((row) => (
-                        <tr key={row.no} className="hover:bg-white/80">
-                          <td className="py-1 px-1.5 font-bold text-slate-700">{row.no}</td>
-                          <td className="py-1 px-1.5 font-mono font-bold text-slate-800">{row.rentang}</td>
-                          <td className="py-1 px-1.5 font-bold text-slate-900">{row.label}</td>
-                          <td className="py-1 px-1.5">
-                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold border ${row.badgeBg} ${row.badgeText} ${row.badgeBorder}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${row.dotColor}`} />
-                              {row.simbolWarna}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Filter Pills for the 5 Risk Levels */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-              <button
-                disabled={attentionItems.length === 0}
-                onClick={() => setAtensiSubFilter('semua')}
-                className={`py-1 px-2.5 rounded-lg text-[11px] font-bold transition whitespace-nowrap ${
-                  atensiSubFilter === 'semua'
-                    ? 'bg-[#0B2B5C] text-white shadow-xs'
-                    : attentionItems.length > 0 ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 cursor-pointer' : 'bg-slate-100 text-slate-300 border border-slate-100 cursor-not-allowed'
-                }`}
-              >
-                Semua ({attentionItems.length})
-              </button>
-
-              {MATRIKS_RENTANG_RISIKO.map((def) => {
-                const isSelected = atensiSubFilter === def.key;
-                    const hasRiskData = attentionItems.some(item => item.risikoDef.key === def.key);
-                return (
-                  <button
-                    key={def.key}
-                    disabled={!hasRiskData}
-                    onClick={() => setAtensiSubFilter(def.key)}
-                    className={`py-1 px-2 rounded-lg text-[11px] font-bold transition whitespace-nowrap flex items-center gap-1.5 border ${
-                      isSelected
-                        ? `${def.badgeBg} ${def.badgeText} ${def.badgeBorder} shadow-xs`
-                        : hasRiskData ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer' : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${def.dotColor}`} />
-                    <span>{def.label}</span>
-                    <span className="text-[10px] opacity-80">({def.rentang})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Selected Itwil Regional Overview (if in Struktur -> Itwil) */}
@@ -797,6 +639,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
             ) : (
               structureItems.map((satker) => {
                 const isSelected = selectedSatkerId === satker.id;
+                const atensiInfo = getSatkerAtensiTLHP(satker);
                 return (
                   <div
                     key={satker.id}
@@ -804,6 +647,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                       onSelectSatkerItem(satker);
                       if (satker.tingkat === 'Itwil') {
                         setSelectedItwilId(satker.id);
+                        onSelectJenjang?.(satker.id as JenjangPengguna);
                       }
                     }}
                     className={`p-2.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-2.5 ${
@@ -821,7 +665,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                           size="sm" 
                         />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                           <h4 className="font-extrabold text-xs text-slate-900 truncate">
                             {satker.nama}
@@ -833,6 +677,14 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                         <p className="text-[11px] text-slate-500 truncate mt-0.5">
                           {satker.pimpinanJabatan}: {satker.pimpinanNama.split(',')[0]} • IKU: {satker.capaianIKU}%
                         </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[9px]">
+                          <span className={`px-1.5 py-0.5 rounded border font-bold ${atensiInfo.badgeBg} ${atensiInfo.badgeText} ${atensiInfo.badgeBorder}`}>
+                            {atensiInfo.statusAtensiShort}
+                          </span>
+                          <span className="text-slate-600 font-medium">
+                            TLHP {atensiInfo.persenTLHP}%
+                          </span>
+                        </div>
                       </div>
                     </div>
 

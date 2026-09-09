@@ -1,12 +1,8 @@
 import { SatkerMabesItem } from '../types';
 
-export const ITWIL_POLDA_MAPPING: Record<string, string[]> = {
-  'itwil-1': ['polda-aceh', 'polda-sumut', 'polda-sumbar', 'polda-riau', 'polda-kepri', 'polda-jambi'],
-  'itwil-2': ['polda-bengkulu', 'polda-sumsel', 'polda-babel', 'polda-lampung', 'polda-banten', 'polda-metro', 'polda-jabar', 'polda-jateng'],
-  'itwil-3': ['polda-diy', 'polda-jatim', 'polda-bali', 'polda-ntb', 'polda-ntt', 'polda-kalbar', 'polda-kalteng'],
-  'itwil-4': ['polda-kalsel', 'polda-kaltim', 'polda-kaltara', 'polda-sulsel', 'polda-sulbar', 'polda-sulteng', 'polda-sultra'],
-  'itwil-5': ['polda-gorontalo', 'polda-sulut', 'polda-malut', 'polda-maluku', 'polda-papua-barat', 'polda-papua']
-};
+import { PUBLIC_ITWIL_POLDA_MAPPING } from './publicStructureData';
+
+export const ITWIL_POLDA_MAPPING: Record<string, string[]> = PUBLIC_ITWIL_POLDA_MAPPING;
 
 export const ITWIL_METADATA: Record<string, { nama: string; pimpinan: string; pangkat: string; wilayahDeskripsi: string }> = {
   'itwil-1': {
