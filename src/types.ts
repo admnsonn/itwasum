@@ -256,6 +256,11 @@ export interface CurrentUserProfile {
   canApproveAccessChange: 'none' | 'approve' | 'propose';
   canViewActivityLogs: 'none' | 'all' | 'wilayah';
   canManageMasterSatker: boolean;
+  canViewAiSummary: boolean;
+  canUseDataLLM: boolean;
+  canExportAiSummary: boolean;
+  canViewLLMLogs: boolean;
+  canManageItwilMaster: boolean;
 }
 
 export type AuditLogKejadian = 
@@ -263,7 +268,11 @@ export type AuditLogKejadian =
   | 'Drill-down'
   | 'Ekspor'
   | 'Akses ditolak'
-  | 'Ubah hak akses user';
+  | 'Ubah hak akses user'
+  | 'Ubah master penugasan Itwil'
+  | 'Buka/Perbarui Ringkasan AI'
+  | 'Pertanyaan ke LLM'
+  | 'Pertanyaan ditolak LLM';
 
 export interface AuditLogEntry {
   id: string;

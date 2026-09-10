@@ -271,6 +271,8 @@ export function buildUserProfileFromConfig(cfg: PredefinedAccountConfig): Curren
   const isSuperAdmin = cfg.peran === 'super_admin';
   const isAdminPolda = cfg.peran === 'admin_polda';
 
+  const canAccessAiFeatures = isPimpinan || isSuperAdmin || isAdminPolda;
+
   return {
     ...cfg,
     // Matrix Hak Akses from "5. Tabel Utama":
@@ -282,7 +284,12 @@ export function buildUserProfileFromConfig(cfg: PredefinedAccountConfig): Curren
     canManageUsers: isSuperAdmin ? 'all' : isAdminPolda ? 'wilayah' : 'none',
     canApproveAccessChange: isSuperAdmin ? 'approve' : isAdminPolda ? 'propose' : 'none',
     canViewActivityLogs: isSuperAdmin ? 'all' : isAdminPolda ? 'wilayah' : 'none',
-    canManageMasterSatker: isSuperAdmin
+    canManageMasterSatker: isSuperAdmin,
+    canViewAiSummary: canAccessAiFeatures,
+    canUseDataLLM: canAccessAiFeatures,
+    canExportAiSummary: isPimpinan || isSuperAdmin,
+    canViewLLMLogs: isSuperAdmin || isAdminPolda,
+    canManageItwilMaster: isSuperAdmin
   };
 }
 

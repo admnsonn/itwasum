@@ -200,3 +200,57 @@ export function logUbahHakAkses(
     }
   });
 }
+
+export function logRingkasanAI(user: CurrentUserProfile, levelLabel: string, summary: string) {
+  saveAuditLog({
+    kejadian: 'Buka/Perbarui Ringkasan AI',
+    user: user.nama,
+    peran: `${user.peranLabel} (${user.level})`,
+    titikWilayah: user.titikWilayahNama,
+    detail: {
+      yangDiminta: `Ringkasan AI ${levelLabel}`,
+      nilaiBaru: summary,
+      alasanDitolak: user.canViewAiSummary ? 'Diperbarui dari data aktif' : 'Akses AI summary dibatasi hak akses'
+    }
+  });
+}
+
+export function logLLMQuestion(user: CurrentUserProfile, question: string, answerScope: string) {
+  saveAuditLog({
+    kejadian: 'Pertanyaan ke LLM',
+    user: user.nama,
+    peran: `${user.peranLabel} (${user.level})`,
+    titikWilayah: user.titikWilayahNama,
+    detail: {
+      yangDiminta: question,
+      nilaiLama: answerScope,
+      nilaiBaru: 'Jawaban dipenuhi dari data aktif saat itu'
+    }
+  });
+}
+
+export function logLLMQuestionDenied(user: CurrentUserProfile, question: string, reason: string) {
+  saveAuditLog({
+    kejadian: 'Pertanyaan ditolak LLM',
+    user: user.nama,
+    peran: `${user.peranLabel} (${user.level})`,
+    titikWilayah: user.titikWilayahNama,
+    detail: {
+      yangDiminta: question,
+      alasanDitolak: reason
+    }
+  });
+}
+
+export function logUbahMasterItwil(user: CurrentUserProfile, perubahan: string) {
+  saveAuditLog({
+    kejadian: 'Ubah master penugasan Itwil',
+    user: user.nama,
+    peran: `${user.peranLabel} (${user.level})`,
+    titikWilayah: user.titikWilayahNama,
+    detail: {
+      yangDiminta: `Master penugasan Itwil: ${perubahan}`,
+      nilaiBaru: 'Cakupan objek audit binaan diperbarui dan berlaku pada periode aktif'
+    }
+  });
+}
