@@ -13,6 +13,7 @@ import { DokumenGapsModal } from '../DokumenGapsModal';
 import { KPICustomizerModal } from '../KPICustomizerModal';
 import { UsulanHakAksesModal } from '../UsulanHakAksesModal';
 import { SecurityRejectionModal } from '../SecurityRejectionModal';
+import { OverviewToolbar } from '../OverviewToolbar';
 import { getRoleScopedPoldas, getRoleScopedSatkers } from '../../utils/roleScope';
 
 import { 
@@ -207,6 +208,11 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
           </button>
         </div>
       )} */}
+
+      {/* Toolbar Overview tambahan: SF-008 Tanya Jawab Data, SF-010 Banding Antar Periode, SF-011 Ekspor Laporan */}
+      {!isMapFullscreen && currentUser && (
+        <OverviewToolbar currentUser={currentUser} wilayahLabel={currentUser.titikWilayahNama} />
+      )}
 
       {/* Executive Indicator Strip */}
       {!isMapFullscreen && (

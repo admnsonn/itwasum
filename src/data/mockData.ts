@@ -1888,7 +1888,20 @@ export const AUDITOR_LIST: AuditorData[] = [
     status: 'Sedang Tugas',
     satkerTugasAktif: 'Polda Jawa Barat',
     totalAuditSelesai: 48,
-    ratingKinerja: 98.4
+    ratingKinerja: 98.4,
+    tmtPangkat: '01 Juli 2019',
+    tempatTanggalLahir: 'Surabaya, 12 Maret 1975',
+    pendidikanKepolisian: 'PTIK / Sespimti Polri Angkatan LII',
+    emailDinas: 'bambang.suryo@itwasum.polri.go.id',
+    noHp: '0812-3456-7890',
+    keahlianKhusus: ['Audit Forensik Keuangan', 'Investigasi Anti-Korupsi'],
+    sertifikat: [
+      { nama: 'QIA (Qualified Internal Auditor)', tanggalKadaluarsa: '2027-06-30' },
+      { nama: 'CFrA', tanggalKadaluarsa: '2026-11-15' },
+    ],
+    satker: 'Itbidjemen SDM & Garkeu',
+    klasifikasi: 'Auditor Senior',
+    penugasanYtd: 6,
   },
   {
     id: 'aud-2',
@@ -1903,7 +1916,17 @@ export const AUDITOR_LIST: AuditorData[] = [
     status: 'Sedang Tugas',
     satkerTugasAktif: 'Polda Sumatera Utara',
     totalAuditSelesai: 42,
-    ratingKinerja: 95.8
+    ratingKinerja: 95.8,
+    tmtPangkat: '01 April 2018',
+    tempatTanggalLahir: 'Medan, 08 Januari 1974',
+    pendidikanKepolisian: 'PTIK / Sespimti Polri Angkatan L',
+    emailDinas: 'dedi.supriyadi@itwasum.polri.go.id',
+    noHp: '0813-9080-2211',
+    keahlianKhusus: ['Audit Manajemen Operasional', 'Reviu Kinerja Satker'],
+    sertifikat: [{ nama: 'QIA', tanggalKadaluarsa: '2026-03-31' }, { nama: 'CIPS', tanggalKadaluarsa: '2025-12-20' }],
+    satker: 'Itbidjemen Operasional',
+    klasifikasi: 'Auditor Senior',
+    penugasanYtd: 5,
   },
   {
     id: 'aud-3',
@@ -1918,7 +1941,20 @@ export const AUDITOR_LIST: AuditorData[] = [
     status: 'Tersedia',
     satkerTugasAktif: 'Standby Asistensi',
     totalAuditSelesai: 36,
-    ratingKinerja: 96.2
+    ratingKinerja: 96.2,
+    tmtPangkat: '01 Oktober 2020',
+    tempatTanggalLahir: 'Yogyakarta, 22 Mei 1978',
+    pendidikanKepolisian: 'PTIK / Sespimma Polri Angkatan LX',
+    emailDinas: 'hendri.rusmono@itwasum.polri.go.id',
+    noHp: '0815-2233-4455',
+    keahlianKhusus: ['Audit Keuangan Negara', 'Reviu Pengadaan Barang/Jasa'],
+    sertifikat: [
+      { nama: 'CRMP', tanggalKadaluarsa: '2026-08-31' },
+      { nama: 'Ahli Pengadaan Nasional (LKPP)', tanggalKadaluarsa: '2025-10-05' },
+    ],
+    satker: 'Itbidjemen Garkeu',
+    klasifikasi: 'Auditor Madya',
+    penugasanYtd: 3,
   },
   {
     id: 'aud-4',
@@ -1933,7 +1969,20 @@ export const AUDITOR_LIST: AuditorData[] = [
     status: 'Sedang Tugas',
     satkerTugasAktif: 'Polda Metro Jaya',
     totalAuditSelesai: 29,
-    ratingKinerja: 94.0
+    ratingKinerja: 94.0,
+    tmtPangkat: '01 Januari 2021',
+    tempatTanggalLahir: 'Bandung, 30 September 1980',
+    pendidikanKepolisian: 'PTIK / Sespimma Polri Angkatan LXII',
+    emailDinas: 'siti.nurhayati@itwasum.polri.go.id',
+    noHp: '0816-7788-9900',
+    keahlianKhusus: ['Verifikasi Aset BMN', 'Audit Kontrak Pemeliharaan'],
+    sertifikat: [
+      { nama: 'QIA', tanggalKadaluarsa: '2026-02-28' },
+      { nama: 'Manajemen Aset Negara (DJKN)', tanggalKadaluarsa: '2026-01-10' },
+    ],
+    satker: 'Itbidjemen Sarpras & Logistik',
+    klasifikasi: 'Auditor Madya',
+    penugasanYtd: 4,
   },
   {
     id: 'aud-5',
@@ -1948,7 +1997,20 @@ export const AUDITOR_LIST: AuditorData[] = [
     status: 'Tersedia',
     satkerTugasAktif: 'Tim e-Audit Terpusat',
     totalAuditSelesai: 22,
-    ratingKinerja: 97.5
+    ratingKinerja: 97.5,
+    tmtPangkat: '01 Maret 2022',
+    tempatTanggalLahir: 'Semarang, 17 Agustus 1983',
+    pendidikanKepolisian: 'PTIK / Sespimma Polri Angkatan LXV',
+    emailDinas: 'agus.triyono@itwasum.polri.go.id',
+    noHp: '0817-4455-6677',
+    keahlianKhusus: ['Audit Keamanan Sistem Informasi', 'Digital Forensics'],
+    sertifikat: [
+      { nama: 'CISA', tanggalKadaluarsa: '2026-05-01' },
+      { nama: 'ISO 27001 Lead Auditor', tanggalKadaluarsa: '2025-11-30' },
+    ],
+    satker: 'Itbidjemen IT & Cyber Audit',
+    klasifikasi: 'Auditor Muda',
+    penugasanYtd: 2,
   },
   {
     id: 'aud-6',
@@ -1963,7 +2025,20 @@ export const AUDITOR_LIST: AuditorData[] = [
     status: 'Sedang Tugas',
     satkerTugasAktif: 'Polda Papua Barat',
     totalAuditSelesai: 51,
-    ratingKinerja: 96.9
+    ratingKinerja: 96.9,
+    tmtPangkat: '01 Juli 2017',
+    tempatTanggalLahir: 'Malang, 04 Februari 1972',
+    pendidikanKepolisian: 'PTIK / Sespimti Polri Angkatan XLVIII',
+    emailDinas: 'sugeng.hariadi@itwasum.polri.go.id',
+    noHp: '0818-1122-3344',
+    keahlianKhusus: ['Investigasi Khusus', 'Audit Anti-Fraud'],
+    sertifikat: [
+      { nama: 'QIA', tanggalKadaluarsa: '2025-09-30' },
+      { nama: 'Pemeriksa Khusus Polri', tanggalKadaluarsa: '2026-07-15' },
+    ],
+    satker: 'Itbidjemen Khusus (Irsus)',
+    klasifikasi: 'Auditor Senior',
+    penugasanYtd: 7,
   }
 ];
 
@@ -1976,7 +2051,12 @@ export const USER_ACCOUNTS: UserAccount[] = [
     satker: 'Itwasum Polri (Mabes)',
     email: 'irwasum@polri.go.id',
     status: 'Aktif',
-    loginTerakhir: 'Hari ini, 08:30 WIB'
+    loginTerakhir: 'Hari ini, 08:30 WIB',
+    nrp: '68120344',
+    username: 'dedi.prasetyo',
+    satkerAsal: 'Itwasum Polri (Mabes)',
+    wilayahLock: 'Seluruh Indonesia',
+    dokumenLegal: { nomor: 'SKEP/1024/0119876', kadaluarsa: '2028-01-31' }
   },
   {
     id: 'u-2',
@@ -1986,7 +2066,12 @@ export const USER_ACCOUNTS: UserAccount[] = [
     satker: 'Itbidjemen SDM Itwasum Polri',
     email: 'bambang.suryo@polri.go.id',
     status: 'Aktif',
-    loginTerakhir: 'Hari ini, 09:15 WIB'
+    loginTerakhir: 'Hari ini, 09:15 WIB',
+    nrp: '73050412',
+    username: 'bambang.suryo',
+    satkerAsal: 'Itbidjemen SDM Itwasum Polri',
+    wilayahLock: 'Seluruh Indonesia',
+    dokumenLegal: { nomor: 'SKEP/12300/1029876', kadaluarsa: '2027-06-30' }
   },
   {
     id: 'u-3',
@@ -1996,7 +2081,12 @@ export const USER_ACCOUNTS: UserAccount[] = [
     satker: 'Itbidjemen Garkeu Itwasum Polri',
     email: 'hendri.rusmono@polri.go.id',
     status: 'Aktif',
-    loginTerakhir: 'Kemarin, 16:40 WIB'
+    loginTerakhir: 'Kemarin, 16:40 WIB',
+    nrp: '79110455',
+    username: 'hendri.rusmono',
+    satkerAsal: 'Itbidjemen Garkeu Itwasum Polri',
+    wilayahLock: 'Seluruh Indonesia',
+    dokumenLegal: { nomor: 'SKEP/44210/0587231', kadaluarsa: '2026-08-31' }
   },
   {
     id: 'u-4',
@@ -2006,7 +2096,12 @@ export const USER_ACCOUNTS: UserAccount[] = [
     satker: 'Bagyanduan & TI Itwasum Polri',
     email: 'agus.triyono@polri.go.id',
     status: 'Aktif',
-    loginTerakhir: 'Hari ini, 10:02 WIB'
+    loginTerakhir: 'Hari ini, 10:02 WIB',
+    nrp: '85070891',
+    username: 'agus.triyono',
+    satkerAsal: 'Bagyanduan & TI Itwasum Polri',
+    wilayahLock: 'Seluruh Indonesia',
+    dokumenLegal: { nomor: 'SKEP/78650/0219043', kadaluarsa: '2028-03-15' }
   },
   {
     id: 'u-5',
@@ -2016,7 +2111,42 @@ export const USER_ACCOUNTS: UserAccount[] = [
     satker: 'Itwasda Polda Jawa Barat',
     email: 'admin.itwasda.jabar@polri.go.id',
     status: 'Aktif',
-    loginTerakhir: 'Kemarin, 14:10 WIB'
+    loginTerakhir: 'Kemarin, 14:10 WIB',
+    nrp: '88040112',
+    username: 'denny.prasetyo',
+    satkerAsal: 'Itwasda Polda Jawa Barat',
+    wilayahLock: 'Polda Jawa Barat'
+    // dokumenLegal belum dilampirkan — sengaja dikosongkan untuk mendemonstrasikan
+    // peringatan "Belum Dilampirkan" pada kolom Dokumen Legal (Plan bagian 5e).
+  },
+  {
+    id: 'u-6',
+    nama: 'Bripka Fitria Ramadhani, S.Tr.K.',
+    pangkatNrp: 'Bripka / 92110078',
+    role: 'Admin Satker',
+    satker: 'Itwasda Polda Riau',
+    email: 'fitria.ramadhani@polri.go.id',
+    status: 'Menunggu Aktivasi',
+    loginTerakhir: 'Belum pernah login',
+    nrp: '92110078',
+    username: 'fitria.ramadhani',
+    satkerAsal: 'Itwasda Polda Riau',
+    wilayahLock: 'Polda Riau'
+  },
+  {
+    id: 'u-7',
+    nama: 'AKP Bagus Wirawan, S.I.K.',
+    pangkatNrp: 'AKP / 90020155',
+    role: 'Admin Satker',
+    satker: 'Itwasda Polda Sumatera Utara',
+    email: 'bagus.wirawan@polri.go.id',
+    status: 'Dibekukan',
+    loginTerakhir: '14 hari lalu',
+    nrp: '90020155',
+    username: 'bagus.wirawan',
+    satkerAsal: 'Itwasda Polda Sumatera Utara',
+    wilayahLock: 'Polda Sumatera Utara',
+    dokumenLegal: { nomor: 'SKEP/33190/0876512', kadaluarsa: '2025-05-31' }
   }
 ];
 

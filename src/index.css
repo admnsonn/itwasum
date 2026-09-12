@@ -35,6 +35,24 @@
 }
 
 :root {
+  /* Token --sd-* (Satu Data): dipetakan dari palet satu-data-itwasum-frontend
+     (origin/development:src/app/globals.css) untuk lapisan design-system baru
+     (src/components/ui/). Dipakai HANYA oleh atoms/molecules baru, TIDAK menimpa
+     --brand-* atau --surface-* yang sudah dipakai shell & view lama. */
+  --sd-primary: #002265;
+  --sd-primary-container: #003594;
+  --sd-secondary: #475f87;
+  --sd-inverse-primary: #b4c5ff;
+  --sd-nav-active: #24427c;
+  --sd-surface: #f4f3fb;
+  --sd-outline-variant: #c4c6d4;
+  --sd-rounded: #475f8733;
+  --sd-success: #2d7a4a;
+  --sd-success-container: #e6f4ea;
+  --sd-error: #ba1a1a;
+  --sd-error-container: #ffdad6;
+  --sd-warning-container: #ffdea5;
+
   --brand-900: #0B2B5C;
   --brand-700: #0B4A8A;
   --surface-page: #f4f6f8;

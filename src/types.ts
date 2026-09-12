@@ -15,7 +15,16 @@ export type StatusRentangRisiko =
   | 'rendah' 
   | 'sangat_rendah';
 
-export type MainNavId = 'beranda' | 'pengawasan' | 'kinerja' | 'auditor' | 'pengaturan';
+/**
+ * Diturunkan dari `MODULE_REGISTRY` (lihat `src/config/moduleRegistry.ts`) sehingga setiap id
+ * modul terdaftar otomatis menjadi bagian dari tipe ini. Memakai `import('...')` type-only agar
+ * tidak membuat dependensi runtime melingkar (types.ts <-> moduleRegistry.ts, yang memuat OfficialRole
+ * dari file ini). 5 nilai legacy ('beranda' | 'pengawasan' | 'kinerja' | 'auditor' | 'pengaturan') tetap
+ * menjadi anggota union ini karena selalu terdaftar sebagai `LegacyViewId` pada modul registry.
+ */
+export type MainNavId =
+  | import('./config/moduleRegistry').ModuleId
+  | import('./config/moduleRegistry').LegacyViewId;
 
 export type JenjangPengguna = 
   | 'kapolri' 
@@ -208,6 +217,19 @@ export interface AuditorData {
   satkerTugasAktif?: string;
   totalAuditSelesai: number;
   ratingKinerja: number;
+  // Perluasan replika B.6 Daftar Auditor (Plan bagian 5d) — dilengkapi generator deterministik
+  // di TimAuditorView.tsx, tidak mengubah semantik field lama di atas.
+  fotoUrl?: string;
+  tmtPangkat?: string;
+  tempatTanggalLahir?: string;
+  pendidikanKepolisian?: string;
+  emailDinas?: string;
+  noHp?: string;
+  keahlianKhusus?: string[];
+  sertifikat?: { nama: string; tanggalKadaluarsa: string }[];
+  satker?: string;
+  klasifikasi?: string;
+  penugasanYtd?: number;
 }
 
 export type OfficialRole = 
@@ -307,8 +329,14 @@ export interface UserAccount {
   poldaId?: string;
   bidang?: BidangName[];
   email: string;
-  status: 'Aktif' | 'Non-Aktif';
+  status: 'Aktif' | 'Non-Aktif' | 'Menunggu Aktivasi' | 'Dibekukan';
   loginTerakhir: string;
+  // Perluasan replika B.9 Tata Kelola Pengguna (Plan bagian 5e).
+  nrp?: string;
+  username?: string;
+  satkerAsal?: string;
+  wilayahLock?: string;
+  dokumenLegal?: { nomor: string; kadaluarsa?: string };
 }
 
 export interface MasterDataItem {

@@ -22,14 +22,17 @@ import { getAuditLogs, logUbahHakAkses, saveAuditLog } from '../../utils/auditLo
 interface AdminOverviewViewProps {
   currentUser: CurrentUserProfile;
   onSwitchAccount: () => void;
+  /** Modul B.10 (Log Aktivitas & Audit Trail) membuka langsung ke tab 'logs'. */
+  initialTab?: 'users' | 'requests' | 'logs' | 'master';
 }
 
 export const AdminOverviewView: React.FC<AdminOverviewViewProps> = ({
   currentUser,
-  onSwitchAccount
+  onSwitchAccount,
+  initialTab
 }) => {
   const isSuperAdmin = currentUser.peran === 'super_admin';
-  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'logs' | 'master'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'requests' | 'logs' | 'master'>(initialTab || 'users');
   const [userList, setUserList] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [logs, setLogs] = useState(getAuditLogs());
   const [logFilter, setLogFilter] = useState<string>('semua');

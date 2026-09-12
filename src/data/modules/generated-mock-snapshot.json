@@ -1,0 +1,895 @@
+{
+  "generatedAt": "2026-09-12T06:53:23.780Z",
+  "moduleCount": 24,
+  "note": "Snapshot deterministik - regenerasi ulang skrip ini pada seed yang sama akan menghasilkan isi identik.",
+  "modules": {
+    "b8": {
+      "kode": "B.8",
+      "label": "SPIP Satker",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Rata-rata Skor Maturitas SPIP",
+          "value": "209 skor",
+          "delta": "-4% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Satker Level 3+",
+          "value": "94 satker",
+          "delta": "+3.9% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Satker Belum Dievaluasi",
+          "value": "83 satker",
+          "delta": "-5.9% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Komponen Terlemah",
+          "value": "126",
+          "delta": "+3.6% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.8 SPIP Satker menilai lima komponen SPIP (lingkungan pengendalian, penilaian risiko, kegiatan pengendalian, informasi & komunikasi, pemantauan) per satker sebagai basis penjaminan mutu pengendalian intern."
+    },
+    "b12": {
+      "kode": "B.12",
+      "label": "Audit Universe",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Total Objek Audit Universe",
+          "value": "106 objek",
+          "delta": "+2.6% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Risiko Sangat Tinggi",
+          "value": "121 objek",
+          "delta": "+3.9% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Belum Pernah Diaudit >2 Tahun",
+          "value": "6 objek",
+          "delta": "-2.3% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Skor Risiko Rata-rata",
+          "value": "123 skor",
+          "delta": "+1% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.12 Audit Universe adalah populasi lengkap objek pengawasan (Mabes/Polda/Polres/Polsek) dengan skor risiko inheren, menjadi basis penyusunan PKPT Berbasis Risiko (B.13)."
+    },
+    "b13": {
+      "kode": "B.13",
+      "label": "PKPT Berbasis Risiko",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Objek Terjadwal PKPT Periode Ini",
+          "value": "196 objek",
+          "delta": "+3.7% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Realisasi Penugasan",
+          "value": "92.4%",
+          "delta": "+4.7% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Deviasi dari Rencana",
+          "value": "158 objek",
+          "delta": "+1.5% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Cakupan Anggaran Wasrik",
+          "value": "78.1%",
+          "delta": "+5.5% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.13 PKPT Berbasis Risiko menyusun Program Kerja Pengawasan Tahunan berdasar peringkat risiko dari Audit Universe (B.12), termasuk usulan penugasan tim per triwulan."
+    },
+    "b14": {
+      "kode": "B.14",
+      "label": "Manajemen Penugasan Audit",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Total Objek Dipantau",
+          "value": "195 objek",
+          "delta": "+5.4% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Status Aman",
+          "value": "83.2%",
+          "delta": "+3.5% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Perlu Perhatian",
+          "value": "219 objek",
+          "delta": "-6.3% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Skor",
+          "value": "124 skor",
+          "delta": "+3.3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.14 Manajemen Penugasan Audit sedang dalam tahap pengembangan mock data awal sesuai lingkup SPEKTEK."
+    },
+    "b15": {
+      "kode": "B.15",
+      "label": "Kertas Kerja Audit Digital",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "KKA Aktif",
+          "value": "42 berkas",
+          "delta": "+2.8% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Menunggu Validasi Berjenjang",
+          "value": "149 berkas",
+          "delta": "+6.5% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Eviden Terunggah",
+          "value": "131 berkas",
+          "delta": "-2.7% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Waktu Validasi",
+          "value": "158 hari",
+          "delta": "-5.8% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.15 Kertas Kerja Audit Digital adalah kertas kerja pemeriksaan digital dengan lampiran eviden multifile dan validasi berjenjang (auditor -> ketua tim -> pengawas tim)."
+    },
+    "b16": {
+      "kode": "B.16",
+      "label": "Manajemen Rekomendasi & TLHP",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Rekomendasi Terbuka",
+          "value": "86 rekomendasi",
+          "delta": "-3.6% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "TLHP Overdue",
+          "value": "234 rekomendasi",
+          "delta": "+5% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "TLHP Selesai Periode Ini",
+          "value": "161 rekomendasi",
+          "delta": "+6% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Aging TLHP",
+          "value": "224 hari",
+          "delta": "+2.6% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.16 Manajemen Rekomendasi & TLHP merekap rekomendasi lintas sumber (Audit Polri, BPK, IRSUS) beserta status dan aging Tindak Lanjut Hasil Pemeriksaan per satker."
+    },
+    "b17": {
+      "kode": "B.17",
+      "label": "Monitoring Maturitas SPIP & Risiko",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Skor Maturitas SPIP Nasional",
+          "value": "113 skor",
+          "delta": "+4.5% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Skor Risiko Strategis",
+          "value": "113 skor",
+          "delta": "+5.5% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Satker Turun Level",
+          "value": "91 satker",
+          "delta": "+1.1% dibanding periode lalu",
+          "tone": "kritis"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Satker Naik Level",
+          "value": "79 satker",
+          "delta": "+4.3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.17 Monitoring Maturitas SPIP & Risiko adalah dashboard agregat rollup dari data SPIP Satker (B.8) dan peta risiko strategis Itwasum tingkat nasional."
+    },
+    "b18": {
+      "kode": "B.18",
+      "label": "Early Warning Pengawasan",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Peringatan Aktif",
+          "value": "41 peringatan",
+          "delta": "+2.3% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Peringatan Kritis",
+          "value": "20 peringatan",
+          "delta": "+5.4% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Ditindaklanjuti < 24 Jam",
+          "value": "91.4%",
+          "delta": "+1.6% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Waktu Respons",
+          "value": "181 jam",
+          "delta": "+5.8% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.18 Early Warning Pengawasan adalah mesin aturan dan pemicu peringatan dini lintas modul: keterlambatan TLHP (B.16), penurunan IKU (B.7), dan anomali data (E.4)."
+    },
+    "b4": {
+      "kode": "B.4",
+      "label": "Surat Usulan",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Surat Diajukan (Periode Ini)",
+          "value": "7 surat",
+          "delta": "+1.7% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Menunggu Review Berjenjang",
+          "value": "31 surat",
+          "delta": "+6.2% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Disahkan",
+          "value": "135 surat",
+          "delta": "+4.8% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Waktu Proses",
+          "value": "149 hari",
+          "delta": "-5.3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.4 Surat Usulan mencatat volume pengajuan surat usulan pengawasan (mutasi, hak akses, penugasan khusus) beserta tahap review berjenjang sebelum pengesahan oleh pejabat berwenang."
+    },
+    "b5": {
+      "kode": "B.5",
+      "label": "E-Office",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Naskah Masuk (Periode Ini)",
+          "value": "64 naskah",
+          "delta": "+1.1% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Naskah Keluar",
+          "value": "18 naskah",
+          "delta": "+2.7% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Menunggu Disposisi",
+          "value": "153 naskah",
+          "delta": "-2.6% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Waktu Disposisi",
+          "value": "80 jam",
+          "delta": "+5.7% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.5 E-Office mengelola naskah dinas masuk/keluar Itwasum secara elektronik lengkap dengan riwayat disposisi dan arsip digital bernomor."
+    },
+    "e1": {
+      "kode": "E.1",
+      "label": "AI Foundation Platform & MLOps Pipeline",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Model Terdaftar di Registry",
+          "value": "105 model",
+          "delta": "+3% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Model Berstatus Produksi",
+          "value": "56 model",
+          "delta": "+2% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Uptime Layanan Inferensi",
+          "value": "88.2%",
+          "delta": "+1.4% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Waktu Deploy",
+          "value": "112 menit",
+          "delta": "+3.3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 8,
+      "chartPoints": 4,
+      "narrative": "Modul E.1 AI Foundation Platform & MLOps Pipeline memantau pipeline MLOps: registry model, versi, tahap deployment (staging/canary/produksi), dan kesehatan layanan inferensi seluruh model E.2-E.7."
+    },
+    "e2": {
+      "kode": "E.2",
+      "label": "RAG Knowledge Hub Pengawasan",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Dokumen Terindeks",
+          "value": "134 dokumen",
+          "delta": "-5.1% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Sumber Pengetahuan Aktif",
+          "value": "202 sumber",
+          "delta": "+6.1% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Rata-rata Relevansi Retrieval",
+          "value": "88.5%",
+          "delta": "-0.7% dibanding periode lalu",
+          "tone": "kritis"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Job Pengindeksan Tertunda",
+          "value": "86 job",
+          "delta": "-4.2% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul E.2 RAG Knowledge Hub Pengawasan adalah basis pengetahuan pengawasan berbasis Retrieval-Augmented Generation, menyuplai konteks untuk ChatItwasum Copilot (E.5) dan Auto Report Generator (E.3)."
+    },
+    "e3": {
+      "kode": "E.3",
+      "label": "Auto Report Generator + Executive Summary",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Laporan Dibuat Periode Ini",
+          "value": "200 laporan",
+          "delta": "+4.8% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Rata-rata Waktu Generate",
+          "value": "128 menit",
+          "delta": "-4.8% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Tingkat Persetujuan Tanpa Revisi",
+          "value": "90.3%",
+          "delta": "-1.8% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Antrean Aktif",
+          "value": "148 antrean",
+          "delta": "+6.5% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 8,
+      "chartPoints": 4,
+      "narrative": "Modul E.3 Auto Report Generator + Executive Summary menghasilkan laporan otomatis dan ringkasan eksekutif dari data pengawasan aktif, mengurangi waktu penyusunan laporan manual pimpinan."
+    },
+    "e4": {
+      "kode": "E.4",
+      "label": "Anomaly Alert Pengawasan",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Anomali Terdeteksi Periode Ini",
+          "value": "132 anomali",
+          "delta": "-0.6% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Anomali Dikonfirmasi Valid",
+          "value": "78.3%",
+          "delta": "+5% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "False Positive Rate",
+          "value": "90.4%",
+          "delta": "+5.2% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Waktu Deteksi",
+          "value": "6 menit",
+          "delta": "-3.7% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 8,
+      "chartPoints": 4,
+      "narrative": "Modul E.4 Anomaly Alert Pengawasan mendeteksi anomali data pengawasan (rule + light ML) yang memicu Early Warning Pengawasan (B.18) secara otomatis."
+    },
+    "e6": {
+      "kode": "E.6",
+      "label": "Document AI Pengawasan",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Dokumen Diproses Periode Ini",
+          "value": "100 dokumen",
+          "delta": "+3.9% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Akurasi Ekstraksi Entitas",
+          "value": "83.5%",
+          "delta": "-3% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Rata-rata Waktu Proses",
+          "value": "207 detik",
+          "delta": "-4% dibanding periode lalu",
+          "tone": "kritis"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Dokumen Menunggu Review Manual",
+          "value": "198 dokumen",
+          "delta": "-6% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul E.6 Document AI Pengawasan melakukan OCR, Named Entity Recognition, dan ekstraksi entitas dari dokumen audit/temuan yang diunggah ke seluruh modul pengawasan."
+    },
+    "e7": {
+      "kode": "E.7",
+      "label": "AI Governance & AI Security",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Model dalam Risk Register",
+          "value": "149 model",
+          "delta": "+5.1% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Risiko Tinggi Belum Dimitigasi",
+          "value": "193 risiko",
+          "delta": "+0.9% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Permintaan LLM Diaudit",
+          "value": "118 permintaan",
+          "delta": "+1.1% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Kepatuhan Kebijakan AI",
+          "value": "85.6%",
+          "delta": "-6.2% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 8,
+      "chartPoints": 4,
+      "narrative": "Modul E.7 AI Governance & AI Security menegakkan kebijakan tata kelola AI, risk register per model, dan audit trail permintaan LLM (dokumen wajib DOC-05, memakai auditLogger.logLLMQuestion yang sudah ada)."
+    },
+    "e8": {
+      "kode": "E.8",
+      "label": "Subscription Layanan AI Cloud Managed",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Sisa Kuota Bulan Ini",
+          "value": "93.9%",
+          "delta": "-4.1% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Biaya Berjalan Bulan Ini",
+          "value": "Rp 396.000.000",
+          "delta": "+1.3% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Sisa Durasi Subscription",
+          "value": "199 bulan",
+          "delta": "+3.1% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Uptime Layanan Cloud AI",
+          "value": "78.5%",
+          "delta": "+3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 8,
+      "chartPoints": 4,
+      "narrative": "Modul E.8 Subscription Layanan AI Cloud Managed memantau status dan biaya berjalan langganan layanan AI cloud terkelola (Rp 3.758.923.000 nilai penuh RKA-K/L) selama 12 bulan pasca go-live."
+    },
+    "a1": {
+      "kode": "A.1",
+      "label": "API Consumer Layer ke DIV TIK / SuperApp Big Data Polri",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Domain Terkoneksi",
+          "value": "215 domain",
+          "delta": "+0.5% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Panggilan API / Hari (rata-rata)",
+          "value": "7 ribu req",
+          "delta": "-2.9% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Tingkat Keberhasilan",
+          "value": "83.2%",
+          "delta": "+5.9% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Latensi Rata-rata",
+          "value": "156 ms",
+          "delta": "+5.6% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul A.1 API Consumer Layer ke DIV TIK / SuperApp Big Data Polri memantau lapisan konsumsi API dari DIV TIK / SuperApp Big Data Polri sebagai sumber data resmi tunggal (Single Source of Truth)."
+    },
+    "a2": {
+      "kode": "A.2",
+      "label": "Data Mart Pengawasan Itwasum",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Tabel Data Mart Aktif",
+          "value": "207 tabel",
+          "delta": "+1.7% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Job ETL Berjalan",
+          "value": "114 job",
+          "delta": "+2.8% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Kesegaran Data Rata-rata",
+          "value": "48 jam",
+          "delta": "-5.8% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Tingkat Keberhasilan Job",
+          "value": "90.2%",
+          "delta": "+3.2% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul A.2 Data Mart Pengawasan Itwasum memantau pipeline ETL/ELT data mart pengawasan Itwasum: sumber, tahapan transformasi, dan kesegaran data untuk seluruh modul B.1-B.18."
+    },
+    "a3": {
+      "kode": "A.3",
+      "label": "Tata Kelola Data SDI",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Entitas Data Terdaftar",
+          "value": "115 entitas",
+          "delta": "+2.1% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Kepatuhan Kamus Data",
+          "value": "89%",
+          "delta": "+1% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Data Steward Aktif",
+          "value": "233 orang",
+          "delta": "+2.3% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Permintaan Akses Data Bulan Ini",
+          "value": "14 permintaan",
+          "delta": "+4.9% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul A.3 Tata Kelola Data SDI mengelola katalog data, kamus data, dan kebijakan tata kelola Satu Data Indonesia (SDI) untuk domain pengawasan Itwasum."
+    },
+    "a4": {
+      "kode": "A.4",
+      "label": "Data Protection & DLP",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Data Terklasifikasi Rahasia/Terbatas",
+          "value": "78.7%",
+          "delta": "+5.4% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Kebijakan Masking Aktif",
+          "value": "12 kebijakan",
+          "delta": "-4% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Insiden DLP Periode Ini",
+          "value": "199 insiden",
+          "delta": "+3.1% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Kepatuhan Enkripsi at-Rest",
+          "value": "98.6%",
+          "delta": "+1.8% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul A.4 Data Protection & DLP menegakkan kebijakan klasifikasi data, masking dinamis, dan Data Loss Prevention lintas seluruh modul aplikasi."
+    },
+    "c1": {
+      "kode": "C.1",
+      "label": "Integrasi Data Service Contract via DIV TIK",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Service Contract Aktif",
+          "value": "82 kontrak",
+          "delta": "+2.6% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Domain Tervalidasi Skema",
+          "value": "81 domain",
+          "delta": "-3.2% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "SLA Terpenuhi",
+          "value": "97.7%",
+          "delta": "+3.3% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Versi Kontrak Terbaru",
+          "value": "156",
+          "delta": "+1.3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul C.1 Integrasi Data Service Contract via DIV TIK mendaftar service contract 8 domain integrasi DIV TIK: status, SLA, dan versi kontrak API sesuai dokumen wajib DOC-04."
+    },
+    "c2": {
+      "kode": "C.2",
+      "label": "Integrasi Data Quality, Schema Alignment & Reconciliation",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Skor Kualitas Data Rata-rata",
+          "value": "239 skor",
+          "delta": "+0.5% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Rekonsiliasi Berhasil",
+          "value": "89.4%",
+          "delta": "-6.1% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Anomali Skema Terdeteksi",
+          "value": "16 anomali",
+          "delta": "+4.2% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Domain Sudah Selaras Skema",
+          "value": "209 domain",
+          "delta": "-4.3% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul C.2 Integrasi Data Quality, Schema Alignment & Reconciliation memantau metrik kualitas data hasil rekonsiliasi antar sumber (completeness, accuracy, timeliness) per domain integrasi DIV TIK."
+    },
+    "b11": {
+      "kode": "B.11",
+      "label": "Login & Otentikasi 2FA",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Sesi Aktif Saat Ini",
+          "value": "193 sesi",
+          "delta": "-0.6% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Login Gagal 24 Jam Terakhir",
+          "value": "19 percobaan",
+          "delta": "-1.1% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Kepatuhan 2FA/OTP",
+          "value": "80.1%",
+          "delta": "+4.1% dibanding periode lalu",
+          "tone": "kritis"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Durasi Sesi",
+          "value": "118 menit",
+          "delta": "+2.5% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.11 Login & Otentikasi 2FA memantau status konfigurasi keamanan otentikasi: login kredensial, lupa kata sandi berbasis OTP, verifikasi 2FA, dan kebijakan sesi tunggal/timeout (BA-SA Feature Catalog B.11: BR-LA-001..004, BR-OTP-001..002, WF-LP-001..003)."
+    }
+  }
+}

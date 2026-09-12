@@ -1,6 +1,7 @@
 import { SatkerMapItem } from '../types';
 import { POLDA_DATA } from './mockData';
 import { POLDA_LOGOS_DATA } from './satkerLogosData';
+import { ITWIL_POLDA_MAPPING, ITWIL_METADATA } from './mabesSatkerData';
 
 // Data struktur 34 Polda, Polres, dan jajaran satker menggunakan sumber publik resmi dan logo yang terverifikasi.
 export const ALL_POLDA_MAP_DATA: SatkerMapItem[] = POLDA_DATA.map((p) => {
@@ -2177,21 +2178,25 @@ export interface ItwilJurisdiction {
   zoomLevel: number;
 }
 
+// CATATAN REKONSILIASI (Plan 2, bagian 2.1): sebelumnya berkas ini mendefinisikan skema 3 wilayah
+// geografis (Sumatera/Jawa-Kalimantan/Timur) ditambah 2 "unit fungsional" (itwil-4, itwil-5 dengan
+// poldaIds kosong) yang bertentangan dengan skema 5 wilayah teritorial yang dipakai konsisten di
+// `mabesSatkerData.ITWIL_METADATA`, `publicStructureData.PUBLIC_ITWIL_POLDA_MAPPING`, dan
+// `rolesData.PREDEFINED_ROLES_ACCOUNTS` (mis. akun L1 'itwil-3' berlabel "Peta 7 Polda Binaan").
+// ITWIL_JURISDICTIONS sekarang diturunkan dari PUBLIC_ITWIL_POLDA_MAPPING (satu sumber kebenaran,
+// total 34 Polda: 6+8+7+7+6) sehingga drill-down L1 <-> L2 tidak lagi berbeda hasil antar komponen.
 export const ITWIL_JURISDICTIONS: ItwilJurisdiction[] = [
   {
     id: 'itwil-1',
     nama: 'Inspektorat Wilayah I Itwasum Polri',
-    singkatan: 'Itwil I (Wilayah Barat)',
-    pimpinan: 'Brigjen Pol. Dr. Dwi Gunawan, S.I.K., M.H.',
-    jabatan: 'Inspektur Wilayah I',
-    cakupan: '10 Polda Regional Sumatera',
-    totalPolda: 10,
+    singkatan: 'Itwil I',
+    pimpinan: ITWIL_METADATA['itwil-1'].pimpinan,
+    jabatan: ITWIL_METADATA['itwil-1'].pangkat,
+    cakupan: `${ITWIL_POLDA_MAPPING['itwil-1'].length} Polda Wilayah Sumatera Bagian Utara`,
+    totalPolda: ITWIL_POLDA_MAPPING['itwil-1'].length,
     totalPolres: 142,
-    poldaIds: [
-      'polda-aceh', 'polda-sumut', 'polda-sumbar', 'polda-riau', 'polda-kepri',
-      'polda-jambi', 'polda-bengkulu', 'polda-sumsel', 'polda-babel', 'polda-lampung'
-    ],
-    deskripsi: 'Membawahi pengawasan fungsional, audit akuntabilitas, dan wasrik berkala pada seluruh satker kewilayahan di Pulau Sumatera.',
+    poldaIds: ITWIL_POLDA_MAPPING['itwil-1'],
+    deskripsi: ITWIL_METADATA['itwil-1'].wilayahDeskripsi,
     warnaTema: '#059669', // Emerald Green
     centerCoordinates: [0.5897, 101.3431], // Riau / Central Sumatera
     zoomLevel: 6
@@ -2199,69 +2204,62 @@ export const ITWIL_JURISDICTIONS: ItwilJurisdiction[] = [
   {
     id: 'itwil-2',
     nama: 'Inspektorat Wilayah II Itwasum Polri',
-    singkatan: 'Itwil II (Wilayah Tengah)',
-    pimpinan: 'Brigjen Pol. Bahtiar Ujang Purnama, S.I.K., M.Si.',
-    jabatan: 'Inspektur Wilayah II',
-    cakupan: '11 Polda Regional Jawa & Kalimantan',
-    totalPolda: 11,
+    singkatan: 'Itwil II',
+    pimpinan: ITWIL_METADATA['itwil-2'].pimpinan,
+    jabatan: ITWIL_METADATA['itwil-2'].pangkat,
+    cakupan: `${ITWIL_POLDA_MAPPING['itwil-2'].length} Polda Wilayah Jawa & Sumatera Bagian Selatan`,
+    totalPolda: ITWIL_POLDA_MAPPING['itwil-2'].length,
     totalPolres: 178,
-    poldaIds: [
-      'polda-metro', 'polda-jabar', 'polda-jateng', 'polda-jatim', 'polda-banten', 'polda-diy',
-      'polda-kalbar', 'polda-kalteng', 'polda-kalsel', 'polda-kaltim', 'polda-kaltara'
-    ],
-    deskripsi: 'Membawahi pengawasan fungsional, evaluasi kinerja, dan audit kepatuhan di seluruh Pulau Jawa dan Kalimantan.',
+    poldaIds: ITWIL_POLDA_MAPPING['itwil-2'],
+    deskripsi: ITWIL_METADATA['itwil-2'].wilayahDeskripsi,
     warnaTema: '#2563EB', // Royal Blue
-    centerCoordinates: [-3.5, 110.0], // Central Java-Kalimantan
+    centerCoordinates: [-6.9, 107.6], // Jawa Barat / Metro
     zoomLevel: 6
   },
   {
     id: 'itwil-3',
     nama: 'Inspektorat Wilayah III Itwasum Polri',
-    singkatan: 'Itwil III (Wilayah Timur)',
-    pimpinan: 'Brigjen Pol. Drs. Gatot Tri Suryanta, M.Si., CSFA',
-    jabatan: 'Inspektur Wilayah III',
-    cakupan: '16 Polda Regional Indonesia Timur & Satker Mabes',
-    totalPolda: 16,
+    singkatan: 'Itwil III',
+    pimpinan: ITWIL_METADATA['itwil-3'].pimpinan,
+    jabatan: ITWIL_METADATA['itwil-3'].pangkat,
+    cakupan: `${ITWIL_POLDA_MAPPING['itwil-3'].length} Polda Wilayah Jawa Timur, Bali, Nusa Tenggara & Kalimantan Barat-Tengah`,
+    totalPolda: ITWIL_POLDA_MAPPING['itwil-3'].length,
     totalPolres: 164,
-    poldaIds: [
-      'polda-bali', 'polda-ntb', 'polda-ntt', 'polda-sulut', 'polda-gorontalo', 'polda-sulteng',
-      'polda-sulbar', 'polda-sulsel', 'polda-sultra', 'polda-maluku', 'polda-malut',
-      'polda-papua', 'polda-papuabarat', 'polda-papuatengah', 'polda-papuapegunungan', 'polda-papuaselatan'
-    ],
-    deskripsi: 'Membawahi pengawasan akuntabilitas fungsional di wilayah kepulauan Bali, Nusa Tenggara, Sulawesi, Maluku, dan Tanah Papua.',
+    poldaIds: ITWIL_POLDA_MAPPING['itwil-3'],
+    deskripsi: ITWIL_METADATA['itwil-3'].wilayahDeskripsi,
     warnaTema: '#7C3AED', // Purple
-    centerCoordinates: [-2.5, 128.0], // Maluku / Eastern Indonesia
-    zoomLevel: 5
+    centerCoordinates: [-7.8, 112.5], // Jawa Timur
+    zoomLevel: 6
   },
   {
     id: 'itwil-4',
     nama: 'Inspektorat Wilayah IV Itwasum Polri',
-    singkatan: 'Itwil IV (Audit Khusus & Investigasi)',
-    pimpinan: 'Brigjen Pol. Rinto Djatmono, S.I.K., M.H.',
-    jabatan: 'Inspektur Wilayah IV',
-    cakupan: 'Audit Investigatif & Dumas Berkadar Tinggi Nasional',
-    totalPolda: 34,
-    totalPolres: 484,
-    poldaIds: [],
-    deskripsi: 'Unit penegakan pengawasan khusus (Irsus) untuk audit investigatif, audit forensik keuangan, dan gelar perkara khusus tingkat nasional.',
+    singkatan: 'Itwil IV',
+    pimpinan: ITWIL_METADATA['itwil-4'].pimpinan,
+    jabatan: ITWIL_METADATA['itwil-4'].pangkat,
+    cakupan: `${ITWIL_POLDA_MAPPING['itwil-4'].length} Polda Wilayah Sulawesi & Kalimantan Selatan-Timur-Utara`,
+    totalPolda: ITWIL_POLDA_MAPPING['itwil-4'].length,
+    totalPolres: 121,
+    poldaIds: ITWIL_POLDA_MAPPING['itwil-4'],
+    deskripsi: ITWIL_METADATA['itwil-4'].wilayahDeskripsi,
     warnaTema: '#DC2626', // Red
-    centerCoordinates: [-6.2383, 106.8025], // Mabes Polri
-    zoomLevel: 14
+    centerCoordinates: [-3.5, 119.4], // Sulawesi Selatan
+    zoomLevel: 6
   },
   {
     id: 'itwil-5',
     nama: 'Inspektorat Wilayah V Itwasum Polri',
-    singkatan: 'Itwil V (Penjaminan Mutu & Dumas)',
-    pimpinan: 'Brigjen Pol. Budi Widjanarko, S.H., M.H.',
-    jabatan: 'Inspektur Wilayah V',
-    cakupan: 'Penjaminan Mutu SPIP, Reformasi Birokrasi & Dumas Presisi',
-    totalPolda: 34,
-    totalPolres: 484,
-    poldaIds: [],
-    deskripsi: 'Pengampu standarisasi mutu audit, e-Audit, evaluasi maturitas SPIP, dan monitoring penanganan pengaduan masyarakat Dumas Presisi.',
+    singkatan: 'Itwil V',
+    pimpinan: ITWIL_METADATA['itwil-5'].pimpinan,
+    jabatan: ITWIL_METADATA['itwil-5'].pangkat,
+    cakupan: `${ITWIL_POLDA_MAPPING['itwil-5'].length} Polda Wilayah Maluku, Maluku Utara, Papua & Papua Barat`,
+    totalPolda: ITWIL_POLDA_MAPPING['itwil-5'].length,
+    totalPolres: 79,
+    poldaIds: ITWIL_POLDA_MAPPING['itwil-5'],
+    deskripsi: ITWIL_METADATA['itwil-5'].wilayahDeskripsi,
     warnaTema: '#0D9488', // Teal
-    centerCoordinates: [-6.2386, 106.8028], // Itwasum Polri
-    zoomLevel: 14
+    centerCoordinates: [-2.5, 128.0], // Maluku / Papua Barat
+    zoomLevel: 5
   }
 ];
 

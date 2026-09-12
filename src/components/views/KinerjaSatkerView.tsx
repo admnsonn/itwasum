@@ -57,7 +57,7 @@ export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList,
       {/* Sub-navigation Tabs */}
       <div className="bg-white rounded-2xl p-1.5 border border-slate-200/90 shadow-sm flex items-center gap-1.5 overflow-x-auto">
         {[
-          { id: 'iku', label: 'Pencapaian IKU Satker' },
+          { id: 'iku', label: 'Dashboard IKU Nasional' },
           { id: 'irsus', label: 'Satwil Pemeriksaan Khusus (Irsus)' },
           { id: 'eprofil', label: 'E-Profil Satker (SDM, Sarpras, DIPA)' },
           { id: 'rbs', label: 'Risk-Based Scrutiny (RBS Matrix)' }
@@ -87,7 +87,7 @@ export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList,
             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
                 <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
-                  Perbandingan Capaian Indikator Kinerja Utama (IKU) Nasional
+                  Dashboard IKU Nasional — Perbandingan Capaian Indikator Kinerja Utama (IKU)
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Target Standar Mabes Polri: <strong>90.0%</strong> (Garis Putus-Putus Merah)

@@ -23,14 +23,17 @@ interface PengawasanTemuanViewProps {
   poldaList: PoldaSatker[];
   initialPoldaFilter?: string;
   currentUser?: CurrentUserProfile;
+  /** Deep-link ke tab tertentu, dipakai oleh registry modul B.2 (bpk) / B.3 (irsus) / B.14 (penugasan) */
+  initialTab?: 'polri' | 'bpk' | 'irsus' | 'penugasan';
 }
 
 export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
   poldaList,
   initialPoldaFilter,
-  currentUser
+  currentUser,
+  initialTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'polri' | 'bpk' | 'irsus' | 'penugasan'>('polri');
+  const [activeTab, setActiveTab] = useState<'polri' | 'bpk' | 'irsus' | 'penugasan'>(initialTab || 'polri');
   
   // Default to user's assigned polda if pengawas_tim or auditee
   const defaultPolda = initialPoldaFilter || (
@@ -165,6 +168,12 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
 
       {activeTab !== 'penugasan' ? (
         <>
+          {/* Screen label: implementasi FSD Detail Temuan (SF-TB-011/SF-TI-011) + Tindak Lanjut
+              (SF-TB-009/SF-TI-009) pada satu layar. Screen Ringkasan AI/Statistik dan Analisis
+              Distribusi/Akar Masalah dicatat sebagai gap pada docs/audit-kesesuaian-ba-sa.md. */}
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 -mb-1">
+            Layar: Detail Temuan &amp; Tindak Lanjut
+          </p>
           {/* Filter Bar (2 Main Dropdowns + Search) */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-wrap items-center justify-between gap-3">
             
