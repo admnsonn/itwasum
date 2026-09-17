@@ -467,6 +467,15 @@ export const EMBLEM_CONFIGS: Record<string, PoldaEmblemConfig> = {
     code: 'P.BARAT',
     namaPolda: 'Polda Papua Barat'
   },
+  'polda-papua-barat': {
+    primaryColor: '#0369A1',
+    secondaryColor: '#FBBF24',
+    accentColor: '#059669',
+    symbolType: 'cenderawasih',
+    motto: 'Kasuari Bhakti',
+    code: 'P.BARAT',
+    namaPolda: 'Polda Papua Barat'
+  },
   'polda-papua': {
     primaryColor: '#18181B',
     secondaryColor: '#DC2626',

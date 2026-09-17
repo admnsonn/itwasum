@@ -1,6 +1,5 @@
 {
-  "generatedAt": "2026-09-12T06:53:23.780Z",
-  "moduleCount": 24,
+  "moduleCount": 25,
   "note": "Snapshot deterministik - regenerasi ulang skrip ini pada seed yang sama akan menghasilkan isi identik.",
   "modules": {
     "b8": {
@@ -10,29 +9,29 @@
         {
           "id": "kpi-0",
           "label": "Rata-rata Skor Maturitas SPIP",
-          "value": "209 skor",
-          "delta": "-4% dibanding periode lalu",
+          "value": "4.17",
+          "delta": "+2.8% dibanding periode lalu",
           "tone": "netral"
         },
         {
           "id": "kpi-1",
           "label": "Satker Level 3+",
-          "value": "94 satker",
-          "delta": "+3.9% dibanding periode lalu",
+          "value": "76 satker",
+          "delta": "+0.8% dibanding periode lalu",
           "tone": "aman"
         },
         {
           "id": "kpi-2",
           "label": "Satker Belum Dievaluasi",
-          "value": "83 satker",
-          "delta": "-5.9% dibanding periode lalu",
+          "value": "164 satker",
+          "delta": "-3.6% dibanding periode lalu",
           "tone": "aman"
         },
         {
           "id": "kpi-3",
           "label": "Komponen Terlemah",
-          "value": "126",
-          "delta": "+3.6% dibanding periode lalu",
+          "value": "144",
+          "delta": "+6.3% dibanding periode lalu",
           "tone": "netral"
         }
       ],
@@ -68,8 +67,8 @@
         {
           "id": "kpi-3",
           "label": "Skor Risiko Rata-rata",
-          "value": "123 skor",
-          "delta": "+1% dibanding periode lalu",
+          "value": "2.94",
+          "delta": "+1.4% dibanding periode lalu",
           "tone": "netral"
         }
       ],
@@ -142,14 +141,14 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Skor",
-          "value": "124 skor",
-          "delta": "+3.3% dibanding periode lalu",
+          "value": "2.81",
+          "delta": "+2.6% dibanding periode lalu",
           "tone": "netral"
         }
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul B.14 Manajemen Penugasan Audit sedang dalam tahap pengembangan mock data awal sesuai lingkup SPEKTEK."
+      "narrative": "Modul B.14 Manajemen Penugasan Audit sedang dalam tahap pengembangan konten awal sesuai lingkup SPEKTEK."
     },
     "b15": {
       "kode": "B.15",
@@ -179,7 +178,7 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Waktu Validasi",
-          "value": "158 hari",
+          "value": "717 hari",
           "delta": "-5.8% dibanding periode lalu",
           "tone": "netral"
         }
@@ -216,7 +215,7 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Aging TLHP",
-          "value": "224 hari",
+          "value": "1029 hari",
           "delta": "+2.6% dibanding periode lalu",
           "tone": "netral"
         }
@@ -232,29 +231,29 @@
         {
           "id": "kpi-0",
           "label": "Skor Maturitas SPIP Nasional",
-          "value": "113 skor",
-          "delta": "+4.5% dibanding periode lalu",
+          "value": "2.73",
+          "delta": "-3.3% dibanding periode lalu",
           "tone": "netral"
         },
         {
           "id": "kpi-1",
           "label": "Skor Risiko Strategis",
-          "value": "113 skor",
-          "delta": "+5.5% dibanding periode lalu",
+          "value": "3.23",
+          "delta": "-2.7% dibanding periode lalu",
           "tone": "aman"
         },
         {
           "id": "kpi-2",
           "label": "Satker Turun Level",
-          "value": "91 satker",
-          "delta": "+1.1% dibanding periode lalu",
-          "tone": "kritis"
+          "value": "29 satker",
+          "delta": "+2.8% dibanding periode lalu",
+          "tone": "aman"
         },
         {
           "id": "kpi-3",
           "label": "Satker Naik Level",
-          "value": "79 satker",
-          "delta": "+4.3% dibanding periode lalu",
+          "value": "155 satker",
+          "delta": "+3.2% dibanding periode lalu",
           "tone": "netral"
         }
       ],
@@ -290,7 +289,7 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Waktu Respons",
-          "value": "181 jam",
+          "value": "18 jam",
           "delta": "+5.8% dibanding periode lalu",
           "tone": "netral"
         }
@@ -327,7 +326,7 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Waktu Proses",
-          "value": "149 hari",
+          "value": "676 hari",
           "delta": "-5.3% dibanding periode lalu",
           "tone": "netral"
         }
@@ -364,7 +363,7 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Waktu Disposisi",
-          "value": "80 jam",
+          "value": "8 jam",
           "delta": "+5.7% dibanding periode lalu",
           "tone": "netral"
         }
@@ -401,14 +400,20 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Waktu Deploy",
-          "value": "112 menit",
+          "value": "21 menit",
           "delta": "+3.3% dibanding periode lalu",
           "tone": "netral"
         }
       ],
       "tableRowCount": 8,
       "chartPoints": 4,
-      "narrative": "Modul E.1 AI Foundation Platform & MLOps Pipeline memantau pipeline MLOps: registry model, versi, tahap deployment (staging/canary/produksi), dan kesehatan layanan inferensi seluruh model E.2-E.7."
+      "narrative": "Modul E.1 AI Foundation Platform & MLOps Pipeline memantau pipeline MLOps: registry model, versi, tahap deployment (staging/canary/produksi), dan kesehatan layanan inferensi seluruh model E.2-E.7.",
+      "composedSections": {
+        "screenSlug": "registry-model",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "e2": {
       "kode": "E.2",
@@ -445,7 +450,13 @@
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul E.2 RAG Knowledge Hub Pengawasan adalah basis pengetahuan pengawasan berbasis Retrieval-Augmented Generation, menyuplai konteks untuk ChatItwasum Copilot (E.5) dan Auto Report Generator (E.3)."
+      "narrative": "Modul E.2 RAG Knowledge Hub Pengawasan adalah basis pengetahuan pengawasan berbasis Retrieval-Augmented Generation, menyuplai konteks untuk ChatItwasum Copilot (E.5) dan Auto Report Generator (E.3).",
+      "composedSections": {
+        "screenSlug": "sumber-pengetahuan",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "e3": {
       "kode": "E.3",
@@ -461,7 +472,7 @@
         {
           "id": "kpi-1",
           "label": "Rata-rata Waktu Generate",
-          "value": "128 menit",
+          "value": "24 menit",
           "delta": "-4.8% dibanding periode lalu",
           "tone": "aman"
         },
@@ -482,7 +493,13 @@
       ],
       "tableRowCount": 8,
       "chartPoints": 4,
-      "narrative": "Modul E.3 Auto Report Generator + Executive Summary menghasilkan laporan otomatis dan ringkasan eksekutif dari data pengawasan aktif, mengurangi waktu penyusunan laporan manual pimpinan."
+      "narrative": "Modul E.3 Auto Report Generator + Executive Summary menghasilkan laporan otomatis dan ringkasan eksekutif dari data pengawasan aktif, mengurangi waktu penyusunan laporan manual pimpinan.",
+      "composedSections": {
+        "screenSlug": "antrean-laporan",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "e4": {
       "kode": "E.4",
@@ -512,14 +529,20 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Waktu Deteksi",
-          "value": "6 menit",
+          "value": "1 menit",
           "delta": "-3.7% dibanding periode lalu",
           "tone": "netral"
         }
       ],
       "tableRowCount": 8,
       "chartPoints": 4,
-      "narrative": "Modul E.4 Anomaly Alert Pengawasan mendeteksi anomali data pengawasan (rule + light ML) yang memicu Early Warning Pengawasan (B.18) secara otomatis."
+      "narrative": "Modul E.4 Anomaly Alert Pengawasan mendeteksi anomali data pengawasan (rule + light ML) yang memicu Early Warning Pengawasan (B.18) secara otomatis.",
+      "composedSections": {
+        "screenSlug": "dashboard-anomali",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "e6": {
       "kode": "E.6",
@@ -542,7 +565,7 @@
         {
           "id": "kpi-2",
           "label": "Rata-rata Waktu Proses",
-          "value": "207 detik",
+          "value": "104 detik",
           "delta": "-4% dibanding periode lalu",
           "tone": "kritis"
         },
@@ -556,7 +579,13 @@
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul E.6 Document AI Pengawasan melakukan OCR, Named Entity Recognition, dan ekstraksi entitas dari dokumen audit/temuan yang diunggah ke seluruh modul pengawasan."
+      "narrative": "Modul E.6 Document AI Pengawasan melakukan OCR, Named Entity Recognition, dan ekstraksi entitas dari dokumen audit/temuan yang diunggah ke seluruh modul pengawasan.",
+      "composedSections": {
+        "screenSlug": "akurasi-ekstraksi",
+        "sectionCount": 3,
+        "kpiSections": 0,
+        "tableSections": 0
+      }
     },
     "e7": {
       "kode": "E.7",
@@ -593,7 +622,13 @@
       ],
       "tableRowCount": 8,
       "chartPoints": 4,
-      "narrative": "Modul E.7 AI Governance & AI Security menegakkan kebijakan tata kelola AI, risk register per model, dan audit trail permintaan LLM (dokumen wajib DOC-05, memakai auditLogger.logLLMQuestion yang sudah ada)."
+      "narrative": "Modul E.7 AI Governance & AI Security menegakkan kebijakan tata kelola AI, risk register per model, dan audit trail permintaan LLM (dokumen wajib DOC-05, memakai auditLogger.logLLMQuestion yang sudah ada).",
+      "composedSections": {
+        "screenSlug": "risk-register",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 0
+      }
     },
     "e8": {
       "kode": "E.8",
@@ -630,7 +665,13 @@
       ],
       "tableRowCount": 8,
       "chartPoints": 4,
-      "narrative": "Modul E.8 Subscription Layanan AI Cloud Managed memantau status dan biaya berjalan langganan layanan AI cloud terkelola (Rp 3.758.923.000 nilai penuh RKA-K/L) selama 12 bulan pasca go-live."
+      "narrative": "Modul E.8 Subscription Layanan AI Cloud Managed memantau status dan biaya berjalan langganan layanan AI cloud terkelola (Rp 3.758.923.000 nilai penuh RKA-K/L) selama 12 bulan pasca go-live.",
+      "composedSections": {
+        "screenSlug": "biaya-berjalan",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "a1": {
       "kode": "A.1",
@@ -660,14 +701,20 @@
         {
           "id": "kpi-3",
           "label": "Latensi Rata-rata",
-          "value": "156 ms",
+          "value": "129 ms",
           "delta": "+5.6% dibanding periode lalu",
           "tone": "netral"
         }
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul A.1 API Consumer Layer ke DIV TIK / SuperApp Big Data Polri memantau lapisan konsumsi API dari DIV TIK / SuperApp Big Data Polri sebagai sumber data resmi tunggal (Single Source of Truth)."
+      "narrative": "Modul A.1 API Consumer Layer ke DIV TIK / SuperApp Big Data Polri memantau lapisan konsumsi API dari DIV TIK / SuperApp Big Data Polri sebagai sumber data resmi tunggal (Single Source of Truth).",
+      "composedSections": {
+        "screenSlug": "status-koneksi",
+        "sectionCount": 3,
+        "kpiSections": 0,
+        "tableSections": 1
+      }
     },
     "a2": {
       "kode": "A.2",
@@ -690,7 +737,7 @@
         {
           "id": "kpi-2",
           "label": "Kesegaran Data Rata-rata",
-          "value": "48 jam",
+          "value": "5 jam",
           "delta": "-5.8% dibanding periode lalu",
           "tone": "aman"
         },
@@ -704,7 +751,13 @@
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul A.2 Data Mart Pengawasan Itwasum memantau pipeline ETL/ELT data mart pengawasan Itwasum: sumber, tahapan transformasi, dan kesegaran data untuk seluruh modul B.1-B.18."
+      "narrative": "Modul A.2 Data Mart Pengawasan Itwasum memantau pipeline ETL/ELT data mart pengawasan Itwasum: sumber, tahapan transformasi, dan kesegaran data untuk seluruh modul B.1-B.18.",
+      "composedSections": {
+        "screenSlug": "dashboard-etl",
+        "sectionCount": 4,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "a3": {
       "kode": "A.3",
@@ -741,7 +794,13 @@
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul A.3 Tata Kelola Data SDI mengelola katalog data, kamus data, dan kebijakan tata kelola Satu Data Indonesia (SDI) untuk domain pengawasan Itwasum."
+      "narrative": "Modul A.3 Tata Kelola Data SDI mengelola katalog data, kamus data, dan kebijakan tata kelola Satu Data Indonesia (SDI) untuk domain pengawasan Itwasum.",
+      "composedSections": {
+        "screenSlug": "katalog-data",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "a4": {
       "kode": "A.4",
@@ -778,7 +837,13 @@
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul A.4 Data Protection & DLP menegakkan kebijakan klasifikasi data, masking dinamis, dan Data Loss Prevention lintas seluruh modul aplikasi."
+      "narrative": "Modul A.4 Data Protection & DLP menegakkan kebijakan klasifikasi data, masking dinamis, dan Data Loss Prevention lintas seluruh modul aplikasi.",
+      "composedSections": {
+        "screenSlug": "klasifikasi",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
     },
     "c1": {
       "kode": "C.1",
@@ -815,7 +880,13 @@
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul C.1 Integrasi Data Service Contract via DIV TIK mendaftar service contract 8 domain integrasi DIV TIK: status, SLA, dan versi kontrak API sesuai dokumen wajib DOC-04."
+      "narrative": "Modul C.1 Integrasi Data Service Contract via DIV TIK mendaftar service contract 8 domain integrasi DIV TIK: status, SLA, dan versi kontrak API sesuai dokumen wajib DOC-04.",
+      "composedSections": {
+        "screenSlug": "daftar-kontrak",
+        "sectionCount": 3,
+        "kpiSections": 0,
+        "tableSections": 1
+      }
     },
     "c2": {
       "kode": "C.2",
@@ -824,35 +895,78 @@
         {
           "id": "kpi-0",
           "label": "Skor Kualitas Data Rata-rata",
-          "value": "239 skor",
-          "delta": "+0.5% dibanding periode lalu",
+          "value": "4.74",
+          "delta": "+3.8% dibanding periode lalu",
           "tone": "netral"
         },
         {
           "id": "kpi-1",
           "label": "Rekonsiliasi Berhasil",
-          "value": "89.4%",
-          "delta": "-6.1% dibanding periode lalu",
+          "value": "97.6%",
+          "delta": "-3% dibanding periode lalu",
           "tone": "aman"
         },
         {
           "id": "kpi-2",
           "label": "Anomali Skema Terdeteksi",
-          "value": "16 anomali",
-          "delta": "+4.2% dibanding periode lalu",
+          "value": "145 anomali",
+          "delta": "+5.7% dibanding periode lalu",
           "tone": "aman"
         },
         {
           "id": "kpi-3",
           "label": "Domain Sudah Selaras Skema",
-          "value": "209 domain",
-          "delta": "-4.3% dibanding periode lalu",
+          "value": "197 domain",
+          "delta": "+6.2% dibanding periode lalu",
           "tone": "netral"
         }
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul C.2 Integrasi Data Quality, Schema Alignment & Reconciliation memantau metrik kualitas data hasil rekonsiliasi antar sumber (completeness, accuracy, timeliness) per domain integrasi DIV TIK."
+      "narrative": "Modul C.2 Integrasi Data Quality, Schema Alignment & Reconciliation memantau metrik kualitas data hasil rekonsiliasi antar sumber (completeness, accuracy, timeliness) per domain integrasi DIV TIK.",
+      "composedSections": {
+        "screenSlug": "dashboard-kualitas",
+        "sectionCount": 3,
+        "kpiSections": 1,
+        "tableSections": 1
+      }
+    },
+    "b10": {
+      "kode": "B.10",
+      "label": "Log Aktivitas & Audit Trail",
+      "kpis": [
+        {
+          "id": "kpi-0",
+          "label": "Total Objek Dipantau",
+          "value": "132 objek",
+          "delta": "-3.8% dibanding periode lalu",
+          "tone": "netral"
+        },
+        {
+          "id": "kpi-1",
+          "label": "Status Aman",
+          "value": "80.3%",
+          "delta": "+3.3% dibanding periode lalu",
+          "tone": "aman"
+        },
+        {
+          "id": "kpi-2",
+          "label": "Perlu Perhatian",
+          "value": "26 objek",
+          "delta": "-0.6% dibanding periode lalu",
+          "tone": "perhatian"
+        },
+        {
+          "id": "kpi-3",
+          "label": "Rata-rata Skor",
+          "value": "2.03",
+          "delta": "-3.6% dibanding periode lalu",
+          "tone": "netral"
+        }
+      ],
+      "tableRowCount": 12,
+      "chartPoints": 4,
+      "narrative": "Modul B.10 Log Aktivitas & Audit Trail sedang dalam tahap pengembangan konten awal sesuai lingkup SPEKTEK."
     },
     "b11": {
       "kode": "B.11",
@@ -882,14 +996,20 @@
         {
           "id": "kpi-3",
           "label": "Rata-rata Durasi Sesi",
-          "value": "118 menit",
+          "value": "22 menit",
           "delta": "+2.5% dibanding periode lalu",
           "tone": "netral"
         }
       ],
       "tableRowCount": 12,
       "chartPoints": 4,
-      "narrative": "Modul B.11 Login & Otentikasi 2FA memantau status konfigurasi keamanan otentikasi: login kredensial, lupa kata sandi berbasis OTP, verifikasi 2FA, dan kebijakan sesi tunggal/timeout (BA-SA Feature Catalog B.11: BR-LA-001..004, BR-OTP-001..002, WF-LP-001..003)."
+      "narrative": "Modul B.11 Login & Otentikasi 2FA memantau status konfigurasi keamanan otentikasi: login kredensial, lupa kata sandi berbasis OTP, verifikasi 2FA, dan kebijakan sesi tunggal/timeout (BA-SA Feature Catalog B.11: BR-LA-001..004, BR-OTP-001..002, WF-LP-001..003).",
+      "composedSections": {
+        "screenSlug": "kebijakan-2fa",
+        "sectionCount": 4,
+        "kpiSections": 0,
+        "tableSections": 1
+      }
     }
   }
 }

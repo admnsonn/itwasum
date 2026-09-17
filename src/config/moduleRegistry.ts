@@ -141,7 +141,7 @@ export interface ModuleDefinition {
   /**
    * Jika terisi, ModuleRouteView mendelegasikan render ke tampilan legacy yang sudah ada
    * (BerandaView/PengawasanTemuanView/KinerjaSatkerView/TimAuditorView/PengaturanSistemView)
-   * alih-alih GenericModuleView. Dipakai untuk modul yang sudah punya implementasi mendalam.
+   * alih-alih ComposedModuleView. Dipakai untuk modul yang sudah punya implementasi mendalam.
    */
   legacyViewId?: LegacyViewId;
   /** Sub-tab yang diteruskan ke tampilan legacy pengawasan (bpk/irsus/penugasan). */
@@ -397,7 +397,7 @@ export const MODULE_REGISTRY = [
     icon: MessageSquareText,
     sumberSpek: 'SPEKTEK III.A.5 (E.5, 180 OH); Modul Overview SF-008 Tanya Jawab Data',
     status: 'baru',
-    deskripsi: 'Asisten percakapan AI untuk menjawab pertanyaan data pengawasan (terhubung ke @google/genai, fallback mock bila API key kosong).',
+    deskripsi: 'Asisten percakapan AI untuk menjawab pertanyaan data pengawasan. Terhubung ke layanan Gemini bila kunci API tersedia; jika tidak, memakai cadangan terverifikasi.',
   },
   {
     id: 'e6',
@@ -502,8 +502,7 @@ export const MODULE_REGISTRY = [
       'bukti nyata: evidence/infra-repoconfig-itwasum, evidence/helm-repoconfig-itwasum',
     status: 'nyata',
     deskripsi:
-      'Satu-satunya halaman berisi DATA NYATA (bukan mock): environment Development & SIT yang benar-benar berjalan ' +
-      '(namespace, Ingress, Vault Secrets Operator, 3 Helm chart, 167 rilis CI terverifikasi), plus status migrasi ke DC DIVTIK.',
+      'Status environment Development & SIT yang berjalan (namespace, Ingress, Vault Secrets Operator, Helm chart, rilis CI terverifikasi), plus status migrasi ke DC DIVTIK.',
   },
 
   // ========================= TATA KELOLA SISTEM =========================

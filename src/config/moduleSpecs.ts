@@ -8,6 +8,7 @@
  * `#/<moduleId>/<screenSlug>` via `useHashRoute`.
  */
 import type { ModuleId } from './moduleRegistry';
+import { MODULE_CONTENT } from '../content/modules';
 
 export interface ScreenSpec {
   /** Slug dipakai pada hash route: #/<moduleId>/<slug> */
@@ -127,6 +128,7 @@ export const MODULE_SPECS: Partial<Record<ModuleId, ModuleSpec>> = {
       { slug: 'konfigurasi-retensi', nama: 'Konfigurasi Retensi', deskripsi: 'Grafik volume log dan alert anomali (>200%), konfigurasi retensi.', subFeatures: ['SF-004 Grafik volume + alert anomali'] },
     ],
   },
+  ...Object.fromEntries(Object.entries(MODULE_CONTENT).map(([id, entry]) => [id, entry.spec])),
 };
 
 export function getModuleSpec(moduleId: string): ModuleSpec | undefined {

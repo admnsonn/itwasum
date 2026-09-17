@@ -7,7 +7,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     id: 'log-1',
     waktu: '06 Sep 2026, 14:15:22 WIB',
     kejadian: 'Buka Overview',
-    user: 'Komjen Pol. Ahmad Dofiri, M.Si.',
+    user: 'Komjen Pol. Drs. Wahyu Widada, M.Phil.',
     peran: 'Pimpinan Tertinggi (L0)',
     titikWilayah: 'Mabes Polri (Nasional)',
     detail: {
@@ -20,7 +20,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     id: 'log-2',
     waktu: '06 Sep 2026, 14:18:05 WIB',
     kejadian: 'Drill-down',
-    user: 'Komjen Pol. Ahmad Dofiri, M.Si.',
+    user: 'Komjen Pol. Drs. Wahyu Widada, M.Phil.',
     peran: 'Pimpinan Tertinggi (L0)',
     titikWilayah: 'Mabes Polri (Nasional)',
     detail: {

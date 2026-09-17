@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Shield, Bell, CheckCircle2, ChevronDown, User, LogOut, Search, X, Check, ExternalLink, RefreshCw, Users, Key, Lock, ShieldAlert, ArrowRight } from 'lucide-react';
 import { PerluPerhatianItem, PoldaSatker, CurrentUserProfile } from '../types';
 import { PoldaLogo } from './PoldaLogo';
+import { AuditorAvatar } from './ui/atoms';
 import { PREDEFINED_ROLES_ACCOUNTS, PredefinedAccountConfig } from '../data/rolesData';
-import auditorProfileImg from '../assets/images/auditor_profile_1787852939070.jpg';
 
 interface HeaderProps {
   urgentItems: PerluPerhatianItem[];
@@ -281,16 +281,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center gap-2.5 p-1 sm:pl-1.5 sm:pr-3 py-1 rounded-xl bg-[#071F42] hover:bg-[#0E2E5E] border border-[#1A4278] transition text-left cursor-pointer"
             >
               <div className="relative w-8 h-8 rounded-lg overflow-hidden shadow-xs shrink-0 bg-slate-800 flex items-center justify-center text-white font-black text-xs">
-                {currentUser?.avatarUrl ? (
-                  <img
-                    src={currentUser.avatarUrl}
-                    alt={currentUser.nama}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <span>{currentUser ? currentUser.nama.split(' ').map(n => n[0]).slice(0, 2).join('') : 'AU'}</span>
-                )}
+                {currentUser ? <AuditorAvatar name={currentUser.nama} size={32} className="rounded-lg" /> : <span>AU</span>}
               </div>
               <div className="hidden sm:block">
                 <div className="flex items-center gap-1.5">
@@ -316,16 +307,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {/* Profile Header */}
                 <div className="p-3.5 bg-[#0B2B5C] text-white flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 shadow-xs bg-slate-800 flex items-center justify-center font-black text-xs text-amber-400">
-                    {currentUser?.avatarUrl ? (
-                      <img
-                        src={currentUser.avatarUrl}
-                        alt={currentUser.nama}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span>{currentUser ? currentUser.nama.split(' ').map(n => n[0]).slice(0, 2).join('') : 'AU'}</span>
-                    )}
+                    {currentUser ? <AuditorAvatar name={currentUser.nama} size={40} className="rounded-lg" /> : <span>AU</span>}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-extrabold text-xs sm:text-sm text-white leading-tight truncate">

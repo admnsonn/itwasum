@@ -8,13 +8,13 @@
  *
  * Urutan resolusi:
  *   1. Modul dengan tampilan bespoke (B.1, D, E.5, B.10) -> komponen khusus.
- *   2. Sisanya -> `GenericModuleView` yang didorong oleh `genericModuleData.ts`.
+ *   2. Sisanya -> `ComposedModuleView` (deskriptor seksi per modul).
  */
 
 import React from 'react';
 import type { CurrentUserProfile, MainNavId, PoldaSatker } from '../../types';
-import { getModuleById, MODULE_GROUPS } from '../../config/moduleRegistry';
-import { GenericModuleView } from './GenericModuleView';
+import { getModuleById } from '../../config/moduleRegistry';
+import { ComposedModuleView } from './modules/ComposedModuleView';
 import { EProfileSatkerView } from './EProfileSatkerView';
 import { DeploymentEnvironmentView } from './DeploymentEnvironmentView';
 import { ChatItwasumCopilotView } from './ChatItwasumCopilotView';
@@ -100,6 +100,12 @@ export const ModuleRouteView: React.FC<ModuleRouteViewProps> = ({
     case 'b18':
       return <EarlyWarningView currentUser={currentUser} poldaList={poldaList} subPath={subPath} onSubPathChange={handleSubPathChange} />;
     default:
-      return <GenericModuleView moduleDef={moduleDef} breadcrumbGroupLabel={MODULE_GROUPS[moduleDef.group].label} />;
+      return (
+        <ComposedModuleView
+          moduleDef={moduleDef}
+          subPath={subPath}
+          onSubPathChange={handleSubPathChange}
+        />
+      );
   }
 };

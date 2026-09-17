@@ -43,6 +43,7 @@ interface IndonesiaMapProps {
   selectedSatkerItem?: SatkerMapItem | null;
   onSelectSatkerItem?: (item: SatkerMapItem) => void;
   onOpenDetailDrawer?: (item: SatkerMapItem) => void;
+  onOpenRegional?: (poldaId: string) => void;
   tingkatObjek?: TingkatObjek;
   currentUser?: CurrentUserProfile;
   activeBidang?: BidangAudit;
@@ -125,6 +126,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   selectedSatkerItem,
   onSelectSatkerItem,
   onOpenDetailDrawer,
+  onOpenRegional,
   tingkatObjek = 'semua',
   currentUser,
   activeBidang = 'semua',
@@ -830,16 +832,23 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
             </div>
           </div>
           
-          <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+          <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
             <span class="text-slate-400 font-mono text-[10px]">${(satker.lat || 0).toFixed(2)}°, ${(satker.lng || 0).toFixed(2)}°</span>
-            <button 
-              id="btn-map-popup-detail-${satker.id}"
-              data-satker-detail-id="${satker.id}"
-              class="px-2.5 py-1.5 bg-[#0B2B5C] hover:bg-blue-900 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer transition"
-            >
-              <span>Detail Lengkap</span>
-              <span>➔</span>
-            </button>
+            <div class="flex items-center gap-1">
+              ${isPolda || satker.parentPoldaId ? `
+              <button
+                data-satker-regional-id="${isPolda ? satker.id : satker.parentPoldaId}"
+                class="px-2 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-bold text-[10px] cursor-pointer"
+              >Kinerja B.7</button>` : ''}
+              <button 
+                id="btn-map-popup-detail-${satker.id}"
+                data-satker-detail-id="${satker.id}"
+                class="px-2.5 py-1.5 bg-[#0B2B5C] hover:bg-blue-900 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer transition"
+              >
+                <span>Detail Lengkap</span>
+                <span>➔</span>
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -854,9 +863,15 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     });
   }, [filteredSatkers, selectedPoldaId, selectedSatkerItem, showRiskHeatmap, onSelectPolda, onSelectSatkerItem]);
 
-  // Global listener for "Detail Lengkap" button click inside Leaflet popup HTML
+  // Global listener for "Detail Lengkap" / "Kinerja B.7" buttons inside Leaflet popup HTML
   useEffect(() => {
     const handleGlobalPopupClick = (e: MouseEvent) => {
+      const regional = (e.target as HTMLElement).closest('[data-satker-regional-id]');
+      if (regional) {
+        const poldaId = regional.getAttribute('data-satker-regional-id');
+        if (poldaId) onOpenRegional?.(poldaId);
+        return;
+      }
       const target = (e.target as HTMLElement).closest('[data-satker-detail-id]');
       if (target) {
         const satkerId = target.getAttribute('data-satker-detail-id');
@@ -873,7 +888,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
     return () => {
       document.removeEventListener('click', handleGlobalPopupClick);
     };
-  }, [onOpenDetailDrawer]);
+  }, [onOpenDetailDrawer, onOpenRegional]);
 
   // 4. Island Region FlyTo Navigation
   const handleSelectIsland = (island: SatkerMapItem['pulau'] | 'Semua') => {
@@ -1449,12 +1464,12 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                       onClick={() => onSelectBidang?.('sarpras')}
                       className={`p-2.5 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
                         activeBidang === 'sarpras'
-                          ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20 shadow-xs'
+                          ? 'bg-blue-50/70 border-brand-700 ring-2 ring-brand-700/20 shadow-xs'
                           : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100/80'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-[9.5px] font-bold text-indigo-700 uppercase tracking-wider">
+                        <span className="text-[9.5px] font-bold text-brand-700 uppercase tracking-wider">
                           Logistik &amp; BMN
                         </span>
                       </div>
@@ -1463,7 +1478,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                           <span className="text-xl sm:text-2xl font-black text-slate-900 font-mono tracking-tight">
                             {uiConditions.sarpras}
                           </span>
-                          <span className="text-sm font-black text-indigo-600">%</span>
+                          <span className="text-sm font-black text-brand-700">%</span>
                         </div>
                         <p className="text-[10px] text-slate-500 truncate mt-0.5">
                           Validasi Senpi &amp; Ranmor
@@ -1471,7 +1486,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                       </div>
                       <div className="mt-1.5 pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-[9px]">
                         <span className="text-slate-400 font-medium">Aset Terdata</span>
-                        <span className="text-indigo-600 font-bold">Tervalidasi</span>
+                        <span className="text-brand-700 font-bold">Tervalidasi</span>
                       </div>
                     </div>
 
@@ -1630,6 +1645,15 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                   <RotateCcw className="w-3 h-3" />
                   <span>Fokus</span>
                 </button>
+                {onOpenRegional && (activeInspectedSatker.tingkat === 'Polda' || activeInspectedSatker.parentPoldaId) && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenRegional(activeInspectedSatker.tingkat === 'Polda' ? activeInspectedSatker.id : activeInspectedSatker.parentPoldaId)}
+                    className="py-1.5 px-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold cursor-pointer"
+                  >
+                    Kinerja B.7
+                  </button>
+                )}
                 {onOpenDetailDrawer && (
                   <button
                     onClick={() => onOpenDetailDrawer(activeInspectedSatker)}
@@ -2158,6 +2182,15 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
               {/* Action Bar */}
               <div className="flex items-center gap-2 mt-2.5">
+                {onOpenRegional && (satkerToDisplay.tingkat === 'Polda' || satkerToDisplay.parentPoldaId) && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenRegional(satkerToDisplay.tingkat === 'Polda' ? satkerToDisplay.id : satkerToDisplay.parentPoldaId)}
+                    className="py-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold text-xs cursor-pointer"
+                  >
+                    Kinerja B.7
+                  </button>
+                )}
                 {onOpenDetailDrawer && (
                   <button
                     onClick={() => onOpenDetailDrawer(satkerToDisplay)}

@@ -67,15 +67,15 @@ export const FloatingKPIs: React.FC<FloatingKPIsProps> = ({ poldaList, onFilterC
         {/* Card 1: TOTALAN NASIONAL (Grand Total Polda + Polres + Polsek) */}
         <div 
           onClick={() => onFilterClick && onFilterClick('all')}
-          className="min-w-[260px] sm:min-w-[290px] flex-1 bg-white rounded-2xl p-4.5 border border-slate-200/90 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden snap-start"
+          className="min-w-[260px] sm:min-w-[290px] flex-1 bg-white rounded-2xl p-4.5 border border-slate-200/90 shadow-sm hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between relative overflow-hidden snap-start"
         >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600"></div>
+          <div className="absolute top-0 left-0 right-0 h-1 bg-brand-700"></div>
 
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               Total Satker Nasional
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-brand-700">
               Polda • Polres • Polsek
             </span>
           </div>
@@ -91,10 +91,10 @@ export const FloatingKPIs: React.FC<FloatingKPIsProps> = ({ poldaList, onFilterC
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
             <div className="flex items-center gap-1.5 font-medium truncate">
-              <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0"></span>
+              <span className="w-2 h-2 rounded-full bg-brand-700 shrink-0"></span>
               <span className="text-[11px] truncate">34 Polda • 514 Polres • 5.097 Polsek</span>
             </div>
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0 ml-1">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-brand-700 border border-blue-200 shrink-0 ml-1">
               NKRI
             </span>
           </div>

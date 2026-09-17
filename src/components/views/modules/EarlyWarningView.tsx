@@ -14,7 +14,8 @@ import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { EARLY_WARNING_ALERTS, EARLY_WARNING_RULE_CONFIG, type EarlyWarningAlert, type EwUrgensi } from '../../../data/modules/lanjutan/spipTlhp';
 import { EARLY_WARNING_SNOOZE_MAKS_HARI } from '../../../data/modules/lanjutan/constants';
-import { Badge, Button, Card, EmptyState, ForbiddenState, ProgressBar, Timeline, Toggle, Typography, type BadgeColor } from '../../ui';
+import { Badge, Button, Card, DonutChart, EmptyState, ForbiddenState, ProgressBar, RiskMatrix, Timeline, Toggle, Typography, type BadgeColor } from '../../ui';
+import { FadeInUp } from '../../ui/motion';
 
 const URGENSI_COLOR: Record<EwUrgensi, BadgeColor> = { Kritis: 'danger', Tinggi: 'warning', Perhatian: 'info' };
 const URGENSI_ORDER: EwUrgensi[] = ['Kritis', 'Tinggi', 'Perhatian'];
@@ -54,6 +55,28 @@ export const EarlyWarningView: React.FC<EarlyWarningViewProps> = ({ currentUser,
 
   const eskalasi = EARLY_WARNING_ALERTS.filter((a) => a.riwayat.length > 0);
 
+  const urgensiSegments = useMemo(() => {
+    const colors: Record<EwUrgensi, string> = { Kritis: '#BA1A1A', Tinggi: '#EAB308', Perhatian: '#3B82F6' };
+    return URGENSI_ORDER.map((u) => ({
+      id: u,
+      label: u,
+      value: EARLY_WARNING_ALERTS.filter((a) => a.urgensi === u).length,
+      color: colors[u],
+    })).filter((s) => s.value > 0);
+  }, []);
+
+  const alertRiskMatrix = useMemo(
+    () =>
+      EARLY_WARNING_ALERTS.map((a) => ({
+        id: a.id,
+        x: Math.min(5, Math.max(1, Math.round((a.slaProgressPersen / 100) * 5 * 10) / 10)),
+        y: URGENSI_ORDER.indexOf(a.urgensi) + 1,
+        label: a.namaSatker,
+        riskLevel: a.urgensi === 'Kritis' ? 'kritis' as const : a.urgensi === 'Tinggi' ? 'tinggi' as const : 'sedang' as const,
+      })),
+    []
+  );
+
   return (
     <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
       {activeScreen === 'konfigurasi-aturan' && (
@@ -81,7 +104,28 @@ export const EarlyWarningView: React.FC<EarlyWarningViewProps> = ({ currentUser,
       )}
 
       {activeScreen === 'dashboard-aktif' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <FadeInUp>
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card>
+                <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Urgensi Peringatan</Typography>
+                {urgensiSegments.length > 0 ? (
+                  <DonutChart segments={urgensiSegments} centerLabel="Alert" centerValue={String(EARLY_WARNING_ALERTS.length)} />
+                ) : (
+                  <p className="text-xs text-slate-400">Tidak ada peringatan aktif.</p>
+                )}
+              </Card>
+              <Card>
+                <Typography variant="label-bold" className="text-slate-700 mb-2">Peta Risiko Alert (SLA × Urgensi)</Typography>
+                {alertRiskMatrix.length > 0 ? (
+                  <RiskMatrix items={alertRiskMatrix} />
+                ) : (
+                  <p className="text-xs text-slate-400">Tidak ada titik risiko untuk ditampilkan.</p>
+                )}
+              </Card>
+            </div>
+          </FadeInUp>
+          <div className="space-y-3">
           {dedupedAlerts.length === 0 ? (
             <EmptyState title="Tidak ada peringatan aktif" description="Seluruh satker berada dalam ambang normal." />
           ) : (
@@ -100,6 +144,7 @@ export const EarlyWarningView: React.FC<EarlyWarningViewProps> = ({ currentUser,
               </Card>
             ))
           )}
+          </div>
         </div>
       )}
 

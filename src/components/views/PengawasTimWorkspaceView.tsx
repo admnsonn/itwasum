@@ -635,13 +635,13 @@ export const PengawasTimWorkspaceView: React.FC<PengawasTimWorkspaceViewProps> =
 
                       {/* Tanggapan Auditee Banner */}
                       {item.tanggapanAuditee && (
-                        <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 text-xs text-purple-950">
+                        <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-slate-950">
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-extrabold flex items-center gap-1.5 text-purple-900">
                               <MessageSquare className="w-3.5 h-3.5" />
                               Tanggapan &amp; Bukti Sanggahan Auditee:
                             </span>
-                            <span className="text-[10px] text-purple-700 font-bold">
+                            <span className="text-[10px] text-brand-700 font-bold">
                               Tenggat Respon: {item.tenggatHari} Hari Kerja
                             </span>
                           </div>
@@ -977,13 +977,13 @@ export const PengawasTimWorkspaceView: React.FC<PengawasTimWorkspaceViewProps> =
               </button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-purple-50/80 border border-purple-200 text-xs space-y-2">
+            <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200 text-xs space-y-2">
               <span className="font-extrabold text-purple-900 block">Tanggapan Resmi Auditee:</span>
               <p className="text-purple-950 leading-relaxed font-medium">
                 {selectedKKA.tanggapanAuditee || 'Auditee telah melampirkan berkas bukti tindak lanjut ke sistem.'}
               </p>
               {selectedKKA.nilaiTemuanRp && (
-                <div className="pt-2 border-t border-purple-200/60 flex items-center justify-between">
+                <div className="pt-2 border-t border-blue-200/60 flex items-center justify-between">
                   <span className="text-purple-800">Nilai Temuan:</span>
                   <span className="font-extrabold text-rose-700">Rp {selectedKKA.nilaiTemuanRp.toLocaleString('id-ID')}</span>
                 </div>

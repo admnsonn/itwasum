@@ -7,7 +7,7 @@
  * asesor, form KK dinamis per kode KK dengan skor terproteksi, kartu KKLEAD I/II/III
  * (penalti KK4), KKLEAD_SPIP + badge level 0-5, indikator sesi edit 15 menit.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Clock, ShieldCheck } from 'lucide-react';
 import type { CurrentUserProfile, PoldaSatker } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
@@ -15,7 +15,9 @@ import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { SPIP_SATKER_DATA, type SpipSatkerEntry, type SpipKkScore } from '../../../data/modules/lanjutan/spipTlhp';
 import { SPIP_ASSESSOR_ROLES, SPIP_ASSESSMENT_MECHANISMS, SPIP_KK_DESKRIPSI, SPIP_SESI_EDIT_MENIT } from '../../../data/modules/lanjutan/constants';
-import { Badge, Card, ProgressBar, Select, Table, Typography, type BadgeColor, type TableColumn } from '../../ui';
+import { SPIP_MATURITY_LEVELS } from '../../../data/modules/lanjutan/constants';
+import { Badge, Card, DonutChart, ProgressBar, Select, Table, Typography, type BadgeColor, type TableColumn } from '../../ui';
+import { FadeInUp } from '../../ui/motion';
 
 const LEVEL_COLOR: Record<number, BadgeColor> = { 0: 'danger', 1: 'danger', 2: 'warning', 3: 'info', 4: 'primary', 5: 'success' };
 
@@ -35,6 +37,19 @@ export const SpipSatkerView: React.FC<SpipSatkerViewProps> = ({ subPath, onSubPa
   const spec = getModuleSpec('b8')!;
   const activeScreen = subPath || getDefaultScreenSlug('b8') || spec.screens[0].slug;
   const [selected, setSelected] = useState<SpipSatkerEntry>(SPIP_SATKER_DATA[0]);
+
+  const levelNasionalSegments = useMemo(() => {
+    const colors = ['#BA1A1A', '#EAB308', '#3B82F6', '#002265', '#2D7A4A'];
+    return [1, 2, 3, 4, 5].map((lvl) => {
+      const meta = SPIP_MATURITY_LEVELS.find((l) => l.level === lvl);
+      return {
+        id: `lvl-${lvl}`,
+        label: meta ? `L${lvl} ${meta.label}` : `Level ${lvl}`,
+        value: SPIP_SATKER_DATA.filter((s) => s.levelMaturitas === lvl).length,
+        color: colors[lvl - 1],
+      };
+    }).filter((s) => s.value > 0);
+  }, []);
 
   const kkColumns = (codes: SpipKkScore[]): TableColumn<SpipKkScore>[] => [
     { key: 'kode', header: 'Kode KK', render: (r) => <span className="font-mono font-bold text-slate-700">{r.kode}</span> },
@@ -56,6 +71,17 @@ export const SpipSatkerView: React.FC<SpipSatkerViewProps> = ({ subPath, onSubPa
       }
     >
       {activeScreen === 'ruang-pm' && (
+        <div className="space-y-4">
+          <FadeInUp>
+            <Card>
+              <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Level Maturitas SPIP (Seluruh Satker)</Typography>
+              <DonutChart
+                segments={levelNasionalSegments}
+                centerLabel="Satker"
+                centerValue={String(SPIP_SATKER_DATA.length)}
+              />
+            </Card>
+          </FadeInUp>
         <div className="grid lg:grid-cols-2 gap-4">
           <Card>
             <Typography variant="label-bold" className="text-slate-700 mb-3 flex items-center gap-1.5"><ShieldCheck className="w-4 h-4" /> Penetapan Tusi Asesor</Typography>
@@ -87,6 +113,7 @@ export const SpipSatkerView: React.FC<SpipSatkerViewProps> = ({ subPath, onSubPa
               </div>
             )}
           </Card>
+        </div>
         </div>
       )}
 
@@ -127,6 +154,12 @@ export const SpipSatkerView: React.FC<SpipSatkerViewProps> = ({ subPath, onSubPa
               <Badge color={selected.statusPenyimpulan === 'Final' ? 'success' : 'warning'}>{selected.statusPenyimpulan}</Badge>
             </div>
           </Card>
+          <FadeInUp className="lg:col-span-3">
+            <Card>
+              <Typography variant="label-bold" className="text-slate-700 mb-2">Perbandingan Level Maturitas Nasional</Typography>
+              <DonutChart segments={levelNasionalSegments} centerLabel="Satker" centerValue={String(SPIP_SATKER_DATA.length)} />
+            </Card>
+          </FadeInUp>
         </div>
       )}
     </ModuleScreenShell>

@@ -19,6 +19,7 @@ import {
   Card,
   ForbiddenState,
   ProgressBar,
+  RiskMatrix,
   Select,
   StatCard,
   Table,
@@ -26,6 +27,7 @@ import {
   type BadgeColor,
   type TableColumn,
 } from '../../ui';
+import { FadeInUp } from '../../ui/motion';
 
 /** Tim audit (pengawas/ketua tim/auditor) hanya dapat MELIHAT peringkat prioritas — konfigurasi
  * ambang skor tinggi adalah kewenangan Pimpinan/Koordinator/Super Admin (Plan bagian 6: tab admin-
@@ -59,6 +61,23 @@ export const PkptBerbasisRisikoView: React.FC<PkptBerbasisRisikoViewProps> = ({ 
 
   const totalUsulanOh = useMemo(() => PKPT_2026.filter((p) => p.disahkan).reduce((s, p) => s + p.usulanTimOh, 0), []);
   const persenKapasitas = Math.round((totalUsulanOh / TOTAL_KAPASITAS_OH_TAHUNAN) * 100);
+
+  const pkptRiskMatrix = useMemo(
+    () =>
+      PKPT_2026.map((p) => {
+        const scores = p.factorScores.map((f) => f.skor);
+        const x = scores.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
+        const y = scores.slice(3).reduce((a, b) => a + b, 0) / Math.max(1, scores.slice(3).length);
+        return {
+          id: p.id,
+          x: Math.round(x * 10) / 10,
+          y: Math.round(y * 10) / 10,
+          label: p.namaAuditi,
+          riskLevel: p.skorTertimbang >= ambangTinggi ? 'kritis' as const : p.skorTertimbang >= 3 ? 'tinggi' as const : p.skorTertimbang >= 2 ? 'sedang' as const : 'rendah' as const,
+        };
+      }),
+    [ambangTinggi]
+  );
 
   const columns: TableColumn<PkptEntry>[] = [
     { key: 'peringkat', header: '#', render: (r) => <span className="font-extrabold text-slate-400">{r.peringkat}</span> },
@@ -131,6 +150,12 @@ export const PkptBerbasisRisikoView: React.FC<PkptBerbasisRisikoViewProps> = ({ 
               </Card>
             )}
           </div>
+          <FadeInUp>
+            <Card>
+              <Typography variant="label-bold" className="text-slate-700 mb-2">Peta Risiko PKPT (Faktor Kemungkinan × Dampak)</Typography>
+              <RiskMatrix items={pkptRiskMatrix} />
+            </Card>
+          </FadeInUp>
           <Card>
             <Table columns={columns} data={PKPT_2026} rowKey={(r) => r.id} />
           </Card>
@@ -167,6 +192,14 @@ export const PkptBerbasisRisikoView: React.FC<PkptBerbasisRisikoViewProps> = ({ 
                 Kapasitas OH tim audit terlampaui. Prioritaskan kegiatan berskor risiko tinggi atau ajukan penambahan tim.
               </div>
             )}
+            <FadeInUp className="mt-4">
+              <Typography variant="label-bold" className="text-slate-700 mb-1">Narasi Kapasitas OH</Typography>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Kapasitas {TOTAL_KAPASITAS_OH_TAHUNAN.toLocaleString('id-ID')} OH tahunan mencakup seluruh kegiatan PKPT yang disahkan. Alokasi saat ini {totalUsulanOh.toLocaleString('id-ID')} OH ({persenKapasitas}%).
+                {persenKapasitas > 90 && !(persenKapasitas > 100) && ' Beban mendekati batas — pertimbangkan penjadwalan bertahap untuk kegiatan skor menengah.'}
+                {persenKapasitas <= 90 && ' Masih terdapat ruang untuk penambahan kegiatan berbasis risiko pada semester berikutnya.'}
+              </p>
+            </FadeInUp>
           </Card>
         </div>
       )}

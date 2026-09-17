@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PoldaSatker, SatkerMapItem, BidangAudit, JenjangPengguna, TingkatObjek, CurrentUserProfile, BidangName } from '../types';
 import { MABES_SATKERS_DATA } from '../data/mabesSatkerData';
 import { Sliders, CheckCircle2, Clock, ShieldCheck, Database } from 'lucide-react';
+import { DataIntegrationNotice } from './ui/DataIntegrationNotice';
 
 interface ExecutiveIndicatorStripProps {
   poldaList: PoldaSatker[];
@@ -272,6 +273,7 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
               <p className="text-[11px] text-slate-400 mt-0.5">
                 Buku Manual E-Audit Hal 4: Angka Polres lebih sedikit. Polsek tidak ditampilkan dan barisnya tidak dapat diklik lagi.
               </p>
+              <DataIntegrationNotice variant="inline" className="mt-2 text-slate-400" sumber="Data Mart Polres (L3)" tahap="SPIP & IKU menunggu integrasi" />
             </div>
           </div>
 
@@ -506,11 +508,11 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
           <div 
             onClick={() => onSelectBidang('sarpras')}
             className={`bg-white rounded-2xl p-3 border transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
-              activeBidang === 'sarpras' ? 'border-indigo-600 ring-2 ring-indigo-600/20 shadow-md' : 'border-slate-200/90 hover:border-slate-300 shadow-xs'
+              activeBidang === 'sarpras' ? 'border-brand-700 ring-2 ring-brand-700/20 shadow-md' : 'border-slate-200/90 hover:border-slate-300 shadow-xs'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-700">
                 Logistik &amp; BMN
               </span>
             </div>
@@ -520,7 +522,7 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
                 <span className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight">
                   {displaySarprasAkurasi}
                 </span>
-                <span className="text-xs font-bold text-indigo-600">%</span>
+                <span className="text-xs font-bold text-brand-700">%</span>
               </div>
               <div className="text-[10px] text-slate-500 font-semibold truncate">
                 Validasi BMN Senpi &amp; Ranmor
@@ -529,7 +531,7 @@ export const ExecutiveIndicatorStrip: React.FC<ExecutiveIndicatorStripProps> = (
 
             <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px]">
               <span className="text-slate-600 font-medium">Aset Terdata</span>
-              <span className="text-indigo-600 font-bold">Tervalidasi</span>
+              <span className="text-brand-700 font-bold">Tervalidasi</span>
             </div>
           </div>
         )}

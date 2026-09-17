@@ -6,14 +6,15 @@
  * Verifikasi Bukti (Plan bagian 4). SF-001..004: tabel rekap tersinkron B.2/B.3 (read-only),
  * badge aging harian + Kritis (>730 hari), antrean verifikasi, badge Temuan Berulang.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { CurrentUserProfile, PoldaSatker } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { TLHP_DATA, type TlhpEntry } from '../../../data/modules/lanjutan/spipTlhp';
 import { TLHP_AMBANG_KRITIS_HARI } from '../../../data/modules/lanjutan/constants';
-import { Badge, Button, Card, FilterPanel, StatCard, Table, Typography, type BadgeColor, type TableColumn } from '../../ui';
+import { Badge, Button, Card, DonutChart, FilterPanel, HorizontalMetricChart, StatCard, Table, Typography, type BadgeColor, type TableColumn } from '../../ui';
+import { FadeInUp } from '../../ui/motion';
 
 const AGING_COLOR: Record<TlhpEntry['statusAging'], BadgeColor> = { Normal: 'success', Perhatian: 'warning', Kritis: 'danger' };
 const TLHP_STATUS_COLOR: Record<TlhpEntry['statusTlhp'], BadgeColor> = { 'Belum Ditindaklanjuti': 'danger', 'Dalam Proses': 'warning', Selesai: 'success' };
@@ -36,6 +37,27 @@ export const RekomendasiTlhpView: React.FC<RekomendasiTlhpViewProps> = ({ subPat
   const kritisCount = TLHP_DATA.filter((t) => t.statusAging === 'Kritis').length;
   const berulangCount = TLHP_DATA.filter((t) => t.temuanBerulang).length;
   const antrean = TLHP_DATA.filter((t) => t.buktiDiunggah && t.verifikasi);
+
+  const agingSegments = useMemo(() => {
+    const bands: TlhpEntry['statusAging'][] = ['Normal', 'Perhatian', 'Kritis'];
+    const colors = { Normal: '#2D7A4A', Perhatian: '#EAB308', Kritis: '#BA1A1A' };
+    return bands.map((b) => ({
+      id: b,
+      label: b,
+      value: TLHP_DATA.filter((t) => t.statusAging === b).length,
+      color: colors[b],
+    })).filter((s) => s.value > 0);
+  }, []);
+
+  const berulangVsBaru = useMemo(() => {
+    const berulang = TLHP_DATA.filter((t) => t.temuanBerulang).length;
+    const baru = TLHP_DATA.length - berulang;
+    const max = Math.max(berulang, baru, 1);
+    return [
+      { id: 'baru', label: 'Temuan Baru', percent: Math.round((baru / max) * 100), displayValue: String(baru), color: '#002265' },
+      { id: 'berulang', label: 'Temuan Berulang', percent: Math.round((berulang / max) * 100), displayValue: String(berulang), color: '#EAB308' },
+    ];
+  }, []);
 
   const columns: TableColumn<TlhpEntry>[] = [
     { key: 'judul', header: 'Rekomendasi', render: (r) => (
@@ -60,6 +82,20 @@ export const RekomendasiTlhpView: React.FC<RekomendasiTlhpViewProps> = ({ subPat
             <StatCard label="Status Kritis (>730 Hari)" value={kritisCount} />
             <StatCard label="Temuan Berulang" value={berulangCount} />
             <StatCard label="Menunggu Verifikasi" value={antrean.length} />
+          </div>
+          <div className="grid lg:grid-cols-2 gap-4">
+            <FadeInUp>
+              <Card>
+                <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Status Aging</Typography>
+                <DonutChart segments={agingSegments} centerLabel="Rekomendasi" centerValue={String(TLHP_DATA.length)} />
+              </Card>
+            </FadeInUp>
+            <FadeInUp>
+              <Card>
+                <Typography variant="label-bold" className="text-slate-700 mb-2">Temuan Baru vs Berulang</Typography>
+                <HorizontalMetricChart items={berulangVsBaru} />
+              </Card>
+            </FadeInUp>
           </div>
           <FilterPanel
             fields={[{ type: 'select', key: 'sumber', label: 'Sumber', value: sumberFilter, onChange: setSumberFilter, placeholder: 'Semua Sumber', options: ['Audit Polri', 'BPK RI', 'Irsus'].map((s) => ({ value: s, label: s })) }]}

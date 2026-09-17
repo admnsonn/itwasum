@@ -9,6 +9,7 @@ import { createSeededRng } from '../../../utils/seededRandom';
 import { AUDITOR_LIST } from '../../mockData';
 import { PKPT_2026 } from './perencanaan';
 import { formatSuratTugasNomor, getCapacityStatusLabel } from './constants';
+import { formatIdDateFixed, tlDeadlineFromST, addDays } from '../../domain/timeline';
 
 export type PenugasanStatus = 'Perlu Penugasan' | 'Tim Terbentuk' | 'ST Terbit' | 'Berjalan' | 'Selesai';
 
@@ -44,6 +45,7 @@ export const PENUGASAN_2026: PenugasanEntry[] = PKPT_2026.filter((p) => p.disahk
   });
   const konflik = tim.length > 0 && rng.bool(0.12);
   const stTerbit = status === 'ST Terbit' || status === 'Berjalan' || status === 'Selesai';
+  const stDate = stTerbit ? new Date(2026, rng.int(0, 9), rng.int(1, 28)) : undefined;
   return {
     id: `penugasan-${pkpt.id}`,
     pkptId: pkpt.id,
@@ -51,8 +53,10 @@ export const PENUGASAN_2026: PenugasanEntry[] = PKPT_2026.filter((p) => p.disahk
     waktuPelaksanaan: pkpt.waktuPelaksanaan,
     status,
     tim,
-    suratTugasNomor: stTerbit ? formatSuratTugasNomor(400 + idx, new Date(2026, rng.int(0, 9), 1)) : undefined,
-    tanggalTerbitST: stTerbit ? `${rng.int(1, 28)} ${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep'][rng.int(0,9)]} 2026` : undefined,
+    suratTugasNomor: stDate
+      ? formatSuratTugasNomor(400 + idx, stDate)
+      : undefined,
+    tanggalTerbitST: stDate ? formatIdDateFixed(stDate) : undefined,
     konflikKepentingan: konflik,
     catatanKonflik: konflik ? 'Anggota tim pernah bertugas di satker auditi dalam 2 tahun terakhir.' : undefined,
     pengecualianKonflikDisetujui: konflik ? rng.bool(0.5) : undefined,
@@ -129,10 +133,14 @@ const KK_STATUS_POOL: KkStatus[] = ['Draf', 'Menunggu Validasi Ketua Tim', 'Perl
 export const KERTAS_KERJA_DIGITAL: KkEntry[] = PENUGASAN_2026.filter((p) => p.status === 'Berjalan' || p.status === 'Selesai' || p.status === 'ST Terbit')
   .flatMap((p) => BIDANG_KK.map((bidang, bidx) => {
     const rng = createSeededRng(`b15-kk-${p.id}-${bidang}`);
+    const stRng = createSeededRng(`b14-penugasan-${p.pkptId}`);
+    const stDate = new Date(2026, stRng.int(0, 9), stRng.int(1, 28));
+    const batasDate = tlDeadlineFromST(stDate, stRng.int(45, 75));
     const status = p.status === 'Selesai' ? 'Disahkan' : KK_STATUS_POOL[rng.int(0, KK_STATUS_POOL.length)];
     const sisaHari = rng.int(-4, 12);
     const jumlahEviden = rng.int(1, 4);
     const jumlahVersi = rng.int(1, 3);
+    const evidenDate = addDays(stDate, rng.int(3, 21));
     return {
       id: `kk-${p.id}-${bidang.replace(/\s+/g, '-').toLowerCase()}`,
       penugasanId: p.id,
@@ -146,21 +154,25 @@ export const KERTAS_KERJA_DIGITAL: KkEntry[] = PENUGASAN_2026.filter((p) => p.st
       ][bidx],
       status,
       skorOtomatis: rng.int(45, 98),
-      batasWaktu: `${rng.int(1, 28)} ${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][rng.int(0,11)]} 2026`,
+      batasWaktu: formatIdDateFixed(batasDate),
       sisaHari,
       terlambat: sisaHari < 0 && status !== 'Disahkan',
-      eviden: Array.from({ length: jumlahEviden }, (_, i) => ({
-        id: `ev-${p.id}-${bidang}-${i}`,
-        namaBerkas: `Eviden_${bidang.replace(/\s+/g, '')}_${p.namaAuditi.replace(/\s+/g, '')}_${i + 1}.${FORMAT_EVIDEN[rng.int(0, FORMAT_EVIDEN.length)].toLowerCase()}`,
-        format: FORMAT_EVIDEN[rng.int(0, FORMAT_EVIDEN.length)],
-        ukuranMb: rng.round(0.3, 18, 1),
-        diunggahOleh: rng.pick(AUDITOR_LIST).nama,
-        tanggal: `${rng.int(1, 28)} Agu 2026`,
-      })),
+      eviden: Array.from({ length: jumlahEviden }, (_, i) => {
+        const format = rng.pick(FORMAT_EVIDEN);
+        const ext = format === 'JPG' || format === 'PNG' ? format.toLowerCase() : format.toLowerCase();
+        return {
+          id: `ev-${p.id}-${bidang}-${i}`,
+          namaBerkas: `Eviden_${bidang.replace(/\s+/g, '')}_${p.namaAuditi.replace(/\s+/g, '')}_${i + 1}.${ext}`,
+          format,
+          ukuranMb: rng.round(0.3, 18, 1),
+          diunggahOleh: rng.pick(AUDITOR_LIST).nama,
+          tanggal: formatIdDateFixed(evidenDate),
+        };
+      }),
       versions: Array.from({ length: jumlahVersi }, (_, i) => ({
         versi: i + 1,
         diubahOleh: rng.pick(AUDITOR_LIST).nama,
-        tanggal: `${rng.int(1, 28)} Agu 2026`,
+        tanggal: formatIdDateFixed(addDays(stDate, rng.int(1, 14))),
         ringkasanPerubahan: i === 0 ? 'Draf awal pengisian kertas kerja.' : rng.pick([
           'Revisi berdasarkan catatan Pengawas Tim.',
           'Penambahan eviden pendukung temuan.',

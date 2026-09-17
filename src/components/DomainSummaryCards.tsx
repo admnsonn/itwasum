@@ -60,9 +60,9 @@ export const DomainSummaryCards: React.FC<DomainSummaryCardsProps> = ({
       singkatan: 'SARPRAS',
       icon: Truck,
       color: 'purple',
-      borderColor: 'border-purple-200',
-      activeBorder: 'border-purple-600 ring-2 ring-purple-500/20',
-      tagBg: 'bg-purple-50 text-purple-800',
+      borderColor: 'border-blue-200',
+      activeBorder: 'border-brand-700 ring-2 ring-brand-700/20',
+      tagBg: 'bg-blue-50 text-brand-700',
       metrics: [
         { label: 'Kesiapan Alsus', value: '94.1%', sub: 'Siap Operasi' },
         { label: 'Aset BMN Tanah', value: '91.8%', sub: 'Bersertifikat' },

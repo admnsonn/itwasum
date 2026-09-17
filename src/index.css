@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+@theme {
+  --color-brand-900: #0B2B5C;
+  --color-brand-700: #0B4A8A;
+  --color-sd-surface: #f4f3fb;
+  --color-sd-outline: #c4c6d4;
+  --radius-card: 12px;
+}
+
 @layer base {
   body {
     margin: 0;
@@ -14,8 +22,7 @@
     font-size: 16px;
     scroll-behavior: smooth;
   }
-  
-  /* Focus outline for high accessibility */
+
   :focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 2px;
@@ -30,16 +37,48 @@
 
   .font-sans,
   .font-mono {
-    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif !important;
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  }
+
+  :where(.rounded-3xl) {
+    border-radius: 1rem;
+  }
+
+  :where(.rounded-2xl) {
+    border-radius: 0.75rem;
+  }
+
+  :where(.rounded-xl) {
+    border-radius: 0.625rem;
+  }
+
+  :where(.rounded-lg) {
+    border-radius: 0.5rem;
+  }
+
+  :where(.shadow-2xl),
+  :where(.shadow-xl),
+  :where(.shadow-lg) {
+    box-shadow: 0 8px 24px -14px rgb(15 23 42 / 0.28);
+  }
+
+  :where(.shadow-md),
+  :where(.shadow-sm),
+  :where(.shadow-xs),
+  :where(.shadow-2xs) {
+    box-shadow: 0 2px 10px -7px rgb(15 23 42 / 0.26);
+  }
+
+  :where([class*="border-slate-200/90"]),
+  :where([class*="border-slate-200/80"]),
+  :where([class*="border-slate-200/60"]) {
+    border-color: var(--border-subtle);
   }
 }
 
 :root {
-  /* Token --sd-* (Satu Data): dipetakan dari palet satu-data-itwasum-frontend
-     (origin/development:src/app/globals.css) untuk lapisan design-system baru
-     (src/components/ui/). Dipakai HANYA oleh atoms/molecules baru, TIDAK menimpa
-     --brand-* atau --surface-* yang sudah dipakai shell & view lama. */
-  --sd-primary: #002265;
+  /* --sd-primary mengikuti --brand-900 kanonik (#0B2B5C), bukan palet #002265. */
+  --sd-primary: #0B2B5C;
   --sd-primary-container: #003594;
   --sd-secondary: #475f87;
   --sd-inverse-primary: #b4c5ff;
@@ -91,7 +130,6 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
-/* App-level reusable UI primitives for consistent look */
 .app-badge {
   padding: 0.35rem 0.65rem;
   border-radius: 0.5rem;
@@ -126,71 +164,6 @@ textarea:disabled {
   font-weight: 800;
 }
 
-/* Keep secondary accents within the same blue product family. */
-.text-indigo-600,
-.text-indigo-700,
-.text-purple-600,
-.text-purple-700 {
-  color: var(--brand-700) !important;
-}
-
-.bg-indigo-50,
-.bg-indigo-600,
-.bg-indigo-700,
-.bg-purple-50,
-.bg-purple-600,
-.bg-purple-700 {
-  background-color: var(--brand-700) !important;
-}
-
-.bg-indigo-50,
-.bg-purple-50 {
-  background-color: #eff6ff !important;
-}
-
-.border-indigo-200,
-.border-indigo-400,
-.border-purple-200,
-.border-purple-400 {
-  border-color: #bfdbfe !important;
-}
-
-/* Shared product polish: quieter surfaces and less ornamental chrome. */
-.rounded-3xl {
-  border-radius: 1rem !important;
-}
-
-.rounded-2xl {
-  border-radius: 0.75rem !important;
-}
-
-.rounded-xl {
-  border-radius: 0.625rem !important;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem !important;
-}
-
-.shadow-2xl,
-.shadow-xl,
-.shadow-lg {
-  box-shadow: 0 8px 24px -14px rgb(15 23 42 / 0.28) !important;
-}
-
-.shadow-md,
-.shadow-sm,
-.shadow-xs,
-.shadow-2xs {
-  box-shadow: 0 2px 10px -7px rgb(15 23 42 / 0.26) !important;
-}
-
-[class*="border-slate-200/90"],
-[class*="border-slate-200/80"],
-[class*="border-slate-200/60"] {
-  border-color: var(--border-subtle) !important;
-}
-
 [class*="divide-slate-100"] > :not([hidden]) ~ :not([hidden]) {
   border-color: #eef2f7;
 }
@@ -212,7 +185,6 @@ button:active:not(:disabled) {
   transform: translateY(0);
 }
 
-/* Prevent dense dashboard rows from becoming cramped on narrow screens. */
 @media (max-width: 768px) {
   [class*="grid-cols-4"],
   [class*="grid-cols-3"] {
@@ -224,7 +196,6 @@ button:active:not(:disabled) {
   }
 }
 
-/* Keep repeated panels quiet and legible across operational views. */
 [class*="border-slate-200"] {
   border-color: var(--border-subtle);
 }
@@ -258,7 +229,6 @@ table thead {
   }
 }
 
-/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -296,7 +266,6 @@ table thead {
   transform-origin: center;
 }
 
-/* Leaflet Custom Styling */
 .satker-leaflet-tooltip {
   background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: blur(8px);
@@ -313,4 +282,3 @@ table thead {
 .leaflet-container {
   font-family: inherit !important;
 }
-

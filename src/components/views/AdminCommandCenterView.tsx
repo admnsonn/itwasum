@@ -181,7 +181,7 @@ export const AdminCommandCenterView: React.FC<AdminCommandCenterViewProps> = ({
         <div className="bg-white rounded-2xl p-4.5 border border-slate-200/90 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500 text-xs">
             <span className="font-bold">Audit Trail (24 Jam)</span>
-            <Activity className="w-4 h-4 text-purple-600" />
+            <Activity className="w-4 h-4 text-brand-700" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900">{isSuperAdmin ? '412' : '48'}</span>

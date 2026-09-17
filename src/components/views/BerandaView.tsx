@@ -14,6 +14,7 @@ import { KPICustomizerModal } from '../KPICustomizerModal';
 import { UsulanHakAksesModal } from '../UsulanHakAksesModal';
 import { SecurityRejectionModal } from '../SecurityRejectionModal';
 import { OverviewToolbar } from '../OverviewToolbar';
+import { ItwilAuditMatrix } from '../ItwilAuditMatrix';
 import { getRoleScopedPoldas, getRoleScopedSatkers } from '../../utils/roleScope';
 
 import { 
@@ -214,6 +215,10 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
         <OverviewToolbar currentUser={currentUser} wilayahLabel={currentUser.titikWilayahNama} />
       )}
 
+      {!isMapFullscreen && (
+        <ItwilAuditMatrix onOpenPolda={onSelectPolda} onNavigateToModule={onNavigateToModule} />
+      )}
+
       {/* Executive Indicator Strip */}
       {!isMapFullscreen && (
         <ExecutiveIndicatorStrip
@@ -262,6 +267,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
                 onSelectPolda(id);
                 setSelectedSatkerMapItem(null);
               }}
+              onOpenRegional={(poldaId) => onNavigateToModule('b7', poldaId)}
               onSelectJenjang={setJenjang}
               activeBidang={bidang}
               tingkatObjek={tingkatObjek}
@@ -303,6 +309,7 @@ export const BerandaView: React.FC<BerandaViewProps> = ({
             selectedSatkerItem={selectedSatkerMapItem}
             onSelectSatkerItem={handleSelectSatkerItem}
             onOpenDetailDrawer={handleOpenDetailModal}
+            onOpenRegional={(poldaId) => onNavigateToModule('b7', poldaId)}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             tingkatObjek={tingkatObjek}

@@ -138,7 +138,7 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
       });
       items.push({
         category: 'INSTRUKSI KOMANDO',
-        title: 'Petunjuk Tindak Lanjut Kapolri / Irwasum',
+        title: 'Petunjuk Tindak Lanjut Irwasum',
         detail: `Penerbitan Surat Atensi Khusus kepada ${pimpinanJabatan} (${pimpinanNama.split(',')[0]}) serta penugasan Tim Asistensi Itwil untuk supervisi percepatan penyelesaian seluruh tunggakan dalam 7 hari kerja.`
       });
     } else if (isTinggi) {
@@ -149,7 +149,7 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
       });
       items.push({
         category: 'INSTRUKSI KOMANDO',
-        title: 'Petunjuk Tindak Lanjut Kapolri / Irwasum',
+        title: 'Petunjuk Tindak Lanjut Irwasum',
         detail: `Instruksikan ${pimpinanJabatan} menyelenggarakan gelar evaluasi internal berkala dan menyampaikan laporan progres mingguan resmi kepada Pengawas Wilayah (Itwil).`
       });
     } else {
@@ -160,7 +160,7 @@ export const AICriticalSatkerAlertCard: React.FC<AICriticalSatkerAlertCardProps>
       });
       items.push({
         category: 'INSTRUKSI KOMANDO',
-        title: 'Petunjuk Tindak Lanjut Kapolri / Irwasum',
+        title: 'Petunjuk Tindak Lanjut Irwasum',
         detail: `Lakukan pemantauan berkala melalui sistem e-audit dan instruksikan penuntasan sisa dokumen pertanggungjawaban dalam batas waktu triwulan berjalan.`
       });
     }

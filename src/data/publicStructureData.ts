@@ -97,7 +97,7 @@ export const PUBLIC_POLDA_RECORDS: PublicStructureRecord[] = [
   { id: 'polda-ntt', nama: 'Kepolisian Daerah Nusa Tenggara Timur', singkatan: 'Polda NTT', wilayah: 'Nusa Tenggara Timur', pulau: 'Bali-Nusa', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/29/Lambang_Polda_NTT.png', source: 'Wikipedia', sourceUrl: 'https://id.wikipedia.org/wiki/Polda_Nusa_Tenggara_Timur' },
   { id: 'polda-maluku', nama: 'Kepolisian Daerah Maluku', singkatan: 'Polda Maluku', wilayah: 'Maluku', pulau: 'Maluku-Papua', logoUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Polda_Maluku.png', source: 'Wikimedia Commons', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Lambang_Polda_Maluku.png' },
   { id: 'polda-malut', nama: 'Kepolisian Daerah Maluku Utara', singkatan: 'Polda Malut', wilayah: 'Maluku Utara', pulau: 'Maluku-Papua', logoUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Polda_Maluku_Utara.png', source: 'Wikimedia Commons', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Lambang_Polda_Maluku_Utara.png' },
-  { id: 'polda-papuabarat', nama: 'Kepolisian Daerah Papua Barat', singkatan: 'Polda Papua Barat', wilayah: 'Papua Barat', pulau: 'Maluku-Papua', logoUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Polda_Papua_Barat.png', source: 'Wikimedia Commons', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Lambang_Polda_Papua_Barat.png' },
+  { id: 'polda-papua-barat', nama: 'Kepolisian Daerah Papua Barat', singkatan: 'Polda Papua Barat', wilayah: 'Papua Barat', pulau: 'Maluku-Papua', logoUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Polda_Papua_Barat.png', source: 'Wikimedia Commons', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Lambang_Polda_Papua_Barat.png' },
   { id: 'polda-papua', nama: 'Kepolisian Daerah Papua', singkatan: 'Polda Papua', wilayah: 'Papua', pulau: 'Maluku-Papua', logoUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lambang_Polda_Papua.png', source: 'Wikimedia Commons', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Lambang_Polda_Papua.png' }
 ];
 
@@ -106,7 +106,7 @@ export const PUBLIC_ITWIL_POLDA_MAPPING: Record<string, string[]> = {
   'itwil-2': ['polda-bengkulu', 'polda-sumsel', 'polda-babel', 'polda-lampung', 'polda-banten', 'polda-metro', 'polda-jabar', 'polda-jateng'],
   'itwil-3': ['polda-diy', 'polda-jatim', 'polda-bali', 'polda-ntb', 'polda-ntt', 'polda-kalbar', 'polda-kalteng'],
   'itwil-4': ['polda-kalsel', 'polda-kaltim', 'polda-kaltara', 'polda-sulsel', 'polda-sulbar', 'polda-sulteng', 'polda-sultra'],
-  'itwil-5': ['polda-gorontalo', 'polda-sulut', 'polda-malut', 'polda-maluku', 'polda-papuabarat', 'polda-papua']
+  'itwil-5': ['polda-gorontalo', 'polda-sulut', 'polda-malut', 'polda-maluku', 'polda-papua-barat', 'polda-papua']
 };
 
 export const PUBLIC_MABES_RECORDS: PublicStructureRecord[] = [

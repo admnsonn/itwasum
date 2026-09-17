@@ -20,11 +20,16 @@ import {
   Card,
   EmptyState,
   ProgressBar,
+  StatCard,
+  StepIndicator,
   Table,
   Typography,
   type BadgeColor,
   type TableColumn,
 } from '../../ui';
+import { FadeInUp } from '../../ui/motion';
+
+const PENUGASAN_WORKFLOW = ['Perlu Penugasan', 'Tim Terbentuk', 'ST Terbit', 'Berjalan', 'Selesai'];
 
 const STATUS_COLOR: Record<PenugasanEntry['status'], BadgeColor> = {
   'Perlu Penugasan': 'neutral',
@@ -61,13 +66,31 @@ export const PenugasanAuditView: React.FC<PenugasanAuditViewProps> = ({ subPath,
   return (
     <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
       {activeScreen === 'perlu-penugasan' && (
-        <Card>
-          {perluPenugasan.length === 0 ? (
-            <EmptyState title="Tidak ada kegiatan menunggu penugasan" description="Seluruh kegiatan PKPT disahkan telah memiliki tim audit." />
-          ) : (
-            <Table columns={columnsPerlu} data={perluPenugasan} rowKey={(r) => r.id} />
-          )}
-        </Card>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatCard label="Menunggu Penugasan" value={perluPenugasan.length} />
+            <StatCard label="Tim Terbentuk" value={PENUGASAN_2026.filter((p) => p.status === 'Tim Terbentuk').length} />
+            <StatCard label="ST Terbit / Berjalan" value={PENUGASAN_2026.filter((p) => p.status === 'ST Terbit' || p.status === 'Berjalan').length} />
+            <StatCard label="Selesai" value={PENUGASAN_2026.filter((p) => p.status === 'Selesai').length} />
+          </div>
+          <FadeInUp>
+            <Card>
+              <Typography variant="label-bold" className="text-slate-700 mb-3">Alur Penugasan Audit</Typography>
+              <StepIndicator
+                steps={PENUGASAN_WORKFLOW}
+                currentStep={Math.max(0, PENUGASAN_WORKFLOW.indexOf(selected.status))}
+              />
+              <p className="mt-2 text-[11px] text-slate-500">Kegiatan terpilih: <span className="font-bold text-slate-700">{selected.namaAuditi}</span></p>
+            </Card>
+          </FadeInUp>
+          <Card>
+            {perluPenugasan.length === 0 ? (
+              <EmptyState title="Tidak ada kegiatan menunggu penugasan" description="Seluruh kegiatan PKPT disahkan telah memiliki tim audit." />
+            ) : (
+              <Table columns={columnsPerlu} data={perluPenugasan} rowKey={(r) => r.id} />
+            )}
+          </Card>
+        </div>
       )}
 
       {activeScreen === 'pembentukan-tim' && (

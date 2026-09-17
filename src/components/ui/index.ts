@@ -11,3 +11,5 @@ export * from './atoms';
 export * from './molecules';
 export * from './charts';
 export * from './eprofilMolecules';
+export * from './motion';
+export * from './DataIntegrationNotice';

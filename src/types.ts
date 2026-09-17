@@ -261,7 +261,7 @@ export interface CurrentUserProfile {
   titikWilayahNama: string;
   parentItwilId?: string;
   parentPoldaId?: string;
-  sebutanPimpinan: string; // e.g. "Kapolri / Irwasum", "Irwil III", "Irwasda Riau", "Kapolres"
+  sebutanPimpinan: string; // e.g. "Irwasum", "Irwil III", "Irwasda Riau", "Kapolres"
   bidang: BidangName[]; // Bidang yang dihaki user: empty for admins!
   dapatOverview: 'penuh' | 'tanpa_data' | 'tidak';
   email: string;

@@ -17,6 +17,7 @@ import { getAuditLogs } from '../../../utils/auditLogger';
 import { LOG_VOLUME_30_HARI, detectVolumeAnomalies } from '../../../data/modules/lanjutan/administrasi';
 import { LOG_ANOMALI_AMBANG_PERSEN, LOG_RETENSI_DEFAULT_HARI } from '../../../data/modules/lanjutan/constants';
 import { Badge, Card, EmptyState, ForbiddenState, StatCard, Table, TrendLineChart, Typography, type BadgeColor, type TableColumn } from '../../ui';
+import { FadeInUp } from '../../ui/motion';
 
 const KEJADIAN_COLOR: Record<string, BadgeColor> = {
   'Buka Overview': 'info',
@@ -81,6 +82,12 @@ export const LogAktivitasView: React.FC<LogAktivitasViewProps> = ({ currentUser,
             <StatCard label="Ubah Hak Akses" value={scopedLogs.filter((l) => l.kejadian === 'Ubah hak akses user').length} />
             <StatCard label="Anomali Volume (30 Hari)" value={anomalies.length} change={anomalies.length > 0 ? { direction: 'up', label: `>${LOG_ANOMALI_AMBANG_PERSEN}% dari baseline` } : undefined} />
           </div>
+          <FadeInUp>
+            <Card>
+              <Typography variant="label-bold" className="text-slate-700 mb-2">Tren Volume Log (30 Hari Terakhir)</Typography>
+              <TrendLineChart data={LOG_VOLUME_30_HARI} xKey="tanggal" series={[{ dataKey: 'jumlah', label: 'Jumlah Log', color: '#002265' }]} />
+            </Card>
+          </FadeInUp>
           <Card>
             {scopedLogs.length === 0 ? <EmptyState title="Belum ada log tercatat" /> : <Table columns={columns} data={scopedLogs} rowKey={(r) => r.id} />}
           </Card>
@@ -133,6 +140,19 @@ export const LogAktivitasView: React.FC<LogAktivitasViewProps> = ({ currentUser,
             <div className="text-2xl font-extrabold text-[var(--sd-primary)] mt-1">{LOG_RETENSI_DEFAULT_HARI.toLocaleString('id-ID')} hari</div>
             <div className="text-[11px] text-slate-400 mt-1">(± 5 tahun, sesuai kebijakan retensi audit trail immutable Itwasum)</div>
           </Card>
+          <FadeInUp>
+            <Card>
+              <Typography variant="label-bold" className="text-slate-700 mb-2">Kebijakan Retensi & Integritas</Typography>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Audit trail dicatat secara append-only dengan checksum per kejadian. Setelah masa retensi minimum terpenuhi, arsip dipindahkan ke penyimpanan dingin dengan akses terbatas Super Admin.
+              </p>
+              <ul className="mt-2 space-y-1 text-xs text-slate-600 list-disc pl-4">
+                <li>Retensi aktif: {LOG_RETENSI_DEFAULT_HARI.toLocaleString('id-ID')} hari sebelum arsip dingin.</li>
+                <li>Deteksi anomali volume: kenaikan &gt;{LOG_ANOMALI_AMBANG_PERSEN}% dari baseline 30 hari.</li>
+                <li>Kejadian akses ditolak dan perubahan hak akses diprioritaskan untuk review berkala.</li>
+              </ul>
+            </Card>
+          </FadeInUp>
         </div>
       )}
     </ModuleScreenShell>
