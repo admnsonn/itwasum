@@ -398,7 +398,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Role Switch Logout Confirmation Modal */}
       {accountToSwitchConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[100050] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 text-slate-800 animate-in zoom-in-95">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 text-amber-800 flex items-center justify-center shrink-0">
@@ -466,7 +466,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* General Switch To Login Screen Logout Confirmation Modal */}
       {showLogoutLoginGeneralConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[100050] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 text-slate-800 animate-in zoom-in-95">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-blue-100 border border-blue-300 text-blue-800 flex items-center justify-center shrink-0">

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   ChevronRight,
@@ -55,15 +56,17 @@ export const SatkerSlideOver: React.FC<SatkerSlideOverProps> = ({
     label?: string;
   } | null>(null);
 
-  // Close on Escape key press
+  // Close on Escape before the fullscreen GIS listener can exit the map
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [onClose]);
 
   // Determine active item to display (prioritizing specific satkerItem over generic parent Polda)
@@ -271,9 +274,9 @@ export const SatkerSlideOver: React.FC<SatkerSlideOverProps> = ({
     </div>
   );
 
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-[100050] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/70 backdrop-blur-xs overflow-y-auto"
       onClick={onClose}
     >
       {/* Centered Modal Card Container */}
@@ -988,6 +991,7 @@ export const SatkerSlideOver: React.FC<SatkerSlideOverProps> = ({
 
       </div>
 
-    </div>
+    </div>,
+    document.body
   );
 };

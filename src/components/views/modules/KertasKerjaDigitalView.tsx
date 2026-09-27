@@ -12,6 +12,7 @@ import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { KERTAS_KERJA_DIGITAL, type KkEntry } from '../../../data/modules/lanjutan/pelaksanaan';
+import { FormMrPerObjek } from './kertasKerja/FormMrPerObjek';
 import {
   ApprovalStep,
   Badge,
@@ -40,10 +41,13 @@ interface KertasKerjaDigitalViewProps {
   onSubPathChange: (subPath?: string) => void;
 }
 
-export const KertasKerjaDigitalView: React.FC<KertasKerjaDigitalViewProps> = ({ subPath, onSubPathChange }) => {
+export const KertasKerjaDigitalView: React.FC<KertasKerjaDigitalViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const moduleDef = getModuleById('b15')!;
   const spec = getModuleSpec('b15')!;
-  const activeScreen = subPath || getDefaultScreenSlug('b15') || spec.screens[0].slug;
+  const isAuditeeOnly = currentUser.peran === 'auditee';
+  const defaultSlug = isAuditeeOnly ? 'form-mr' : getDefaultScreenSlug('b15') || spec.screens[0].slug;
+  const activeScreen = isAuditeeOnly ? 'form-mr' : subPath || defaultSlug;
+  const visibleSpec = isAuditeeOnly ? { ...spec, screens: spec.screens.filter((s) => s.slug === 'form-mr') } : spec;
   const [selected, setSelected] = useState<KkEntry>(KERTAS_KERJA_DIGITAL[0]);
 
   const columns: TableColumn<KkEntry>[] = [
@@ -66,7 +70,9 @@ export const KertasKerjaDigitalView: React.FC<KertasKerjaDigitalViewProps> = ({ 
   const antrean = KERTAS_KERJA_DIGITAL.filter((k) => k.status === 'Menunggu Validasi Ketua Tim' || k.status === 'Disetujui Ketua Tim');
 
   return (
-    <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
+    <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={visibleSpec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
+      {activeScreen === 'form-mr' && <FormMrPerObjek currentUser={currentUser} />}
+
       {activeScreen === 'kk-aktif' && (
         <Card><Table columns={columns} data={KERTAS_KERJA_DIGITAL} rowKey={(r) => r.id} /></Card>
       )}

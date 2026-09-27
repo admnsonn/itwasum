@@ -143,6 +143,9 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const heatLayerRef = useRef<L.LayerGroup | null>(null);
+  const pendingPopupSatkerIdRef = useRef<string | null>(null);
+  const rebuildingMarkersRef = useRef(false);
+  const coordsRef = useRef<HTMLSpanElement>(null);
 
   // States
   const [internalSelectedIsland, setInternalSelectedIsland] = useState<SatkerMapItem['pulau'] | 'Semua'>('Semua');
@@ -156,8 +159,6 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const [showBasemapMenu, setShowBasemapMenu] = useState(false);
   const [showRiskHeatmap, setShowRiskHeatmap] = useState(false);
   const [tingkatFilter, setTingkatFilter] = useState<'all' | 'mabes' | 'polda' | 'polres'>('all');
-  const [currentCoordinates, setCurrentCoordinates] = useState({ lat: '-2.50', lng: '118.00' });
-  const [currentZoomLevel, setCurrentZoomLevel] = useState<number>(5);
   const [internalIsMaximized, setInternalIsMaximized] = useState<boolean>(false);
   const isMaximized = controlledIsMaximized !== undefined ? controlledIsMaximized : internalIsMaximized;
 
@@ -169,18 +170,22 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   const roleScopedSatkers = useMemo(() => {
     return getRoleScopedSatkers(ALL_COMBINED_SATKERS_DATA, currentUser, activeBidang, tingkatObjek, activeJenjang);
   }, [activeBidang, activeJenjang, currentUser, tingkatObjek]);
-  const mapFilterBaseSatkers = roleScopedSatkers.filter((satker) => {
-    if (satker.tingkat === 'Polsek') {
-      return false;
-    }
-    if (statusFilter === 'perhatian' && satker.status === 'aman') {
-      return false;
-    }
-    if (statusFilter === 'audit' && !satker.auditBerjalan) {
-      return false;
-    }
-    return true;
-  });
+
+  const mapFilterBaseSatkers = useMemo(() => {
+    return roleScopedSatkers.filter((satker) => {
+      if (satker.tingkat === 'Polsek') {
+        return false;
+      }
+      if (statusFilter === 'perhatian' && satker.status === 'aman') {
+        return false;
+      }
+      if (statusFilter === 'audit' && !satker.auditBerjalan) {
+        return false;
+      }
+      return true;
+    });
+  }, [roleScopedSatkers, statusFilter]);
+
   const islandFilterOptions = useMemo(() => {
     return ISLAND_NAMES.map((island) => ({
       id: island,
@@ -189,13 +194,18 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
         : mapFilterBaseSatkers.filter(s => s.pulau === island).length
     })).filter(option => option.count > 0);
   }, [mapFilterBaseSatkers]);
+
   useEffect(() => {
     if (islandFilterOptions.some(option => option.id === selectedIsland)) return;
     setSelectedIsland(islandFilterOptions[0]?.id || 'Semua');
   }, [islandFilterOptions, selectedIsland]);
-  const islandScopedSatkers = mapFilterBaseSatkers.filter(
-    (satker) => selectedIsland === 'Semua' || satker.pulau === selectedIsland
-  );
+
+  const islandScopedSatkers = useMemo(() => {
+    return mapFilterBaseSatkers.filter(
+      (satker) => selectedIsland === 'Semua' || satker.pulau === selectedIsland
+    );
+  }, [mapFilterBaseSatkers, selectedIsland]);
+
   const tingkatFilterOptions = useMemo(() => {
     const options = [
       {
@@ -272,6 +282,9 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       }
 
       if (e.key === 'Escape' && isMaximized) {
+        if (document.getElementById('satker-detail-modal')) {
+          return;
+        }
         if (onToggleMaximize) {
           onToggleMaximize();
         } else {
@@ -416,77 +429,78 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   }, [tingkatObjek]);
 
   // Filter combined satkers based on Status, Tingkat, Island, and Search Query
-  const filteredSatkers = roleScopedSatkers.filter((satker) => {
-    // Poros 3 Enforcement (Tingkat Objek: Gabungan, Wilayah, Pusat)
-    const isMabesPusat = (
-      satker.tingkat === 'Mabes' || 
-      satker.tingkat === 'Itwasum' || 
-      satker.tingkat === 'Satker-Mabes' || 
-      satker.tingkat === 'Biro-Mabes' || 
-      satker.tingkat === 'Itwil'
-    );
-    const isRegionalWilayah = (
-      satker.tingkat === 'Polda' || 
-      satker.tingkat === 'Polrestabes' || 
-      satker.tingkat === 'Polresta' || 
-      satker.tingkat === 'Polres' || 
-      satker.tingkat === 'Polsek'
-    );
+  const filteredSatkers = useMemo(() => {
+    return roleScopedSatkers.filter((satker) => {
+      // Poros 3 Enforcement (Tingkat Objek: Gabungan, Wilayah, Pusat)
+      const isMabesPusat = (
+        satker.tingkat === 'Mabes' || 
+        satker.tingkat === 'Itwasum' || 
+        satker.tingkat === 'Satker-Mabes' || 
+        satker.tingkat === 'Biro-Mabes' || 
+        satker.tingkat === 'Itwil'
+      );
+      const isRegionalWilayah = (
+        satker.tingkat === 'Polda' || 
+        satker.tingkat === 'Polrestabes' || 
+        satker.tingkat === 'Polresta' || 
+        satker.tingkat === 'Polres' || 
+        satker.tingkat === 'Polsek'
+      );
 
-    if (tingkatObjek === 'pusat' && !isMabesPusat) {
-      return false;
-    }
-    if (tingkatObjek === 'wilayah' && !isRegionalWilayah) {
-      return false;
-    }
-
-    // Exclude Polsek completely as per official manual book (page 4)
-    if (satker.tingkat === 'Polsek') {
-      return false;
-    }
-
-    // Local Tingkat filter acts as the actual map scope: selecting Polda shows only Polda,
-    // selecting Polres shows only Polres, and Polsek is excluded entirely.
-    if (tingkatFilter !== 'all') {
-      if (tingkatFilter === 'mabes' && !['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)) {
+      if (tingkatObjek === 'pusat' && !isMabesPusat) {
         return false;
       }
-      if (tingkatFilter === 'polda' && satker.tingkat !== 'Polda') {
+      if (tingkatObjek === 'wilayah' && !isRegionalWilayah) {
         return false;
       }
-      if (tingkatFilter === 'polres' && !['Polres', 'Polrestabes', 'Polresta'].includes(satker.tingkat)) {
+
+      // Exclude Polsek completely as per official manual book (page 4)
+      if (satker.tingkat === 'Polsek') {
         return false;
       }
-    }
 
-    // Status filter
-    if (statusFilter === 'perhatian' && satker.status === 'aman') {
-      return false;
-    }
-    if (statusFilter === 'audit' && !satker.auditBerjalan) {
-      return false;
-    }
+      // Local Tingkat filter acts as the actual map scope: selecting Polda shows only Polda,
+      // selecting Polres shows only Polres, and Polsek is excluded entirely.
+      if (tingkatFilter !== 'all') {
+        if (tingkatFilter === 'mabes' && !['Mabes', 'Itwasum', 'Itwil', 'Satker-Mabes', 'Biro-Mabes'].includes(satker.tingkat)) {
+          return false;
+        }
+        if (tingkatFilter === 'polda' && satker.tingkat !== 'Polda') {
+          return false;
+        }
+        if (tingkatFilter === 'polres' && !['Polres', 'Polrestabes', 'Polresta'].includes(satker.tingkat)) {
+          return false;
+        }
+      }
 
-    // Island / Region filter
-    if (selectedIsland !== 'Semua' && satker.pulau !== selectedIsland) {
-      return false;
-    }
+      // Status filter
+      if (statusFilter === 'perhatian' && satker.status === 'aman') {
+        return false;
+      }
+      if (statusFilter === 'audit' && !satker.auditBerjalan) {
+        return false;
+      }
 
+      // Island / Region filter
+      if (selectedIsland !== 'Semua' && satker.pulau !== selectedIsland) {
+        return false;
+      }
 
-    // Search query filter
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase().trim();
-      const matchNama = satker.nama.toLowerCase().includes(q);
-      const matchSingkatan = satker.singkatan.toLowerCase().includes(q);
-      const matchIbukota = satker.ibukota.toLowerCase().includes(q);
-      const matchPimpinan = satker.pimpinanNama.toLowerCase().includes(q);
-      const matchWilayah = satker.wilayahHukum.toLowerCase().includes(q);
-      const matchTingkat = satker.tingkat.toLowerCase().includes(q);
-      return matchNama || matchSingkatan || matchIbukota || matchPimpinan || matchWilayah || matchTingkat;
-    }
+      // Search query filter
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase().trim();
+        const matchNama = satker.nama.toLowerCase().includes(q);
+        const matchSingkatan = satker.singkatan.toLowerCase().includes(q);
+        const matchIbukota = satker.ibukota.toLowerCase().includes(q);
+        const matchPimpinan = satker.pimpinanNama.toLowerCase().includes(q);
+        const matchWilayah = satker.wilayahHukum.toLowerCase().includes(q);
+        const matchTingkat = satker.tingkat.toLowerCase().includes(q);
+        return matchNama || matchSingkatan || matchIbukota || matchPimpinan || matchWilayah || matchTingkat;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [roleScopedSatkers, tingkatObjek, tingkatFilter, statusFilter, selectedIsland, searchQuery]);
 
   // 1. Initialize Map Instance
   useEffect(() => {
@@ -531,15 +545,29 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       markersLayerRef.current = markersLayer;
       heatLayerRef.current = heatLayer;
 
+      const setMapPopupActive = (active: boolean) => {
+        document.getElementById('command-map-container')?.classList.toggle('map-popup-active', active);
+      };
+      map.on('popupopen', () => setMapPopupActive(true));
+      map.on('popupclose', () => {
+        if (rebuildingMarkersRef.current) return;
+        pendingPopupSatkerIdRef.current = null;
+        setMapPopupActive(false);
+      });
+
+      const updateCoords = (lat?: number, lng?: number) => {
+        if (!coordsRef.current || !map) return;
+        const targetLat = lat !== undefined ? lat : map.getCenter().lat;
+        const targetLng = lng !== undefined ? lng : map.getCenter().lng;
+        coordsRef.current.textContent = `${targetLat.toFixed(2)}, ${targetLng.toFixed(2)} (Zoom: ${map.getZoom()})`;
+      };
+
       map.on('mousemove', (e: L.LeafletMouseEvent) => {
-        setCurrentCoordinates({
-          lat: e.latlng.lat.toFixed(2),
-          lng: e.latlng.lng.toFixed(2)
-        });
+        updateCoords(e.latlng.lat, e.latlng.lng);
       });
 
       map.on('zoomend', () => {
-        setCurrentZoomLevel(map.getZoom());
+        updateCoords();
       });
 
       mapInstanceRef.current = map;
@@ -548,11 +576,26 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       map.fitBounds(L.latLngBounds(INDONESIA_BOUNDS[0], INDONESIA_BOUNDS[1]), {
         padding: [20, 20]
       });
+
+      updateCoords();
     } catch (err) {
       console.warn('Map initialization failed or container re-bound:', err);
     }
 
+    let resizeObserver: ResizeObserver | null = null;
+    if (mapContainerRef.current && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        mapInstanceRef.current?.invalidateSize();
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      document.getElementById('command-map-container')?.classList.remove('map-popup-active');
+      pendingPopupSatkerIdRef.current = null;
       if (mapInstanceRef.current) {
         try {
           mapInstanceRef.current.remove();
@@ -577,8 +620,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
   useEffect(() => {
     if (!mapInstanceRef.current || !markersLayerRef.current || !heatLayerRef.current) return;
 
+    rebuildingMarkersRef.current = true;
     markersLayerRef.current.clearLayers();
     heatLayerRef.current.clearLayers();
+    const markersBySatkerId = new Map<string, L.Marker>();
 
     const coordinateGroups = new Map<string, SatkerMapItem[]>();
     filteredSatkers.forEach((satker) => {
@@ -650,20 +695,18 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
         <div class="satker-marker-wrapper relative group cursor-pointer transition-transform duration-200 ${isSelected ? 'scale-125 z-50' : 'hover:scale-115'}">
           
           ${satker.auditBerjalan ? `
-            <span class="absolute -top-1.5 -left-1.5 z-20 flex h-3.5 w-3.5">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-blue-600 border border-white text-[7px] text-white font-black items-center justify-center">⏱</span>
+            <span class="absolute -top-1.5 -left-1.5 z-20 flex h-3.5 w-3.5 items-center justify-center">
+              <span class="inline-flex rounded-full h-3.5 w-3.5 bg-blue-600 border border-white text-[7px] text-white font-black items-center justify-center shadow-xs">⏱</span>
             </span>
           ` : ''}
 
           ${atensiInfo.def.key === 'sangat_tinggi' ? `
-            <span class="absolute -top-1.5 -right-1.5 z-20 flex h-4 w-4">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-80"></span>
-              <span class="relative inline-flex rounded-full h-4 w-4 bg-red-600 border border-white text-[8px] text-white font-black items-center justify-center shadow-sm">!</span>
+            <span class="absolute -top-1.5 -right-1.5 z-20 flex h-4 w-4 items-center justify-center">
+              <span class="inline-flex rounded-full h-4 w-4 bg-red-600 border border-white text-[8px] text-white font-black items-center justify-center shadow-sm ring-1 ring-red-300">!</span>
             </span>
           ` : atensiInfo.def.key === 'tinggi' ? `
-            <span class="absolute -top-1 -right-1 z-20 flex h-3.5 w-3.5">
-              <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-orange-500 border border-white text-[7px] text-white font-black items-center justify-center shadow-xs">▲</span>
+            <span class="absolute -top-1 -right-1 z-20 flex h-3.5 w-3.5 items-center justify-center">
+              <span class="inline-flex rounded-full h-3.5 w-3.5 bg-orange-500 border border-white text-[7px] text-white font-black items-center justify-center shadow-xs ring-1 ring-orange-300">▲</span>
             </span>
           ` : ''}
 
@@ -717,6 +760,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
 
       // Handle Marker Click
       marker.on('click', () => {
+        pendingPopupSatkerIdRef.current = satker.id;
         // Trigger satker item callback if provided (handles both Polda and Sub-Satkers)
         if (onSelectSatkerItem) {
           onSelectSatkerItem(satker);
@@ -847,11 +891,30 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       marker.bindPopup(popupContent, {
         offset: [0, -markerSize - 6],
         className: 'satker-leaflet-popup',
-        maxWidth: 300
+        maxWidth: 300,
+        closeOnClick: false,
+        autoPan: true,
+        keepInView: true,
+        autoPanPadding: [48, 48]
       });
 
+      markersBySatkerId.set(satker.id, marker);
       markersLayerRef.current?.addLayer(marker);
     });
+
+    const pendingId = pendingPopupSatkerIdRef.current;
+    const pendingMarker = pendingId ? markersBySatkerId.get(pendingId) : undefined;
+    if (pendingMarker) {
+      requestAnimationFrame(() => {
+        if (markersLayerRef.current?.hasLayer(pendingMarker)) {
+          pendingMarker.openPopup();
+        }
+        rebuildingMarkersRef.current = false;
+      });
+    } else {
+      rebuildingMarkersRef.current = false;
+      document.getElementById('command-map-container')?.classList.remove('map-popup-active');
+    }
   }, [filteredSatkers, selectedPoldaId, selectedSatkerItem, showRiskHeatmap, onSelectPolda, onSelectSatkerItem]);
 
   // Global listener for "Detail Lengkap" button click inside Leaflet popup HTML
@@ -863,15 +926,16 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
         if (satkerId) {
           const satker = ALL_COMBINED_SATKERS_DATA.find(s => s.id === satkerId);
           if (satker && onOpenDetailDrawer) {
+            mapInstanceRef.current?.closePopup();
             onOpenDetailDrawer(satker);
           }
         }
       }
     };
 
-    document.addEventListener('click', handleGlobalPopupClick);
+    document.addEventListener('click', handleGlobalPopupClick, true);
     return () => {
-      document.removeEventListener('click', handleGlobalPopupClick);
+      document.removeEventListener('click', handleGlobalPopupClick, true);
     };
   }, [onOpenDetailDrawer]);
 
@@ -1076,11 +1140,11 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
       )}
 
       {/* Main Leaflet Map Viewport Container */}
-      <div className="relative flex-1 w-full h-full">
+      <div className="map-viewport relative flex-1 w-full h-full overflow-hidden">
         <div 
           ref={mapContainerRef} 
           id="leaflet-indonesia-map" 
-          className="w-full h-full bg-slate-100"
+          className="relative z-[1] w-full h-full bg-slate-100 overflow-hidden"
           style={{ cursor: 'grab' }}
         />
 
@@ -1632,7 +1696,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
                 </button>
                 {onOpenDetailDrawer && (
                   <button
-                    onClick={() => onOpenDetailDrawer(activeInspectedSatker)}
+                    onClick={() => {
+                      mapInstanceRef.current?.closePopup();
+                      onOpenDetailDrawer(activeInspectedSatker);
+                    }}
                     className="flex-1 py-1.5 px-3 rounded-xl bg-[#0B2B5C] hover:bg-[#071D3F] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>Buka Lembar Telaah</span>
@@ -2160,7 +2227,10 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
               <div className="flex items-center gap-2 mt-2.5">
                 {onOpenDetailDrawer && (
                   <button
-                    onClick={() => onOpenDetailDrawer(satkerToDisplay)}
+                    onClick={() => {
+                      mapInstanceRef.current?.closePopup();
+                      onOpenDetailDrawer(satkerToDisplay);
+                    }}
                     className="flex-1 py-1.5 px-3 rounded-xl bg-[#0B2B5C] hover:bg-blue-900 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <span>Buka Lembar Wasrik &amp; TLHP</span>
@@ -2188,7 +2258,7 @@ export const IndonesiaMap: React.FC<IndonesiaMapProps> = ({
           <span className="font-semibold text-slate-300">Wilayah Hukum:</span>
           <span className="font-bold text-amber-400">Negara Kesatuan Republik Indonesia (NKRI)</span>
           <span className="text-slate-500">|</span>
-          <span className="font-mono text-slate-300 text-[10px]">{currentCoordinates.lat}, {currentCoordinates.lng} (Zoom: {currentZoomLevel})</span>
+          <span ref={coordsRef} className="font-mono text-slate-300 text-[10px]">-2.50, 118.00 (Zoom: 5)</span>
         </div>
 
         {/* Map Legend Overlay (Keterangan Satker & Logo - Sesuai Status Atensi & TLHP) - High Z-Index */}

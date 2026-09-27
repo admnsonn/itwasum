@@ -29,6 +29,9 @@ import {
   type BadgeColor,
   type TableColumn,
 } from '../../ui';
+import { PermintaanDataScreen } from './auditUniverse/PermintaanDataScreen';
+import { PortalSatkerScreen } from './auditUniverse/PortalSatkerScreen';
+import { VerifikasiBerkasScreen } from './auditUniverse/VerifikasiBerkasScreen';
 
 const STATUS_COLOR: Record<AuditiKelengkapanStatus, BadgeColor> = {
   Lengkap: 'success',
@@ -45,10 +48,19 @@ interface AuditUniverseViewProps {
   onSubPathChange: (subPath?: string) => void;
 }
 
-export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, onSubPathChange }) => {
+export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const moduleDef = getModuleById('b12')!;
   const spec = getModuleSpec('b12')!;
-  const activeScreen = subPath || getDefaultScreenSlug('b12') || spec.screens[0].slug;
+  const isAuditeeOnly = currentUser.peran === 'auditee';
+  const defaultSlug = isAuditeeOnly ? 'portal-satker' : getDefaultScreenSlug('b12') || spec.screens[0].slug;
+  const [rawScreenSlug, ...detailParts] = (subPath || defaultSlug).split('/');
+  const activeScreen = isAuditeeOnly ? 'portal-satker' : rawScreenSlug;
+  const detailPath = detailParts.join('/') || undefined;
+  const navigateDetail = (detail?: string) => onSubPathChange(detail ? `${activeScreen}/${detail}` : activeScreen);
+
+  // Auditee (PIC Satker) hanya melihat tab Portal Satker — sembunyikan tab lain di ModuleScreenShell
+  // dengan membatasi spec.screens yang diteruskan.
+  const visibleSpec = isAuditeeOnly ? { ...spec, screens: spec.screens.filter((s) => s.slug === 'portal-satker') } : spec;
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -96,7 +108,7 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, o
     <ModuleScreenShell
       moduleDef={moduleDef}
       groupLabel={MODULE_GROUPS[moduleDef.group].label}
-      spec={spec}
+      spec={visibleSpec}
       activeScreen={activeScreen}
       onScreenChange={onSubPathChange}
     >
@@ -213,6 +225,16 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, o
           </Card>
         </div>
       )}
+
+      {activeScreen === 'permintaan-data' && (
+        <PermintaanDataScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} />
+      )}
+
+      {activeScreen === 'portal-satker' && (
+        <PortalSatkerScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} />
+      )}
+
+      {activeScreen === 'verifikasi-berkas' && <VerifikasiBerkasScreen currentUser={currentUser} />}
     </ModuleScreenShell>
   );
 };

@@ -29,6 +29,32 @@ import { getModuleById, getVisibleModulesForRole, type LegacyViewId } from './co
 
 const TIM_AUDIT_ROLES = ['pengawas_tim', 'ketua_tim', 'auditor', 'auditee'];
 
+const AUTH_SESSION_KEY = 'itwasum_auth_session';
+const AUTH_LOGGED_OUT_KEY = 'itwasum_logged_out';
+
+function getInitialAuthState(): { user: CurrentUserProfile; authenticated: boolean } {
+  if (typeof window === 'undefined') {
+    return { user: DEFAULT_USER_PROFILE, authenticated: true };
+  }
+  try {
+    const isExplicitlyLoggedOut = localStorage.getItem(AUTH_LOGGED_OUT_KEY) === 'true';
+    if (isExplicitlyLoggedOut) {
+      return { user: DEFAULT_USER_PROFILE, authenticated: false };
+    }
+    const saved = localStorage.getItem(AUTH_SESSION_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && parsed.id && parsed.peran) {
+        return { user: parsed as CurrentUserProfile, authenticated: true };
+      }
+    }
+    return { user: DEFAULT_USER_PROFILE, authenticated: true };
+  } catch (err) {
+    console.warn('Failed to parse auth session from localStorage:', err);
+    return { user: DEFAULT_USER_PROFILE, authenticated: true };
+  }
+}
+
 export default function App() {
   // Routing berbasis hash (lihat Plan 2 bagian 2.1): setiap modul punya URL stabil (#/<id>)
   // yang bisa di-screenshot sebagai bukti teknis. `setActiveNav` dipertahankan sebagai nama
@@ -50,8 +76,8 @@ export default function App() {
       ? (activeNav as LegacyViewId)
       : undefined);
 
-  const [currentUser, setCurrentUser] = useState<CurrentUserProfile>(DEFAULT_USER_PROFILE);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUserProfile>(() => getInitialAuthState().user);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => getInitialAuthState().authenticated);
   const [isLoginViewOpen, setIsLoginViewOpen] = useState<boolean>(false);
   const [selectedPoldaId, setSelectedPoldaId] = useState<string | null>(null);
   const [targetModulePoldaFilter, setTargetModulePoldaFilter] = useState<string | undefined>(undefined);
@@ -75,6 +101,12 @@ export default function App() {
   };
 
   const handleConfirmLogout = () => {
+    try {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      localStorage.setItem(AUTH_LOGGED_OUT_KEY, 'true');
+    } catch (err) {
+      console.warn('Failed to update logout state:', err);
+    }
     setShowLogoutModal(false);
     setIsAuthenticated(false);
     setPreselectedLoginAccount(undefined);
@@ -83,6 +115,12 @@ export default function App() {
 
   // Enforce logout before login: terminate active session and open login view with targeted role
   const handleLogoutAndSwitchToRole = (account?: PredefinedAccountConfig) => {
+    try {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      localStorage.setItem(AUTH_LOGGED_OUT_KEY, 'true');
+    } catch (err) {
+      console.warn('Failed to update logout state:', err);
+    }
     setIsAuthenticated(false);
     setPreselectedLoginAccount(account);
     setIsLoginViewOpen(true);
@@ -95,6 +133,12 @@ export default function App() {
         currentUser={isAuthenticated ? currentUser : undefined}
         targetAccountConfig={preselectedLoginAccount}
         onLoginSuccess={(newProfile) => {
+          try {
+            localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(newProfile));
+            localStorage.removeItem(AUTH_LOGGED_OUT_KEY);
+          } catch (err) {
+            console.warn('Failed to persist auth session:', err);
+          }
           setCurrentUser(newProfile);
           setIsAuthenticated(true);
           setIsLoginViewOpen(false);

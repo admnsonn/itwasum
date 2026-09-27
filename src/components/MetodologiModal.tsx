@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Calculator, 
@@ -22,8 +23,8 @@ export const MetodologiModal: React.FC<MetodologiModalProps> = ({ isOpen, onClos
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-xs animate-in fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-xs animate-in fade-in" onClick={onClose}>
       <div 
         className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -298,6 +299,7 @@ export const MetodologiModal: React.FC<MetodologiModalProps> = ({ isOpen, onClos
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Search, 
@@ -84,13 +85,14 @@ export const LogoSatkerExplorerModal: React.FC<LogoSatkerExplorerModalProps> = (
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
       <div 
         className="bg-white w-full max-w-5xl h-[90vh] max-h-[850px] rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="explorer-modal-title"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
         <div className="px-6 py-4.5 bg-gradient-to-r from-slate-900 via-[#0B2B5C] to-slate-900 text-white flex items-center justify-between border-b border-blue-900/60">
@@ -366,6 +368,7 @@ export const LogoSatkerExplorerModal: React.FC<LogoSatkerExplorerModalProps> = (
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

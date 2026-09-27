@@ -6,6 +6,7 @@
  * Lihat catatan lisensi & konvensi di `atoms.tsx`.
  */
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Check,
   ChevronLeft,
@@ -198,8 +199,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, descriptio
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-stretch" role="dialog" aria-modal="true">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-stretch" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
         className={cn(
@@ -223,7 +224,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, descriptio
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

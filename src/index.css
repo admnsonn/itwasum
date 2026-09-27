@@ -314,3 +314,23 @@ table thead {
   font-family: inherit !important;
 }
 
+/* Leaflet container must ALWAYS have overflow: hidden to prevent map tiles and elements from spilling out into adjacent layout columns */
+#command-map-container,
+.map-viewport,
+#leaflet-indonesia-map,
+.leaflet-container {
+  overflow: hidden;
+}
+
+#command-map-container .leaflet-popup-pane,
+#command-map-container .leaflet-tooltip-pane {
+  z-index: 1200;
+}
+
+.satker-leaflet-popup,
+.satker-leaflet-popup .leaflet-popup-content-wrapper,
+.satker-leaflet-popup .leaflet-popup-tip,
+.satker-leaflet-popup a.leaflet-popup-close-button {
+  pointer-events: auto;
+}
+
