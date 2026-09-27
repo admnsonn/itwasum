@@ -59,6 +59,9 @@ export type FormMrStatus = 'Belum dibuka' | 'Draf' | 'Diajukan' | 'Dikembalikan'
 export type RiskKategori = 'Keuangan/Fraud' | 'Operasional' | 'Kepatuhan' | 'Reputasi' | 'Strategis';
 export type KontrolJenis = 'Preventif' | 'Detektif' | 'Korektif';
 
+/** F2 "Prioritas Uji" — menandai risiko mana yang wajib diuji auditor pada F4 (KKP Uji Kontrol). */
+export type PrioritasUji = 'Ya · Utama' | 'Ya' | 'Tidak';
+
 export interface RiskRegisterEntry {
   kode: string;
   proses: string;
@@ -78,6 +81,8 @@ export interface RiskRegisterEntry {
   mitigasiTindakan: string;
   mitigasiPic: string;
   mitigasiTenggat: string;
+  /** Diisi Auditee (UPR) pada F2 (Register Risiko) — menandai prioritas uji kontrol F4. */
+  prioritasUji: PrioritasUji;
   /** Diisi Auditor pada F3 (Reviu Register & RCM). */
   auditorSepakat?: boolean;
   auditorResidualL?: number;
@@ -89,6 +94,15 @@ export interface KontrolKunci {
   kode: string;
   uraian: string;
   prosedurPustaka: string;
+}
+
+/** F3 "Risiko Tambahan Temuan Auditor" — risiko baru yang ditemukan auditor saat reviu, di
+ * luar Register Risiko self-assessment UPR (F2). */
+export interface RisikoTambahan {
+  id: string;
+  pernyataan: string;
+  kategori: RiskKategori;
+  kontrolTerkait: string;
 }
 
 export interface ObjekAuditMr {
@@ -147,6 +161,7 @@ export const RISK_REGISTER_SEED: RiskRegisterEntry[] = [
     mitigasiTindakan: 'Menetapkan SOP survei pasar minimal 3 penyedia sebelum penyusunan HPS.',
     mitigasiPic: 'PPK Pengadaan',
     mitigasiTenggat: '2026-09-30',
+    prioritasUji: 'Ya · Utama',
   },
   {
     kode: 'R-02',
@@ -165,6 +180,7 @@ export const RISK_REGISTER_SEED: RiskRegisterEntry[] = [
     mitigasiTindakan: 'Memasang papan informasi tarif resmi & kanal pengaduan di loket layanan.',
     mitigasiPic: 'Kasium Polres',
     mitigasiTenggat: '2026-08-15',
+    prioritasUji: 'Ya',
   },
   {
     kode: 'R-03',
@@ -183,6 +199,7 @@ export const RISK_REGISTER_SEED: RiskRegisterEntry[] = [
     mitigasiTindakan: 'Menetapkan tenggat SPTJ H+5 setiap akhir bulan dengan pengingat sistem.',
     mitigasiPic: 'Bendahara Pengeluaran',
     mitigasiTenggat: '2026-08-01',
+    prioritasUji: 'Tidak',
   },
 ];
 
@@ -190,6 +207,8 @@ export const KONTROL_KUNCI_SEED: KontrolKunci[] = [
   { kode: 'K-01', uraian: 'Reviu HPS oleh PPK sebelum penetapan.', prosedurPustaka: 'PU-PBJ-03 · Reviu Harga Perkiraan Sendiri' },
   { kode: 'K-02', uraian: 'Pemeriksaan serah terima barang/pekerjaan.', prosedurPustaka: 'PU-PBJ-07 · Verifikasi Serah Terima' },
 ];
+
+export const RISIKO_TAMBAHAN_SEED: RisikoTambahan[] = [];
 
 export interface LogSeedEntry {
   waktuLabel: string;

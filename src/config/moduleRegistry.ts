@@ -605,11 +605,13 @@ export function getVisibleModulesForRole(role: OfficialRole): ModuleDefinition[]
   };
 
   const base = MODULE_REGISTRY.filter((m) => {
-    if (m.rolesOverride?.length) return m.rolesOverride.includes(role);
+    const override = m.rolesOverride as OfficialRole[] | undefined;
+    if (override?.length) return override.includes(role);
     return inDefaultScope(m);
   });
   const extra = MODULE_REGISTRY.filter((m) => {
-    if (m.rolesOverride?.length && !m.rolesOverride.includes(role)) return false;
+    const override = m.rolesOverride as OfficialRole[] | undefined;
+    if (override?.length && !override.includes(role)) return false;
     return (m.extraRoles as OfficialRole[] | undefined)?.includes(role) && !base.includes(m);
   });
   return [...base, ...extra];

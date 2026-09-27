@@ -12,12 +12,13 @@
  * "Sesuai rekomendasi" (skor RBIA diperbarui untuk PKPT berikutnya).
  */
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, ChevronRight, Lock, RotateCcw, Send, Undo2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Lock, Send, Undo2 } from 'lucide-react';
 import type { CurrentUserProfile, OfficialRole } from '../../../../types';
 import {
   OBJEK_AUDIT_MR,
   RISK_REGISTER_SEED,
   KONTROL_KUNCI_SEED,
+  RISIKO_TAMBAHAN_SEED,
   LOG_SEED,
   STEP_IDS,
   STEP_TITLES,
@@ -29,8 +30,12 @@ import {
   type FormMrStatus,
   type RiskRegisterEntry,
   type RiskLevel,
+  type RisikoTambahan,
+  type PrioritasUji,
+  type RiskKategori,
 } from '../../../../data/modules/lanjutan/formMr';
-import { Badge, Button, Card, HeatmapGrid, Select, Textarea, Typography, type BadgeColor } from '../../../ui';
+import { Badge, Button, Card, HeatmapGrid, Select, Textarea, Typography, UploadDropzone, type BadgeColor } from '../../../ui';
+import { formatBytes } from '../../../../data/auditUniverse';
 
 const STORAGE_KEY = 'itwasum_form_mr_v1';
 
@@ -56,15 +61,28 @@ const LEVEL_COLOR: Record<RiskLevel, BadgeColor> = { Rendah: 'success', Sedang: 
 
 type TindakLanjutStatus = 'Belum ditindaklanjuti' | 'Belum sesuai' | 'Sesuai rekomendasi' | 'Tidak dapat ditindaklanjuti';
 
+interface LampiranFile {
+  nama: string;
+  sizeBytes: number;
+  oleh: string;
+  waktu: string;
+}
+
 interface PersistedState {
   stepStatuses: Record<StepId, FormMrStatus>;
   risks: RiskRegisterEntry[];
+  risikoTambahan: RisikoTambahan[];
+  /** Berkas terlampir per tahap (F1 "Dokumen pendukung", F4 "Unggah bukti"). */
+  lampiran: Partial<Record<StepId, LampiranFile[]>>;
   log: { waktu: string; aksi: string }[];
   kkp: { populasi: number; sampel: number; exc: number; samplingMethod: string; desainKontrol: 'Memadai' | 'Tidak Memadai' };
   maturitasMr: number;
   keandalanUpr: string;
   simpulan: string;
   tindakLanjutStatus: TindakLanjutStatus;
+  buktiTindakLanjut: LampiranFile[];
+  tglVerifikasi: string;
+  catatanVerifikasi: string;
   closed: boolean;
 }
 
@@ -73,24 +91,44 @@ function buildInitialState(): PersistedState {
   return {
     stepStatuses,
     risks: RISK_REGISTER_SEED.map((r) => ({ ...r })),
+    risikoTambahan: RISIKO_TAMBAHAN_SEED.map((r) => ({ ...r })),
+    lampiran: {},
     log: LOG_SEED.map((l) => ({ waktu: l.waktuLabel, aksi: l.aksi })),
     kkp: { populasi: 40, sampel: 15, exc: 5, samplingMethod: 'Berbasis risiko', desainKontrol: 'Memadai' },
     maturitasMr: 3,
     keandalanUpr: 'Cukup Andal',
     simpulan: '',
     tindakLanjutStatus: 'Belum ditindaklanjuti',
+    buktiTindakLanjut: [],
+    tglVerifikasi: '',
+    catatanVerifikasi: '',
     closed: false,
   };
 }
 
 function loadState(): PersistedState {
+  const initial = buildInitialState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as PersistedState;
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<PersistedState>;
+      // Merge over `initial` (bukan replace total) supaya sesi lama yang belum punya
+      // field baru (lampiran/risikoTambahan/buktiTindakLanjut/dst.) tetap kompatibel.
+      return {
+        ...initial,
+        ...saved,
+        risks: saved.risks?.map((r) => ({ prioritasUji: 'Tidak' as PrioritasUji, ...r })) ?? initial.risks,
+        risikoTambahan: saved.risikoTambahan ?? initial.risikoTambahan,
+        lampiran: saved.lampiran ?? initial.lampiran,
+        buktiTindakLanjut: saved.buktiTindakLanjut ?? initial.buktiTindakLanjut,
+        tglVerifikasi: saved.tglVerifikasi ?? initial.tglVerifikasi,
+        catatanVerifikasi: saved.catatanVerifikasi ?? initial.catatanVerifikasi,
+      };
+    }
   } catch {
     // ignore corrupt storage
   }
-  return buildInitialState();
+  return initial;
 }
 
 interface FormMrPerObjekProps {
@@ -169,6 +207,29 @@ export const FormMrPerObjek: React.FC<FormMrPerObjekProps> = ({ currentUser }) =
     setState((s) => ({ ...s, risks: s.risks.map((r) => (r.kode === kode ? { ...r, ...patch } : r)) }));
   };
 
+  const addRisikoTambahan = (item: Omit<RisikoTambahan, 'id'>) => {
+    touchDraft();
+    const entry: RisikoTambahan = { ...item, id: `RT-${state.risikoTambahan.length + 1}` };
+    setState((s) => ({ ...s, risikoTambahan: [...s.risikoTambahan, entry] }));
+    addLog(`Menambahkan risiko tambahan temuan auditor: ${item.pernyataan}`);
+  };
+
+  const addLampiran = (step: StepId, files: File[]) => {
+    if (!files.length) return;
+    touchDraft();
+    const entries: LampiranFile[] = files.map((f) => ({ nama: f.name, sizeBytes: f.size, oleh: currentUser.nama, waktu: 'Baru saja' }));
+    setState((s) => ({ ...s, lampiran: { ...s.lampiran, [step]: [...(s.lampiran[step] ?? []), ...entries] } }));
+    addLog(`Melampirkan ${files.length} berkas pada ${STEP_TITLES[step]}.`);
+  };
+
+  const addBuktiTindakLanjut = (files: File[]) => {
+    if (!files.length) return;
+    touchDraft();
+    const entries: LampiranFile[] = files.map((f) => ({ nama: f.name, sizeBytes: f.size, oleh: currentUser.nama, waktu: 'Baru saja' }));
+    setState((s) => ({ ...s, buktiTindakLanjut: [...s.buktiTindakLanjut, ...entries] }));
+    addLog(`Mengunggah ${files.length} bukti tindak lanjut.`);
+  };
+
   const matrixCells = state.risks.flatMap((r) => [
     { rowId: String(r.inherenI), colId: String(r.inherenL), value: r.inherenL * r.inherenI, label: `${r.kode} inheren` },
     { rowId: String(r.residualI), colId: String(r.residualL), value: r.residualL * r.residualI, label: `${r.kode} residual` },
@@ -240,11 +301,25 @@ export const FormMrPerObjek: React.FC<FormMrPerObjekProps> = ({ currentUser }) =
 
           <div className="text-[11px] text-slate-400 mb-3">Peran aktif saat ini: <strong className="text-slate-600">{effectiveRoleLabel}</strong>{canEdit ? ' — dapat mengisi tahap ini.' : canReview ? ' — dapat mereviu tahap ini.' : ' — hanya lihat (bukan aktor/reviewer tahap ini).'}</div>
 
-          {activeStep === 'F1' && <F1Content risks={state.risks} readOnly={!canEdit} onTouch={touchDraft} />}
+          {activeStep === 'F1' && <F1Content risks={state.risks} readOnly={!canEdit} lampiran={state.lampiran.F1 ?? []} onTouch={touchDraft} onUpload={(files) => addLampiran('F1', files)} />}
           {activeStep === 'F2' && <F2Content risks={state.risks} readOnly={!canEdit} onUpdate={updateRisk} />}
-          {activeStep === 'F3' && <F3Content risks={state.risks} readOnly={!canEdit} onUpdate={updateRisk} />}
+          {activeStep === 'F3' && (
+            <F3Content
+              risks={state.risks}
+              risikoTambahan={state.risikoTambahan}
+              readOnly={!canEdit}
+              onUpdate={updateRisk}
+              onAddRisikoTambahan={addRisikoTambahan}
+            />
+          )}
           {activeStep === 'F4' && (
-            <F4Content kkp={state.kkp} readOnly={!canEdit} onChange={(patch) => { touchDraft(); setState((s) => ({ ...s, kkp: { ...s.kkp, ...patch } })); }} />
+            <F4Content
+              kkp={state.kkp}
+              readOnly={!canEdit}
+              lampiran={state.lampiran.F4 ?? []}
+              onUpload={(files) => addLampiran('F4', files)}
+              onChange={(patch) => { touchDraft(); setState((s) => ({ ...s, kkp: { ...s.kkp, ...patch } })); }}
+            />
           )}
           {activeStep === 'F5' && <F5Content risks={state.risks} />}
           {activeStep === 'F6' && (
@@ -262,7 +337,13 @@ export const FormMrPerObjek: React.FC<FormMrPerObjekProps> = ({ currentUser }) =
               readOnly={!canEdit}
               tindakLanjutStatus={state.tindakLanjutStatus}
               closed={state.closed}
+              buktiTindakLanjut={state.buktiTindakLanjut}
+              tglVerifikasi={state.tglVerifikasi}
+              catatanVerifikasi={state.catatanVerifikasi}
               onChange={(v) => { touchDraft(); setState((s) => ({ ...s, tindakLanjutStatus: v })); }}
+              onUploadBukti={addBuktiTindakLanjut}
+              onTglVerifikasiChange={(v) => setState((s) => ({ ...s, tglVerifikasi: v }))}
+              onCatatanVerifikasiChange={(v) => setState((s) => ({ ...s, catatanVerifikasi: v }))}
             />
           )}
 
@@ -320,6 +401,14 @@ export const FormMrPerObjek: React.FC<FormMrPerObjekProps> = ({ currentUser }) =
           </ul>
         </Card>
         <Card>
+          <div className="text-[10px] font-bold uppercase text-slate-400 mb-2">Reviu Berjenjang</div>
+          <ul className="space-y-1.5">
+            <ReviuBerjenjangRow label="Ketua Tim" aksi="Disusun" status={state.stepStatuses.F3} />
+            <ReviuBerjenjangRow label="Dalnis (Pengawas Tim)" aksi="Direviu" status={state.stepStatuses.F5} />
+            <ReviuBerjenjangRow label="Daltu (Koordinator/Pimpinan)" aksi="Disetujui" status={state.stepStatuses.F6} />
+          </ul>
+        </Card>
+        <Card>
           <div className="text-[10px] font-bold uppercase text-slate-400 mb-2">Status Form</div>
           <div className="flex flex-wrap gap-1.5">
             {(['Belum dibuka', 'Draf', 'Diajukan', 'Dikembalikan', 'Disetujui', 'Terkunci'] as FormMrStatus[]).map((s) => (
@@ -345,7 +434,9 @@ export const FormMrPerObjek: React.FC<FormMrPerObjekProps> = ({ currentUser }) =
 /* ============================================================================================ *
  * F1 — Profil & Konteks Risiko
  * ============================================================================================ */
-const F1Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; onTouch: () => void }> = ({ risks, onTouch }) => (
+interface LampiranEntry { nama: string; sizeBytes: number; oleh: string; waktu: string }
+
+const F1Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; lampiran: LampiranEntry[]; onTouch: () => void; onUpload: (files: File[]) => void }> = ({ risks, readOnly, lampiran, onTouch, onUpload }) => (
   <div className="space-y-3">
     <div className="grid sm:grid-cols-2 gap-3 text-xs">
       <FieldReadonly label="Nama Satker" value={OBJEK_AUDIT_MR.namaObjek} />
@@ -367,9 +458,37 @@ const F1Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; onTou
         ))}
       </div>
     </div>
-    <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">Berkas terlampir: Renja, SK Tim MR, Profil Risiko periode sebelumnya. {risks.length} risiko awal teridentifikasi pada Register (lihat F2).</p>
+    <div>
+      <label className="block text-[11px] font-bold text-slate-500 mb-1.5">Dokumen Pendukung</label>
+      <p className="text-[10px] text-slate-400 mb-1.5">Renja, SK Tim MR, Profil Risiko periode sebelumnya.</p>
+      <LampiranList items={lampiran} />
+      {!readOnly && <UploadDropzone onFiles={onUpload} multiple maxSizeMB={25} hint="PDF/Word/Excel · maks 25 MB · boleh lebih dari satu" className="mt-2" />}
+    </div>
+    <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">{risks.length} risiko awal teridentifikasi pada Register (lihat F2).</p>
   </div>
 );
+
+const LampiranList: React.FC<{ items: LampiranEntry[] }> = ({ items }) =>
+  items.length === 0 ? null : (
+    <ul className="space-y-1">
+      {items.map((f, i) => (
+        <li key={i} className="flex items-center justify-between gap-2 rounded-[8px] bg-slate-50 border border-slate-100 px-2.5 py-1.5 text-[11px]">
+          <span className="font-bold text-slate-700 truncate">{f.nama}</span>
+          <span className="text-slate-400 shrink-0">{formatBytes(f.sizeBytes)} · {f.oleh} · {f.waktu}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
+const ReviuBerjenjangRow: React.FC<{ label: string; aksi: string; status: FormMrStatus }> = ({ label, aksi, status }) => {
+  const done = status === 'Disetujui' || status === 'Terkunci';
+  return (
+    <li className="flex items-center justify-between gap-2 text-[11px]">
+      <span className="text-slate-600 font-semibold">{label}</span>
+      <Badge color={done ? 'success' : 'neutral'} size="sm">{done ? aksi : 'Menunggu'}</Badge>
+    </li>
+  );
+};
 
 const FieldReadonly: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div>
@@ -390,7 +509,18 @@ const F2Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; onUpd
         <div key={r.kode} className="rounded-[10px] border border-slate-100 p-3 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-extrabold text-slate-800">{r.kode} · {r.proses}</span>
-            <Badge color="indigo" size="sm">{r.kategori}</Badge>
+            <div className="flex items-center gap-1.5">
+              <Badge color="indigo" size="sm">{r.kategori}</Badge>
+              <select
+                disabled={readOnly}
+                value={r.prioritasUji}
+                onChange={(e) => onUpdate(r.kode, { prioritasUji: e.target.value as PrioritasUji })}
+                className="h-6 rounded-[6px] border border-slate-200 px-1.5 text-[10px] font-bold disabled:bg-slate-50"
+                title="Prioritas Uji (F4)"
+              >
+                {(['Ya · Utama', 'Ya', 'Tidak'] as const).map((v) => <option key={v} value={v}>Prioritas Uji: {v}</option>)}
+              </select>
+            </div>
           </div>
           <div className="grid sm:grid-cols-3 gap-2 text-[11px] text-slate-500">
             <div><span className="font-bold text-slate-600">Pernyataan:</span> {r.pernyataan}</div>
@@ -468,7 +598,13 @@ const RiskScoreEditor: React.FC<{ label: string; L: number; I: number; score: nu
 /* ============================================================================================ *
  * F3 — Reviu Register & RCM (oleh Auditor)
  * ============================================================================================ */
-const F3Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; onUpdate: (kode: string, patch: Partial<RiskRegisterEntry>) => void }> = ({ risks, readOnly, onUpdate }) => (
+const F3Content: React.FC<{
+  risks: RiskRegisterEntry[];
+  risikoTambahan: RisikoTambahan[];
+  readOnly: boolean;
+  onUpdate: (kode: string, patch: Partial<RiskRegisterEntry>) => void;
+  onAddRisikoTambahan: (item: Omit<RisikoTambahan, 'id'>) => void;
+}> = ({ risks, risikoTambahan, readOnly, onUpdate, onAddRisikoTambahan }) => (
   <div className="space-y-3">
     <div className="text-[11px] text-slate-500">Auditor mereviu residual risiko dari Register (F2) dan menyusun Risk & Control Matrix (RCM) sebagai dasar Prosedur Ketaatan Pengujian (PKP).</div>
     {risks.map((r) => {
@@ -504,16 +640,22 @@ const F3Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; onUpd
               </select>
             </div>
           </div>
-          <input
-            disabled={readOnly}
-            placeholder="Alasan bila tidak sepakat..."
-            defaultValue={r.auditorAlasan}
-            onBlur={(e) => onUpdate(r.kode, { auditorAlasan: e.target.value })}
-            className="w-full h-8 rounded-[6px] border border-slate-200 px-2 text-[11px] disabled:bg-slate-50"
-          />
+          <div>
+            <label className="block font-bold text-slate-500 mb-0.5">Alasan Perbedaan</label>
+            <input
+              disabled={readOnly}
+              placeholder="Alasan bila tidak sepakat..."
+              defaultValue={r.auditorAlasan}
+              onBlur={(e) => onUpdate(r.kode, { auditorAlasan: e.target.value })}
+              className="w-full h-8 rounded-[6px] border border-slate-200 px-2 text-[11px] disabled:bg-slate-50"
+            />
+          </div>
         </div>
       );
     })}
+
+    <RisikoTambahanSection items={risikoTambahan} readOnly={readOnly} onAdd={onAddRisikoTambahan} />
+
     <div className="rounded-[10px] border border-slate-100 p-3">
       <div className="text-xs font-bold text-slate-700 mb-2">Risk & Control Matrix (RCM) → dasar PKP</div>
       <table className="w-full text-[11px]">
@@ -532,11 +674,70 @@ const F3Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; onUpd
   </div>
 );
 
+const RISIKO_KATEGORI_OPTIONS: RiskKategori[] = ['Keuangan/Fraud', 'Operasional', 'Kepatuhan', 'Reputasi', 'Strategis'];
+
+const RisikoTambahanSection: React.FC<{ items: RisikoTambahan[]; readOnly: boolean; onAdd: (item: Omit<RisikoTambahan, 'id'>) => void }> = ({ items, readOnly, onAdd }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [pernyataan, setPernyataan] = useState('');
+  const [kategori, setKategori] = useState<RiskKategori>('Operasional');
+  const [kontrolTerkait, setKontrolTerkait] = useState('');
+
+  return (
+    <div className="rounded-[10px] border border-slate-100 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-bold text-slate-700">Risiko Tambahan Temuan Auditor</div>
+        {!readOnly && !showForm && (
+          <button onClick={() => setShowForm(true)} className="text-[11px] font-bold text-[var(--sd-primary)] hover:underline">+ Tambah Risiko</button>
+        )}
+      </div>
+      {items.length === 0 && !showForm ? (
+        <p className="text-[11px] text-slate-400 italic">Belum ada risiko tambahan yang ditemukan auditor di luar Register Risiko (F2).</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((r) => (
+            <li key={r.id} className="rounded-[8px] bg-slate-50 border border-slate-100 p-2 text-[11px]">
+              <div className="flex items-center gap-1.5"><span className="font-mono font-bold text-slate-700">{r.id}</span><Badge color="indigo" size="sm">{r.kategori}</Badge></div>
+              <div className="text-slate-600 mt-0.5">{r.pernyataan}</div>
+              <div className="text-slate-400 mt-0.5">Kontrol terkait: {r.kontrolTerkait}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {showForm && (
+        <div className="space-y-2 pt-1 border-t border-slate-100">
+          <input value={pernyataan} onChange={(e) => setPernyataan(e.target.value)} placeholder="Pernyataan risiko yang ditemukan..." className="w-full h-8 rounded-[6px] border border-slate-200 px-2 text-[11px]" />
+          <div className="grid grid-cols-2 gap-2">
+            <select value={kategori} onChange={(e) => setKategori(e.target.value as RiskKategori)} className="w-full h-8 rounded-[6px] border border-slate-200 px-2 text-[11px]">
+              {RISIKO_KATEGORI_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+            <input value={kontrolTerkait} onChange={(e) => setKontrolTerkait(e.target.value)} placeholder="Kontrol/prosedur terkait..." className="w-full h-8 rounded-[6px] border border-slate-200 px-2 text-[11px]" />
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setShowForm(false); setPernyataan(''); setKontrolTerkait(''); }}>Batal</Button>
+            <Button
+              size="sm"
+              disabled={!pernyataan.trim()}
+              onClick={() => {
+                onAdd({ pernyataan: pernyataan.trim(), kategori, kontrolTerkait: kontrolTerkait.trim() || '–' });
+                setShowForm(false);
+                setPernyataan('');
+                setKontrolTerkait('');
+              }}
+            >
+              Simpan
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ============================================================================================ *
  * F4 — KKP Uji Kontrol
  * ============================================================================================ */
 interface KkpState { populasi: number; sampel: number; exc: number; samplingMethod: string; desainKontrol: 'Memadai' | 'Tidak Memadai' }
-const F4Content: React.FC<{ kkp: KkpState; readOnly: boolean; onChange: (patch: Partial<KkpState>) => void }> = ({ kkp, readOnly, onChange }) => {
+const F4Content: React.FC<{ kkp: KkpState; readOnly: boolean; lampiran: LampiranEntry[]; onUpload: (files: File[]) => void; onChange: (patch: Partial<KkpState>) => void }> = ({ kkp, readOnly, lampiran, onUpload, onChange }) => {
   const excRate = kkp.sampel > 0 ? Math.round((kkp.exc / kkp.sampel) * 1000) / 10 : 0;
   const operasiEfektif = excRate <= 10;
   const kesimpulan = operasiEfektif && kkp.desainKontrol === 'Memadai' ? 'Efektif' : operasiEfektif ? 'Efektif dengan Catatan' : 'Tidak Efektif';
@@ -548,11 +749,11 @@ const F4Content: React.FC<{ kkp: KkpState; readOnly: boolean; onChange: (patch: 
           <input type="number" disabled={readOnly} value={kkp.populasi} onChange={(e) => onChange({ populasi: Number(e.target.value) })} className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 disabled:bg-slate-50" />
         </div>
         <div>
-          <label className="block font-bold text-slate-500 mb-1">Sampel</label>
+          <label className="block font-bold text-slate-500 mb-1">Ukuran Sampel</label>
           <input type="number" disabled={readOnly} value={kkp.sampel} onChange={(e) => onChange({ sampel: Number(e.target.value) })} className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 disabled:bg-slate-50" />
         </div>
         <div>
-          <label className="block font-bold text-slate-500 mb-1">Jumlah Eksepsi</label>
+          <label className="block font-bold text-slate-500 mb-1">Jumlah Pengecualian</label>
           <input type="number" disabled={readOnly} value={kkp.exc} onChange={(e) => onChange({ exc: Number(e.target.value) })} className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 disabled:bg-slate-50" />
         </div>
       </div>
@@ -564,7 +765,7 @@ const F4Content: React.FC<{ kkp: KkpState; readOnly: boolean; onChange: (patch: 
           </select>
         </div>
         <div>
-          <label className="block font-bold text-slate-500 mb-1">Desain Kontrol</label>
+          <label className="block font-bold text-slate-500 mb-1">Kesimpulan Desain Kontrol</label>
           <select disabled={readOnly} value={kkp.desainKontrol} onChange={(e) => onChange({ desainKontrol: e.target.value as KkpState['desainKontrol'] })} className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 disabled:bg-slate-50">
             {(['Memadai', 'Tidak Memadai'] as const).map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
@@ -580,6 +781,11 @@ const F4Content: React.FC<{ kkp: KkpState; readOnly: boolean; onChange: (patch: 
           <div className="text-[10px] font-bold uppercase text-slate-400">Kesimpulan Uji Kontrol</div>
           <Badge color={kesimpulan === 'Efektif' ? 'success' : kesimpulan === 'Efektif dengan Catatan' ? 'warning' : 'danger'} className="mt-1">{kesimpulan}</Badge>
         </div>
+      </div>
+      <div>
+        <label className="block text-[11px] font-bold text-slate-500 mb-1.5">Unggah Bukti</label>
+        <LampiranList items={lampiran} />
+        {!readOnly && <UploadDropzone onFiles={onUpload} multiple maxSizeMB={25} hint="PDF/Word/Excel/JPG · maks 25 MB · boleh lebih dari satu" className="mt-2" />}
       </div>
     </div>
   );
@@ -643,7 +849,19 @@ const F6Content: React.FC<{ readOnly: boolean; maturitasMr: number; keandalanUpr
 /* ============================================================================================ *
  * F7 — Rencana Aksi & Tindak Lanjut
  * ============================================================================================ */
-const F7Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; tindakLanjutStatus: TindakLanjutStatus; closed: boolean; onChange: (v: TindakLanjutStatus) => void }> = ({ risks, readOnly, tindakLanjutStatus, closed, onChange }) => (
+const F7Content: React.FC<{
+  risks: RiskRegisterEntry[];
+  readOnly: boolean;
+  tindakLanjutStatus: TindakLanjutStatus;
+  closed: boolean;
+  buktiTindakLanjut: LampiranEntry[];
+  tglVerifikasi: string;
+  catatanVerifikasi: string;
+  onChange: (v: TindakLanjutStatus) => void;
+  onUploadBukti: (files: File[]) => void;
+  onTglVerifikasiChange: (v: string) => void;
+  onCatatanVerifikasiChange: (v: string) => void;
+}> = ({ risks, readOnly, tindakLanjutStatus, closed, buktiTindakLanjut, tglVerifikasi, catatanVerifikasi, onChange, onUploadBukti, onTglVerifikasiChange, onCatatanVerifikasiChange }) => (
   <div className="space-y-3">
     <table className="w-full text-[11px]">
       <thead><tr className="text-slate-400"><th className="text-left pb-1.5">Kode</th><th className="text-left pb-1.5">Tindakan</th><th className="text-left pb-1.5">PIC</th><th className="text-left pb-1.5">Tenggat</th></tr></thead>
@@ -658,16 +876,33 @@ const F7Content: React.FC<{ risks: RiskRegisterEntry[]; readOnly: boolean; tinda
         ))}
       </tbody>
     </table>
-    <div className="rounded-[10px] bg-slate-50 border border-slate-100 p-3">
-      <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">Verifikasi Tindak Lanjut</div>
+
+    <div>
+      <label className="block text-[11px] font-bold text-slate-500 mb-1.5">Bukti Tindak Lanjut</label>
+      <LampiranList items={buktiTindakLanjut} />
+      {!readOnly && <UploadDropzone onFiles={onUploadBukti} multiple maxSizeMB={25} hint="PDF/Word/Excel/JPG · maks 25 MB · boleh lebih dari satu" className="mt-2" />}
+    </div>
+
+    <div className="rounded-[10px] bg-slate-50 border border-slate-100 p-3 space-y-2.5">
+      <div className="text-[10px] font-bold uppercase text-slate-400">Verifikasi Tindak Lanjut</div>
       <select disabled={readOnly} value={tindakLanjutStatus} onChange={(e) => onChange(e.target.value as TindakLanjutStatus)} className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 text-sm font-bold disabled:bg-white">
         {(['Belum ditindaklanjuti', 'Belum sesuai', 'Sesuai rekomendasi', 'Tidak dapat ditindaklanjuti'] as TindakLanjutStatus[]).map((v) => <option key={v} value={v}>{v}</option>)}
       </select>
-      <p className="text-[11px] text-slate-400 mt-1.5">Alur ditutup hanya jika status "Sesuai rekomendasi".</p>
+      <div className="grid sm:grid-cols-2 gap-2.5">
+        <div>
+          <label className="block font-bold text-slate-500 mb-1 text-[11px]">Tanggal Verifikasi</label>
+          <input type="date" disabled={readOnly} value={tglVerifikasi} onChange={(e) => onTglVerifikasiChange(e.target.value)} className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 text-[11px] disabled:bg-white" />
+        </div>
+        <div>
+          <label className="block font-bold text-slate-500 mb-1 text-[11px]">Catatan Verifikasi</label>
+          <input disabled={readOnly} value={catatanVerifikasi} onChange={(e) => onCatatanVerifikasiChange(e.target.value)} placeholder="Catatan auditor atas tindak lanjut..." className="w-full h-9 rounded-[8px] border border-slate-200 px-2.5 text-[11px] disabled:bg-white" />
+        </div>
+      </div>
+      <p className="text-[11px] text-slate-400">Alur ditutup hanya jika status "Sesuai rekomendasi".</p>
     </div>
     {closed && (
       <div className="rounded-[10px] bg-emerald-50 border border-emerald-200 p-3 flex items-center gap-2 text-emerald-800 text-xs font-bold">
-        <CheckCircle2 className="w-4 h-4" /> Alur Form MR objek ini telah ditutup — skor RBIA telah diperbarui untuk PKPT berikutnya.
+        <CheckCircle2 className="w-4 h-4" /> Penugasan ditutup — skor RBIA telah diperbarui untuk PKPT berikutnya.
       </div>
     )}
   </div>

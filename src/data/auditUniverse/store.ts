@@ -35,11 +35,12 @@ import { JENIS_PENGAWASAN_SEED } from './seeds/jenisPengawasan';
 import { BIDJEMEN_SEED } from './seeds/bidjemen';
 import { KATALOG_DOKUMEN_SEED } from './seeds/katalogDokumen';
 import { PERMINTAAN_SEED, type PermintaanSeedDef } from './seeds/permintaan';
-import { IKU_SLOTS, SPIP_SLOTS, LAPORAN_SEED_BERJALAN, HISTORI_KIRIM_14_HARI } from './seeds/laporan';
+import { IKU_SLOTS, SPIP_SLOTS, LAPORAN_SEED_BERJALAN, LAPORAN_SEED_TAHUN_LALU, HISTORI_KIRIM_14_HARI, type LaporanSeedEntry } from './seeds/laporan';
+import type { LaporanSlotDef, BerkasVersion } from './types';
 
 const STORAGE_KEY = 'itwasum_audit_universe_v1';
 /** Bump when the seed/shape changes so stale localStorage from an older shape is discarded. */
-const SEED_VERSION = 1;
+const SEED_VERSION = 2;
 
 const uid = (prefix = 'F') => `${prefix}${Math.random().toString(36).slice(2, 9)}`;
 
@@ -112,25 +113,33 @@ function resolvePermintaanSeed(defs: PermintaanSeedDef[], now: Date) {
   return { permintaan, berkas, selesai };
 }
 
+function resolveLaporanEntries(now: Date, tahunAnggaran: string, entries: LaporanSeedEntry[]): LaporanEntry[] {
+  return entries.map((e) => ({
+    id: uid('LAP'),
+    jenis: e.jenis,
+    key: e.key,
+    tahunAnggaran,
+    status: e.status,
+    fileNama: `${e.jenis}_${e.key}_${tahunAnggaran}.pdf`,
+    fileSizeBytes: 400000 + Math.round(Math.random() * 2500000),
+    tgl: addDaysIso(now, e.offsetDays),
+    catatan: e.catatan ?? '',
+    verifikatorOleh: e.verifikatorOleh ?? '',
+    tglVerifikasi: e.verifikasiOffsetDays != null ? addDaysIso(now, e.verifikasiOffsetDays) : null,
+    skor: e.skor ?? null,
+    realisasi: e.realisasi ?? null,
+  }));
+}
+
 function resolveLaporanSeed(now: Date): Record<string, LaporanEntry[]> {
   const laporan: Record<string, LaporanEntry[]> = {};
   const tahunBerjalan = String(now.getFullYear());
+  const tahunLalu = String(now.getFullYear() - 1);
   for (const [orgId, entries] of Object.entries(LAPORAN_SEED_BERJALAN)) {
-    laporan[orgId] = entries.map((e) => ({
-      id: uid('LAP'),
-      jenis: e.jenis,
-      key: e.key,
-      tahunAnggaran: tahunBerjalan,
-      status: e.status,
-      fileNama: `${e.jenis}_${e.key}_${tahunBerjalan}.pdf`,
-      fileSizeBytes: 400000 + Math.round(Math.random() * 2500000),
-      tgl: addDaysIso(now, e.offsetDays),
-      catatan: e.catatan ?? '',
-      verifikatorOleh: e.verifikatorOleh ?? '',
-      tglVerifikasi: e.verifikasiOffsetDays != null ? addDaysIso(now, e.verifikasiOffsetDays) : null,
-      skor: e.skor ?? null,
-      realisasi: e.realisasi ?? null,
-    }));
+    laporan[orgId] = [...(laporan[orgId] ?? []), ...resolveLaporanEntries(now, tahunBerjalan, entries)];
+  }
+  for (const [orgId, entries] of Object.entries(LAPORAN_SEED_TAHUN_LALU)) {
+    laporan[orgId] = [...(laporan[orgId] ?? []), ...resolveLaporanEntries(now, tahunLalu, entries)];
   }
   return laporan;
 }
@@ -337,20 +346,48 @@ export function deadlinesForOrg(orgId: string): DeadlineItem[] {
   ([['IKU', IKU_SLOTS], ['SPIP', SPIP_SLOTS]] as const).forEach(([jenis, slots]) => {
     slots.forEach((sl) => {
       const lap = (state.laporan[orgId] ?? []).find((l) => l.jenis === jenis && l.key === sl.key && l.tahunAnggaran === tahunBerjalan);
-      const st = laporanStatusLabel(sl, lap);
-      if (['Perlu Diunggah', 'Belum Dikirim', 'Perlu Perbaikan'].includes(st)) {
-        out.push({ judul: `${sl.nama} ${tahunBerjalan}`, tgl: lap?.tgl ?? addDaysIso(startOfToday(), 14), mulai: '', tipe: `Laporan ${jenis}`, laporanJenis: jenis });
+      const st = laporanStatusLabel(sl, lap, tahunBerjalan);
+      if (['Perlu Diunggah', 'Belum Dikirim', 'Perlu Perbaikan', 'Terlambat'].includes(st)) {
+        const win = slotWindow(sl, tahunBerjalan, lap);
+        out.push({ judul: `${sl.nama} ${tahunBerjalan}`, tgl: lap?.tgl ?? win.tenggatIso, mulai: '', tipe: `Laporan ${jenis}`, laporanJenis: jenis });
       }
     });
   });
   return out.sort((a, b) => (a.tgl < b.tgl ? -1 : 1));
 }
 
-export function laporanStatusLabel(_slot: { key: string }, lap: LaporanEntry | undefined): string {
+export interface SlotWindow {
+  bukaIso: string;
+  tenggatIso: string;
+  /** "Hari ini" sudah melewati tanggal buka slot ini. */
+  sudahDibuka: boolean;
+  /** Tenggat sudah lewat dan belum ada laporan terkirim (wait/ok) untuk slot ini. */
+  terlambat: boolean;
+}
+
+/** Menghitung jendela dibuka/tenggat suatu slot laporan untuk TA tertentu (identik `slotsFor`
+ * prototipe: `y`/`y0`/`y1` = TA/TA-1/TA+1), lihat `LaporanSlotDef.bukaTahunSebelumnya`/`tenggatTahunBerikut`. */
+export function slotWindow(slot: LaporanSlotDef, tahunAnggaran: string, lap?: LaporanEntry): SlotWindow {
+  const ta = Number(tahunAnggaran);
+  const bukaTahun = slot.bukaTahunSebelumnya ? ta - 1 : ta;
+  const tenggatTahun = slot.tenggatTahunBerikut ? ta + 1 : ta;
+  const bukaIso = `${bukaTahun}-${slot.bukaMd}`;
+  const tenggatIso = `${tenggatTahun}-${slot.tenggatMd}`;
+  const sudahDibuka = daysDiffFromToday(bukaIso) <= 0;
+  const belumTerkirim = !lap || lap.status === 'draft';
+  const terlambat = belumTerkirim && daysDiffFromToday(tenggatIso) < 0;
+  return { bukaIso, tenggatIso, sudahDibuka, terlambat };
+}
+
+export function laporanStatusLabel(slot: LaporanSlotDef, lap: LaporanEntry | undefined, tahunAnggaran?: string): string {
+  const win = tahunAnggaran ? slotWindow(slot, tahunAnggaran, lap) : undefined;
   if (lap) {
     if (lap.status === 'draft') return 'Belum Dikirim';
+    if (lap.status === 'wait' && win?.terlambat) return 'Terlambat';
     return BERKAS_STATUS_LABEL_LOCAL[lap.status];
   }
+  if (win && !win.sudahDibuka) return 'Belum Dibuka';
+  if (win?.terlambat) return 'Terlambat';
   return 'Perlu Diunggah';
 }
 const BERKAS_STATUS_LABEL_LOCAL: Record<BerkasStatus, string> = {
@@ -748,6 +785,87 @@ export function removeDraftBerkas(reqId: string, orgId: string, fileId: string):
   setState({ ...state, berkas: { ...state.berkas, [reqId]: berkasForReq } });
 }
 
+function snapshotBerkasVersion(f: BerkasSatker): BerkasVersion {
+  return { nama: f.nama, sizeBytes: f.sizeBytes, tgl: f.tgl, status: f.status, catatan: f.catatan, verifikatorOleh: f.verifikatorOleh, tglVerifikasi: f.tglVerifikasi };
+}
+
+/** "Ganti Berkas" pada berkas draft (belum dikirim) — mengganti file, tetap berstatus draft. */
+export function replaceBerkas(reqId: string, orgId: string, fileId: string, file: { nama: string; sizeBytes: number }): void {
+  const berkasForReq = { ...(state.berkas[reqId] ?? {}) };
+  const files = berkasForReq[orgId] ?? [];
+  const today = startOfToday().toISOString().slice(0, 10);
+  berkasForReq[orgId] = files.map((f) => {
+    if (f.id !== fileId || f.status !== 'draft') return f;
+    return { ...f, nama: file.nama, sizeBytes: file.sizeBytes, tgl: today, versi: [...(f.versi ?? []), snapshotBerkasVersion(f)] };
+  });
+  setState({ ...state, berkas: { ...state.berkas, [reqId]: berkasForReq } });
+}
+
+/** "Kirim Perbaikan" pada berkas berstatus `fix` — kirim ulang, langsung ke "Menunggu Verifikasi". */
+export function resubmitBerkas(reqId: string, orgId: string, fileId: string, file: { nama: string; sizeBytes: number }, keterangan: string, oleh: string): void {
+  const berkasForReq = { ...(state.berkas[reqId] ?? {}) };
+  const files = berkasForReq[orgId] ?? [];
+  const today = startOfToday().toISOString().slice(0, 10);
+  let fileNama = '';
+  berkasForReq[orgId] = files.map((f) => {
+    if (f.id !== fileId || f.status !== 'fix') return f;
+    fileNama = file.nama;
+    return {
+      ...f,
+      nama: file.nama,
+      sizeBytes: file.sizeBytes,
+      keterangan: keterangan || f.keterangan,
+      status: 'wait' as const,
+      tgl: today,
+      catatan: '',
+      verifikatorOleh: '',
+      tglVerifikasi: null,
+      versi: [...(f.versi ?? []), snapshotBerkasVersion(f)],
+    };
+  });
+  const permintaan = state.permintaan.map((r) => (r.id === reqId ? addLog(r, `${getOrgById(orgId)?.sing ?? orgId} mengirim perbaikan berkas ${fileNama}`, oleh, orgId) : r));
+  setState({ ...state, berkas: { ...state.berkas, [reqId]: berkasForReq }, permintaan });
+}
+
+export interface ReuseCandidate {
+  reqId: string;
+  fileId: string;
+  nama: string;
+  sizeBytes: number;
+  dokId: string;
+  tgl: string | null;
+  reqJudul: string;
+}
+
+/** Berkas berstatus "Diterima" (`ok`) milik `orgId` dari permintaan lain — kandidat "Pakai Berkas Lama". */
+export function reuseCandidates(orgId: string, excludeReqId?: string): ReuseCandidate[] {
+  const out: ReuseCandidate[] = [];
+  Object.entries(state.berkas).forEach(([reqId, byOrg]) => {
+    if (reqId === excludeReqId) return;
+    (byOrg[orgId] ?? []).forEach((f) => {
+      if (f.status !== 'ok') return;
+      out.push({ reqId, fileId: f.id, nama: f.nama, sizeBytes: f.sizeBytes, dokId: f.dokId, tgl: f.tgl, reqJudul: getPermintaanById(reqId)?.judul ?? reqId });
+    });
+  });
+  return out.sort((a, b) => (b.tgl ?? '').localeCompare(a.tgl ?? ''));
+}
+
+/** "Pakai Berkas Lama" — menyalin berkas yang sudah diterima sebelumnya sebagai draft baru. */
+export function reuseBerkas(reqId: string, orgId: string, sources: { reqId: string; fileId: string }[], oleh: string): void {
+  const today = startOfToday().toISOString().slice(0, 10);
+  const copied: BerkasSatker[] = [];
+  sources.forEach(({ reqId: srcReqId, fileId: srcFileId }) => {
+    const src = (state.berkas[srcReqId]?.[orgId] ?? []).find((f) => f.id === srcFileId);
+    if (!src) return;
+    copied.push({ id: uid(), nama: src.nama, sizeBytes: src.sizeBytes, dokId: src.dokId, keterangan: src.keterangan, status: 'draft', tgl: today, terlambat: false, catatan: '', verifikatorOleh: '', tglVerifikasi: null, asalBerkasId: src.id });
+  });
+  if (!copied.length) return;
+  const berkasForReq = { ...(state.berkas[reqId] ?? {}) };
+  berkasForReq[orgId] = [...(berkasForReq[orgId] ?? []), ...copied];
+  const permintaan = state.permintaan.map((r) => (r.id === reqId ? addLog(r, `${getOrgById(orgId)?.sing ?? orgId} memakai kembali ${copied.length} berkas lama`, oleh, orgId) : r));
+  setState({ ...state, berkas: { ...state.berkas, [reqId]: berkasForReq }, permintaan });
+}
+
 /** PIC mengirim seluruh berkas draft milik Satkernya untuk permintaan ini -> status "wait". */
 export function sendBerkas(reqId: string, orgId: string, oleh: string): void {
   const berkasForReq = { ...(state.berkas[reqId] ?? {}) };
@@ -796,7 +914,7 @@ export function uploadLaporan(
   key: string,
   tahunAnggaran: string,
   file: { nama: string; sizeBytes: number },
-  extra?: { realisasi?: Record<string, number>; skor?: number }
+  extra?: { realisasi?: Record<string, number>; skor?: number; keterangan?: string; kirim?: boolean }
 ): void {
   const existing = state.laporan[orgId] ?? [];
   const idx = existing.findIndex((l) => l.jenis === jenis && l.key === key && l.tahunAnggaran === tahunAnggaran);
@@ -806,7 +924,7 @@ export function uploadLaporan(
     jenis,
     key,
     tahunAnggaran,
-    status: 'wait',
+    status: extra?.kirim === false ? 'draft' : 'wait',
     fileNama: file.nama,
     fileSizeBytes: file.sizeBytes,
     tgl: today,
@@ -815,9 +933,58 @@ export function uploadLaporan(
     tglVerifikasi: null,
     skor: extra?.skor ?? null,
     realisasi: extra?.realisasi ?? null,
+    keterangan: extra?.keterangan ?? '',
   };
   const nextList = idx >= 0 ? existing.map((l, i) => (i === idx ? entry : l)) : [...existing, entry];
   setState({ ...state, laporan: { ...state.laporan, [orgId]: nextList } });
+}
+
+/** Mengirim draft laporan yang tersimpan ("Simpan Draft" sebelumnya) ke Itwasum. */
+export function sendLaporan(orgId: string, laporanId: string): void {
+  const list = state.laporan[orgId] ?? [];
+  const today = startOfToday().toISOString().slice(0, 10);
+  const next = list.map((l) => (l.id === laporanId && l.status === 'draft' ? { ...l, status: 'wait' as const, tgl: today } : l));
+  setState({ ...state, laporan: { ...state.laporan, [orgId]: next } });
+}
+
+/** "Hapus draft laporan?" — hanya laporan berstatus draft yang dapat dihapus. */
+export function deleteDraftLaporan(orgId: string, laporanId: string): { ok: boolean; reason?: string } {
+  const list = state.laporan[orgId] ?? [];
+  const lap = list.find((l) => l.id === laporanId);
+  if (!lap) return { ok: false, reason: 'Data tidak ditemukan.' };
+  if (lap.status !== 'draft') return { ok: false, reason: 'Hanya draft yang belum dikirim dapat dihapus.' };
+  setState({ ...state, laporan: { ...state.laporan, [orgId]: list.filter((l) => l.id !== laporanId) } });
+  return { ok: true };
+}
+
+/** "Kirim Perbaikan" pada laporan berstatus `fix` — menyimpan versi lama, lalu kirim ulang. */
+export function resubmitLaporan(
+  orgId: string,
+  laporanId: string,
+  file: { nama: string; sizeBytes: number },
+  extra?: { realisasi?: Record<string, number>; skor?: number; keterangan?: string }
+): void {
+  const list = state.laporan[orgId] ?? [];
+  const today = startOfToday().toISOString().slice(0, 10);
+  const next = list.map((l) => {
+    if (l.id !== laporanId || l.status !== 'fix') return l;
+    const version: BerkasVersion = { nama: l.fileNama, sizeBytes: l.fileSizeBytes, tgl: l.tgl, status: l.status, catatan: l.catatan, verifikatorOleh: l.verifikatorOleh, tglVerifikasi: l.tglVerifikasi };
+    return {
+      ...l,
+      fileNama: file.nama,
+      fileSizeBytes: file.sizeBytes,
+      status: 'wait' as const,
+      tgl: today,
+      catatan: '',
+      verifikatorOleh: '',
+      tglVerifikasi: null,
+      skor: extra?.skor ?? l.skor,
+      realisasi: extra?.realisasi ?? l.realisasi,
+      keterangan: extra?.keterangan ?? l.keterangan,
+      versi: [...(l.versi ?? []), version],
+    };
+  });
+  setState({ ...state, laporan: { ...state.laporan, [orgId]: next } });
 }
 
 export function verifyLaporan(orgId: string, laporanId: string, decision: 'ok' | 'fix', catatan: string, verifikatorOleh: string): void {

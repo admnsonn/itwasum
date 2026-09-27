@@ -185,7 +185,7 @@ export interface ModalProps {
   description?: React.ReactNode;
   footer?: React.ReactNode;
   placement?: 'center' | 'right';
-  children: React.ReactNode;
+  children?: React.ReactNode;
   widthClassName?: string;
 }
 

@@ -149,6 +149,8 @@ const OrganisasiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => voi
   const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit } | null>(null);
   const [nonaktifTarget, setNonaktifTarget] = useState<OrgUnit | null>(null);
   const [alasanNonaktif, setAlasanNonaktif] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<OrgUnit | null>(null);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return state.orgUnits.filter((o) => {
@@ -198,6 +200,11 @@ const OrganisasiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => voi
               className="text-xs font-bold text-slate-500 hover:underline"
             >
               {o.aktif ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
+          )}
+          {!readOnly && (
+            <button onClick={() => setDeleteTarget(o)} className="text-xs font-bold text-rose-500 hover:underline">
+              Hapus
             </button>
           )}
         </div>
@@ -279,6 +286,42 @@ const OrganisasiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => voi
           <Textarea rows={3} value={alasanNonaktif} onChange={(e) => setAlasanNonaktif(e.target.value)} placeholder="Mis. Digabung ke satker lain per SK..." />
         </Modal>
       )}
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={`Hapus organisasi ${deleteTarget.sing}?`}
+          description="Tindakan ini tidak dapat dibatalkan. Data yang masih dipakai (tipologi terpasang atau memiliki unit turunan) tidak dapat dihapus — nonaktifkan saja."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const res = deleteOrgUnit(deleteTarget.id);
+                  setDeleteTarget(null);
+                  if (res.ok) notify(`${deleteTarget.sing} berhasil dihapus.`);
+                  else setBlockedReason(res.reason ?? 'Data ini tidak dapat dihapus.');
+                }}
+              >
+                Hapus
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      {blockedReason && (
+        <Modal
+          isOpen
+          onClose={() => setBlockedReason(null)}
+          title="Tidak bisa dihapus"
+          footer={<Button variant="outline" onClick={() => setBlockedReason(null)}>Tutup</Button>}
+        >
+          <p className="text-xs text-slate-600">{blockedReason}</p>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -294,6 +337,8 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
   const [kode, setKode] = useState(org?.kode ?? '');
   const [ang, setAng] = useState<OrgUnit['ang']>(org?.ang ?? '');
   const [error, setError] = useState('');
+  const [confirmItwil, setConfirmItwil] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const indukOptions: SelectOption[] = state.orgUnits
     .filter((o) => JENJANG_INDUK_RULE[jenjang]?.includes(o.jenjang) && o.aktif)
@@ -304,13 +349,10 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
   const readOnly = mode === 'view';
   const showItwil = ITWIL_MANUAL_JENJANG.includes(jenjang);
   const showTipKode = JENJANG_TIPOLOGI.includes(jenjang);
+  const isDirty = !readOnly && (jenjang !== (org?.jenjang ?? 'Polres') || induk !== (org?.induk ?? '') || nama !== (org?.nama ?? '') || sing !== (org?.sing ?? '') || itwil !== (org?.itwil ?? '') || tip !== (org?.tip ?? '') || kode !== (org?.kode ?? '') || ang !== (org?.ang ?? ''));
+  const attemptClose = () => (isDirty ? setConfirmDiscard(true) : onClose());
 
-  const handleSave = () => {
-    if (!nama.trim() || !sing.trim()) return setError('Nama resmi dan singkatan wajib diisi.');
-    if (JENJANG_INDUK_RULE[jenjang].length > 0 && !induk) return setError('Induk organisasi wajib dipilih.');
-    if (kode && kode.length !== 6) return setError('Kode Satker harus 6 digit.');
-    if (kode && !isOrgKodeUnique(kode, org?.id)) return setError('Kode Satker sudah dipakai unit lain.');
-
+  const doSave = () => {
     const payload = { jenjang, induk, nama: nama.trim(), sing: sing.trim(), itwil: showItwil ? itwil : '', tip: showTipKode ? (tip || null) : null, kode, ang, peng: org?.peng ?? '', ketTip: org?.ketTip ?? '', perm: org?.perm ?? false, alasan: org?.alasan ?? '' };
     if (mode === 'create') {
       createOrgUnit(payload);
@@ -321,10 +363,57 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
     }
   };
 
+  const handleSave = () => {
+    if (!nama.trim() || !sing.trim()) return setError('Nama resmi dan singkatan wajib diisi.');
+    if (JENJANG_INDUK_RULE[jenjang].length > 0 && !induk) return setError('Induk organisasi wajib dipilih.');
+    if (kode && kode.length !== 6) return setError('Kode Satker harus 6 digit.');
+    if (kode && !isOrgKodeUnique(kode, org?.id)) return setError('Kode Satker sudah dipakai unit lain.');
+
+    if (mode === 'edit' && org && showItwil && itwil !== (org.itwil ?? '') && getOrgKids(org.id).length > 0) {
+      setConfirmItwil(true);
+      return;
+    }
+    doSave();
+  };
+
+  if (confirmItwil) {
+    return (
+      <Modal
+        isOpen
+        onClose={() => setConfirmItwil(false)}
+        title="Ubah Itwil pengawas?"
+        description={`Seluruh unit turunan ${org?.sing} (Polres/Polsek jajaran) ikut berpindah pengawasan ke ${itwil}.`}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmItwil(false)}>Batal</Button>
+            <Button onClick={() => { setConfirmItwil(false); doSave(); }}>Ya, Ubah</Button>
+          </>
+        }
+      />
+    );
+  }
+
+  if (confirmDiscard) {
+    return (
+      <Modal
+        isOpen
+        onClose={() => setConfirmDiscard(false)}
+        title="Buang perubahan?"
+        description="Perubahan yang belum disimpan akan hilang."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>Batal</Button>
+            <Button variant="danger" onClick={onClose}>Buang Perubahan</Button>
+          </>
+        }
+      />
+    );
+  }
+
   return (
     <Modal
       isOpen
-      onClose={onClose}
+      onClose={attemptClose}
       title={mode === 'create' ? 'Tambah Unit/Satker' : mode === 'edit' ? `Ubah ${org?.sing}` : org?.sing}
       widthClassName="max-w-xl"
       footer={
@@ -332,7 +421,7 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
           <Button variant="outline" onClick={onClose}>Tutup</Button>
         ) : (
           <>
-            <Button variant="outline" onClick={onClose}>Batal</Button>
+            <Button variant="outline" onClick={attemptClose}>Batal</Button>
             <Button onClick={handleSave}>Simpan</Button>
           </>
         )
@@ -411,11 +500,22 @@ const TipologiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void 
 
 const DaftarTipologiTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
-  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; tip?: Tipologi } | null>(null);
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'view'; tip?: Tipologi } | null>(null);
+  const [nonaktifTarget, setNonaktifTarget] = useState<Tipologi | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Tipologi | null>(null);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   const columns: TableColumn<Tipologi>[] = [
     { key: 'id', header: 'Kode', render: (t) => <span className="font-mono text-[11px] text-slate-400">{t.id}</span> },
-    { key: 'nama', header: 'Nama', render: (t) => <span className="font-bold text-slate-800">{t.nama}</span> },
+    {
+      key: 'nama',
+      header: 'Nama',
+      render: (t) => (
+        <button onClick={() => setModal({ mode: readOnly ? 'view' : 'edit', tip: t })} className="font-bold text-slate-800 hover:text-[var(--sd-primary)] hover:underline text-left">
+          {t.nama}
+        </button>
+      ),
+    },
     { key: 'jenjang', header: 'Jenjang', render: (t) => <Badge color="primary">{t.jenjang}</Badge> },
     { key: 'jumlah', header: 'Jumlah Satker', render: (t) => tipCount(t.id) },
     { key: 'ket', header: 'Keterangan', render: (t) => <span className="text-[11px] text-slate-400">{t.ket}</span> },
@@ -425,16 +525,17 @@ const DaftarTipologiTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
       header: 'Aksi',
       render: (t) =>
         readOnly ? (
-          <span className="text-[11px] text-slate-400">—</span>
+          <button onClick={() => setModal({ mode: 'view', tip: t })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat</button>
         ) : (
           <div className="flex items-center gap-2">
             <button onClick={() => setModal({ mode: 'edit', tip: t })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Ubah</button>
             <button
-              onClick={() => (t.aktif ? setTipologiActive(t.id, false) : setTipologiActive(t.id, true))}
+              onClick={() => (t.aktif ? setNonaktifTarget(t) : setTipologiActive(t.id, true))}
               className="text-xs font-bold text-slate-500 hover:underline"
             >
               {t.aktif ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
+            <button onClick={() => setDeleteTarget(t)} className="text-xs font-bold text-rose-500 hover:underline">Hapus</button>
           </div>
         ),
     },
@@ -458,54 +559,125 @@ const DaftarTipologiTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
           onSaved={(msg) => { notify(msg); setModal(null); }}
         />
       )}
+
+      {nonaktifTarget && (
+        <Modal
+          isOpen
+          onClose={() => setNonaktifTarget(null)}
+          title={`Nonaktifkan tipologi ${nonaktifTarget.nama}?`}
+          description="Satker yang sudah memakai tipologi ini tidak terpengaruh. Tipologi ini tidak akan muncul lagi sebagai pilihan baru."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setNonaktifTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => { setTipologiActive(nonaktifTarget.id, false); notify(`Tipologi ${nonaktifTarget.nama} dinonaktifkan.`); setNonaktifTarget(null); }}>Nonaktifkan</Button>
+            </>
+          }
+        />
+      )}
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={`Hapus tipologi ${deleteTarget.nama}?`}
+          description="Tindakan ini tidak dapat dibatalkan. Tipologi yang masih dipakai Satker tidak dapat dihapus — nonaktifkan saja."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const res = deleteTipologi(deleteTarget.id);
+                  setDeleteTarget(null);
+                  if (res.ok) notify(`Tipologi ${deleteTarget.nama} berhasil dihapus.`);
+                  else setBlockedReason(res.reason ?? 'Data ini tidak dapat dihapus.');
+                }}
+              >
+                Hapus
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      {blockedReason && (
+        <Modal isOpen onClose={() => setBlockedReason(null)} title="Tidak bisa dihapus" footer={<Button variant="outline" onClick={() => setBlockedReason(null)}>Tutup</Button>}>
+          <p className="text-xs text-slate-600">{blockedReason}</p>
+        </Modal>
+      )}
     </div>
   );
 };
 
-const TipologiFormModal: React.FC<{ mode: 'create' | 'edit'; tip?: Tipologi; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, tip, onClose, onSaved }) => {
+const TipologiFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; tip?: Tipologi; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, tip, onClose, onSaved }) => {
   const [jenjang, setJenjang] = useState<JenjangOrg>(tip?.jenjang ?? 'Polres');
   const [nama, setNama] = useState(tip?.nama ?? '');
   const [ket, setKet] = useState(tip?.ket ?? '');
   const [error, setError] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const readOnly = mode === 'view';
+  const isDirty = !readOnly && (jenjang !== (tip?.jenjang ?? 'Polres') || nama !== (tip?.nama ?? '') || ket !== (tip?.ket ?? ''));
+  const attemptClose = () => (isDirty ? setConfirmDiscard(true) : onClose());
+
+  if (confirmDiscard) {
+    return (
+      <Modal
+        isOpen
+        onClose={() => setConfirmDiscard(false)}
+        title="Buang perubahan?"
+        description="Perubahan yang belum disimpan akan hilang."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>Batal</Button>
+            <Button variant="danger" onClick={onClose}>Buang Perubahan</Button>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <Modal
       isOpen
-      onClose={onClose}
-      title={mode === 'create' ? 'Tambah Tipologi' : `Ubah ${tip?.nama}`}
+      onClose={attemptClose}
+      title={mode === 'create' ? 'Tambah Tipologi' : mode === 'view' ? `Detail Tipologi — ${tip?.nama}` : `Ubah ${tip?.nama}`}
       footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button
-            onClick={() => {
-              if (!nama.trim()) return setError('Nama tipologi wajib diisi.');
-              if (mode === 'create') {
-                createTipologi({ jenjang, nama: nama.trim(), ket });
-                onSaved('Tipologi berhasil ditambahkan.');
-              } else if (tip) {
-                updateTipologi(tip.id, { jenjang, nama: nama.trim(), ket });
-                onSaved('Tipologi berhasil diperbarui.');
-              }
-            }}
-          >
-            Simpan
-          </Button>
-        </>
+        readOnly ? (
+          <Button variant="outline" onClick={onClose}>Tutup</Button>
+        ) : (
+          <>
+            <Button variant="outline" onClick={attemptClose}>Batal</Button>
+            <Button
+              onClick={() => {
+                if (!nama.trim()) return setError('Nama tipologi wajib diisi.');
+                if (mode === 'create') {
+                  createTipologi({ jenjang, nama: nama.trim(), ket });
+                  onSaved('Tipologi berhasil ditambahkan.');
+                } else if (tip) {
+                  updateTipologi(tip.id, { jenjang, nama: nama.trim(), ket });
+                  onSaved('Tipologi berhasil diperbarui.');
+                }
+              }}
+            >
+              Simpan
+            </Button>
+          </>
+        )
       }
     >
       <div className="space-y-3">
         {error && <div className="p-2.5 rounded-[8px] bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">{error}</div>}
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Jenjang</label>
-          <Select options={JENJANG_TIPOLOGI.map((j) => ({ value: j, label: j }))} value={jenjang} onChange={(v) => setJenjang(v as JenjangOrg)} />
+          <Select options={JENJANG_TIPOLOGI.map((j) => ({ value: j, label: j }))} value={jenjang} onChange={(v) => setJenjang(v as JenjangOrg)} disabled={readOnly} />
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Tipologi</label>
-          <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Mis. Polres Tipe A" />
+          <Input value={nama} onChange={(e) => setNama(e.target.value)} disabled={readOnly} placeholder="Mis. Polres Tipe A" />
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Keterangan</label>
-          <Textarea rows={2} value={ket} onChange={(e) => setKet(e.target.value)} />
+          <Textarea rows={2} value={ket} onChange={(e) => setKet(e.target.value)} disabled={readOnly} />
         </div>
       </div>
     </Modal>
@@ -516,8 +688,11 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
   const state = useAuditUniverseStore();
   const [target, setTarget] = useState<OrgUnit | null>(null);
   const [pick, setPick] = useState('');
+  const [kosongkanTarget, setKosongkanTarget] = useState<OrgUnit | null>(null);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   const eligible = state.orgUnits.filter((o) => JENJANG_TIPOLOGI.includes(o.jenjang));
+  const isOrgSasaranAktif = (orgId: string) => state.permintaan.some((r) => r.status === 'Terkirim' && r.sasaran.includes(orgId));
 
   const columns: TableColumn<OrgUnit>[] = [
     { key: 'nama', header: 'Nama Satker/Unit', render: (o) => <span className="font-bold text-slate-800">{o.sing}</span> },
@@ -539,7 +714,13 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
               {o.tip ? 'Ubah' : 'Tetapkan'}
             </button>
             {o.tip && (
-              <button onClick={() => { assignTipologiToOrg(o.id, null); notify(`Tipologi ${o.sing} dikosongkan.`); }} className="text-xs font-bold text-slate-500 hover:underline">
+              <button
+                onClick={() => {
+                  if (isOrgSasaranAktif(o.id)) setBlockedReason(`Tipologi ${o.sing} tidak dapat dikosongkan karena Satker ini masih menjadi sasaran permintaan pengumpulan data yang sedang berjalan.`);
+                  else setKosongkanTarget(o);
+                }}
+                className="text-xs font-bold text-slate-500 hover:underline"
+              >
                 Kosongkan
               </button>
             )}
@@ -580,6 +761,27 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
           />
         </Modal>
       )}
+
+      {kosongkanTarget && (
+        <Modal
+          isOpen
+          onClose={() => setKosongkanTarget(null)}
+          title="Kosongkan penetapan?"
+          description={`Tipologi Satker ${kosongkanTarget.sing} akan dikosongkan dan perlu ditetapkan ulang.`}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setKosongkanTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => { assignTipologiToOrg(kosongkanTarget.id, null); notify(`Tipologi ${kosongkanTarget.sing} dikosongkan.`); setKosongkanTarget(null); }}>Kosongkan</Button>
+            </>
+          }
+        />
+      )}
+
+      {blockedReason && (
+        <Modal isOpen onClose={() => setBlockedReason(null)} title="Tidak bisa dikosongkan" footer={<Button variant="outline" onClick={() => setBlockedReason(null)}>Tutup</Button>}>
+          <p className="text-xs text-slate-600">{blockedReason}</p>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -600,7 +802,10 @@ const JenisPengawasanScreen: React.FC<{ readOnly: boolean; notify: (m: string) =
 const JenisPengawasanTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; jp?: JenisPengawasan } | null>(null);
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'view'; jp?: JenisPengawasan } | null>(null);
+  const [nonaktifTarget, setNonaktifTarget] = useState<JenisPengawasan | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<JenisPengawasan | null>(null);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const topLevel = state.jenisPengawasan.filter((j) => !j.induk);
 
   const columns: TableColumn<JenisPengawasan>[] = [
@@ -641,13 +846,17 @@ const JenisPengawasanTable: React.FC<{ readOnly: boolean; notify: (m: string) =>
       header: 'Aksi',
       render: (j) =>
         readOnly ? (
-          <span className="text-[11px] text-slate-400">—</span>
+          <button onClick={() => setModal({ mode: 'view', jp: j })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat</button>
         ) : (
           <div className="flex items-center gap-2">
             <button onClick={() => setModal({ mode: 'edit', jp: j })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Ubah</button>
-            <button onClick={() => setJenisPengawasanActive(j.id, !j.aktif)} className="text-xs font-bold text-slate-500 hover:underline">
+            <button
+              onClick={() => (j.aktif ? setNonaktifTarget(j) : setJenisPengawasanActive(j.id, true))}
+              className="text-xs font-bold text-slate-500 hover:underline"
+            >
               {j.aktif ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
+            <button onClick={() => setDeleteTarget(j)} className="text-xs font-bold text-rose-500 hover:underline">Hapus</button>
           </div>
         ),
     },
@@ -678,59 +887,130 @@ const JenisPengawasanTable: React.FC<{ readOnly: boolean; notify: (m: string) =>
           onSaved={(m) => { notify(m); setModal(null); }}
         />
       )}
+
+      {nonaktifTarget && (
+        <Modal
+          isOpen
+          onClose={() => setNonaktifTarget(null)}
+          title={`Nonaktifkan jenis pengawasan ${nonaktifTarget.nama}?`}
+          description="Sub-jenis di bawahnya (jika ada) ikut dinonaktifkan. Data tidak dihapus dan dapat diaktifkan kembali."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setNonaktifTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => { setJenisPengawasanActive(nonaktifTarget.id, false); notify(`${nonaktifTarget.nama} dinonaktifkan.`); setNonaktifTarget(null); }}>Nonaktifkan</Button>
+            </>
+          }
+        />
+      )}
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={`Hapus jenis pengawasan ${deleteTarget.nama}?`}
+          description="Tindakan ini tidak dapat dibatalkan. Jenis yang sudah dipakai pada permintaan atau memiliki sub-jenis tidak dapat dihapus — nonaktifkan saja."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const res = deleteJenisPengawasan(deleteTarget.id);
+                  setDeleteTarget(null);
+                  if (res.ok) notify(`${deleteTarget.nama} berhasil dihapus.`);
+                  else setBlockedReason(res.reason ?? 'Data ini tidak dapat dihapus.');
+                }}
+              >
+                Hapus
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      {blockedReason && (
+        <Modal isOpen onClose={() => setBlockedReason(null)} title="Tidak bisa dihapus" footer={<Button variant="outline" onClick={() => setBlockedReason(null)}>Tutup</Button>}>
+          <p className="text-xs text-slate-600">{blockedReason}</p>
+        </Modal>
+      )}
     </div>
   );
 };
 
-const JenisPengawasanFormModal: React.FC<{ mode: 'create' | 'edit'; jp?: JenisPengawasan; topLevel: JenisPengawasan[]; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, jp, topLevel, onClose, onSaved }) => {
+const JenisPengawasanFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; jp?: JenisPengawasan; topLevel: JenisPengawasan[]; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, jp, topLevel, onClose, onSaved }) => {
   const [induk, setInduk] = useState(jp?.induk ?? '');
   const [nama, setNama] = useState(jp?.nama ?? '');
   const [sifat, setSifat] = useState<JenisPengawasan['sifat']>(jp?.sifat ?? 'Terprogram');
   const [ket, setKet] = useState(jp?.ket ?? '');
   const [error, setError] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const readOnly = mode === 'view';
+  const isDirty = !readOnly && (induk !== (jp?.induk ?? '') || nama !== (jp?.nama ?? '') || sifat !== (jp?.sifat ?? 'Terprogram') || ket !== (jp?.ket ?? ''));
+  const attemptClose = () => (isDirty ? setConfirmDiscard(true) : onClose());
+
+  if (confirmDiscard) {
+    return (
+      <Modal
+        isOpen
+        onClose={() => setConfirmDiscard(false)}
+        title="Buang perubahan?"
+        description="Perubahan yang belum disimpan akan hilang."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>Batal</Button>
+            <Button variant="danger" onClick={onClose}>Buang Perubahan</Button>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <Modal
       isOpen
-      onClose={onClose}
-      title={mode === 'create' ? 'Tambah Jenis Pengawasan' : `Ubah ${jp?.nama}`}
+      onClose={attemptClose}
+      title={mode === 'create' ? 'Tambah Jenis Pengawasan' : mode === 'view' ? `Detail Jenis Pengawasan — ${jp?.nama}` : `Ubah ${jp?.nama}`}
       footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button
-            onClick={() => {
-              if (!nama.trim()) return setError('Nama jenis pengawasan wajib diisi.');
-              if (mode === 'create') {
-                createJenisPengawasan({ induk, nama: nama.trim(), sifat, ket });
-                onSaved('Jenis pengawasan berhasil ditambahkan.');
-              } else if (jp) {
-                updateJenisPengawasan(jp.id, { nama: nama.trim(), sifat, ket });
-                onSaved('Jenis pengawasan berhasil diperbarui.');
-              }
-            }}
-          >
-            Simpan
-          </Button>
-        </>
+        readOnly ? (
+          <Button variant="outline" onClick={onClose}>Tutup</Button>
+        ) : (
+          <>
+            <Button variant="outline" onClick={attemptClose}>Batal</Button>
+            <Button
+              onClick={() => {
+                if (!nama.trim()) return setError('Nama jenis pengawasan wajib diisi.');
+                if (mode === 'create') {
+                  createJenisPengawasan({ induk, nama: nama.trim(), sifat, ket });
+                  onSaved('Jenis pengawasan berhasil ditambahkan.');
+                } else if (jp) {
+                  updateJenisPengawasan(jp.id, { nama: nama.trim(), sifat, ket });
+                  onSaved('Jenis pengawasan berhasil diperbarui.');
+                }
+              }}
+            >
+              Simpan
+            </Button>
+          </>
+        )
       }
     >
       <div className="space-y-3">
         {error && <div className="p-2.5 rounded-[8px] bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">{error}</div>}
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Induk (opsional, untuk sub-jenis)</label>
-          <Select options={topLevel.map((j) => ({ value: j.id, label: j.nama }))} value={induk} onChange={setInduk} placeholder="Tidak ada (jenis utama)" disabled={mode === 'edit'} />
+          <Select options={topLevel.map((j) => ({ value: j.id, label: j.nama }))} value={induk} onChange={setInduk} placeholder="Tidak ada (jenis utama)" disabled={readOnly || mode === 'edit'} />
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama</label>
-          <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Mis. Wasrik Rutin Tahap III" />
+          <Input value={nama} onChange={(e) => setNama(e.target.value)} disabled={readOnly} placeholder="Mis. Wasrik Rutin Tahap III" />
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Sifat</label>
-          <Select options={[{ value: 'Terprogram', label: 'Terprogram' }, { value: 'Tidak Terprogram', label: 'Tidak Terprogram' }]} value={sifat} onChange={(v) => setSifat(v as JenisPengawasan['sifat'])} />
+          <Select options={[{ value: 'Terprogram', label: 'Terprogram' }, { value: 'Tidak Terprogram', label: 'Tidak Terprogram' }]} value={sifat} onChange={(v) => setSifat(v as JenisPengawasan['sifat'])} disabled={readOnly} />
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Keterangan</label>
-          <Textarea rows={2} value={ket} onChange={(e) => setKet(e.target.value)} />
+          <Textarea rows={2} value={ket} onChange={(e) => setKet(e.target.value)} disabled={readOnly} />
         </div>
       </div>
     </Modal>
@@ -739,11 +1019,21 @@ const JenisPengawasanFormModal: React.FC<{ mode: 'create' | 'edit'; jp?: JenisPe
 
 const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
-  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; bj?: Bidjemen } | null>(null);
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'view'; bj?: Bidjemen } | null>(null);
+  const [nonaktifTarget, setNonaktifTarget] = useState<Bidjemen | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Bidjemen | null>(null);
 
   const columns: TableColumn<Bidjemen>[] = [
     { key: 'id', header: 'Kode', render: (b) => <span className="font-mono text-[11px] text-slate-400">{b.id}</span> },
-    { key: 'nama', header: 'Nama', render: (b) => <span className="font-bold text-slate-800">{b.nama}</span> },
+    {
+      key: 'nama',
+      header: 'Nama',
+      render: (b) => (
+        <button onClick={() => setModal({ mode: readOnly ? 'view' : 'edit', bj: b })} className="font-bold text-slate-800 hover:text-[var(--sd-primary)] hover:underline text-left">
+          {b.nama}
+        </button>
+      ),
+    },
     { key: 'sing', header: 'Singkatan', render: (b) => b.sing },
     { key: 'cak', header: 'Cakupan', render: (b) => <span className="text-[11px] text-slate-400">{b.cak}</span> },
     { key: 'status', header: 'Status', render: (b) => { const s = STATUS_BADGE(b.aktif); return <Badge color={s.color}>{s.label}</Badge>; } },
@@ -752,13 +1042,14 @@ const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }
       header: 'Aksi',
       render: (b) =>
         readOnly ? (
-          <span className="text-[11px] text-slate-400">—</span>
+          <button onClick={() => setModal({ mode: 'view', bj: b })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat</button>
         ) : (
           <div className="flex items-center gap-2">
             <button onClick={() => setModal({ mode: 'edit', bj: b })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Ubah</button>
-            <button onClick={() => setBidjemenActive(b.id, !b.aktif)} className="text-xs font-bold text-slate-500 hover:underline">
+            <button onClick={() => (b.aktif ? setNonaktifTarget(b) : setBidjemenActive(b.id, true))} className="text-xs font-bold text-slate-500 hover:underline">
               {b.aktif ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
+            <button onClick={() => setDeleteTarget(b)} className="text-xs font-bold text-rose-500 hover:underline">Hapus</button>
           </div>
         ),
     },
@@ -775,65 +1066,122 @@ const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }
       )}
       <Table columns={columns} data={state.bidjemen} rowKey={(b) => b.id} />
       {modal && (
+        <BidjemenFormModal mode={modal.mode} bj={modal.bj} onClose={() => setModal(null)} onSaved={(m) => { notify(m); setModal(null); }} />
+      )}
+
+      {nonaktifTarget && (
         <Modal
           isOpen
-          onClose={() => setModal(null)}
-          title={modal.mode === 'create' ? 'Tambah Bidjemen' : `Ubah ${modal.bj?.nama}`}
-          footer={<BidjemenFormFooter mode={modal.mode} bj={modal.bj} onClose={() => setModal(null)} onSaved={(m) => { notify(m); setModal(null); }} />}
-        >
-          <BidjemenFormFields bj={modal.bj} />
-        </Modal>
+          onClose={() => setNonaktifTarget(null)}
+          title={`Nonaktifkan Bidjemen ${nonaktifTarget.nama}?`}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setNonaktifTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => { setBidjemenActive(nonaktifTarget.id, false); notify(`${nonaktifTarget.nama} dinonaktifkan.`); setNonaktifTarget(null); }}>Nonaktifkan</Button>
+            </>
+          }
+        />
+      )}
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={`Hapus Bidjemen ${deleteTarget.nama}?`}
+          description="Tindakan ini tidak dapat dibatalkan."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  deleteBidjemen(deleteTarget.id);
+                  notify(`${deleteTarget.nama} berhasil dihapus.`);
+                  setDeleteTarget(null);
+                }}
+              >
+                Hapus
+              </Button>
+            </>
+          }
+        />
       )}
     </div>
   );
 };
 
-// Nama/sing/cak state lives in a small shared context object passed via closures — simplest is
-// a self-contained form component that owns state and exposes save via ref-less callback pattern.
-const bjFormRef: { nama: string; sing: string; cak: string } = { nama: '', sing: '', cak: '' };
-const BidjemenFormFields: React.FC<{ bj?: Bidjemen }> = ({ bj }) => {
+const BidjemenFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; bj?: Bidjemen; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, bj, onClose, onSaved }) => {
   const [nama, setNama] = useState(bj?.nama ?? '');
   const [sing, setSing] = useState(bj?.sing ?? '');
   const [cak, setCak] = useState(bj?.cak ?? '');
-  bjFormRef.nama = nama;
-  bjFormRef.sing = sing;
-  bjFormRef.cak = cak;
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const readOnly = mode === 'view';
+  const isDirty = !readOnly && (nama !== (bj?.nama ?? '') || sing !== (bj?.sing ?? '') || cak !== (bj?.cak ?? ''));
+  const attemptClose = () => (isDirty ? setConfirmDiscard(true) : onClose());
+
+  if (confirmDiscard) {
+    return (
+      <Modal
+        isOpen
+        onClose={() => setConfirmDiscard(false)}
+        title="Buang perubahan?"
+        description="Perubahan yang belum disimpan akan hilang."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>Batal</Button>
+            <Button variant="danger" onClick={onClose}>Buang Perubahan</Button>
+          </>
+        }
+      />
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      <div>
-        <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Bidang</label>
-        <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Mis. Bidang Operasional" />
+    <Modal
+      isOpen
+      onClose={attemptClose}
+      title={mode === 'create' ? 'Tambah Bidjemen' : mode === 'view' ? `Detail Bidjemen — ${bj?.nama}` : `Ubah ${bj?.nama}`}
+      footer={
+        readOnly ? (
+          <Button variant="outline" onClick={onClose}>Tutup</Button>
+        ) : (
+          <>
+            <Button variant="outline" onClick={attemptClose}>Batal</Button>
+            <Button
+              onClick={() => {
+                if (!nama.trim()) return;
+                if (mode === 'create') {
+                  createBidjemen({ nama: nama.trim(), sing: sing.trim(), cak });
+                  onSaved('Bidjemen berhasil ditambahkan.');
+                } else if (bj) {
+                  updateBidjemen(bj.id, { nama: nama.trim(), sing: sing.trim(), cak });
+                  onSaved('Bidjemen berhasil diperbarui.');
+                }
+              }}
+            >
+              Simpan
+            </Button>
+          </>
+        )
+      }
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Bidang</label>
+          <Input value={nama} onChange={(e) => setNama(e.target.value)} disabled={readOnly} placeholder="Mis. Bidang Operasional" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Singkatan</label>
+          <Input value={sing} onChange={(e) => setSing(e.target.value)} disabled={readOnly} placeholder="Mis. Ops" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Cakupan</label>
+          <Textarea rows={2} value={cak} onChange={(e) => setCak(e.target.value)} disabled={readOnly} />
+        </div>
       </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-600 mb-1.5">Singkatan</label>
-        <Input value={sing} onChange={(e) => setSing(e.target.value)} placeholder="Mis. Ops" />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-600 mb-1.5">Cakupan</label>
-        <Textarea rows={2} value={cak} onChange={(e) => setCak(e.target.value)} />
-      </div>
-    </div>
+    </Modal>
   );
 };
-const BidjemenFormFooter: React.FC<{ mode: 'create' | 'edit'; bj?: Bidjemen; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, bj, onClose, onSaved }) => (
-  <>
-    <Button variant="outline" onClick={onClose}>Batal</Button>
-    <Button
-      onClick={() => {
-        if (!bjFormRef.nama.trim()) return;
-        if (mode === 'create') {
-          createBidjemen({ nama: bjFormRef.nama.trim(), sing: bjFormRef.sing.trim(), cak: bjFormRef.cak });
-          onSaved('Bidjemen berhasil ditambahkan.');
-        } else if (bj) {
-          updateBidjemen(bj.id, { nama: bjFormRef.nama.trim(), sing: bjFormRef.sing.trim(), cak: bjFormRef.cak });
-          onSaved('Bidjemen berhasil diperbarui.');
-        }
-      }}
-    >
-      Simpan
-    </Button>
-  </>
-);
 
 /* ============================================================================================ *
  * 4.4 Katalog Data & Dokumen
@@ -844,7 +1192,10 @@ const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }
   const [kategoriFilter, setKategoriFilter] = useState('');
   const [caraFilter, setCaraFilter] = useState('');
   const [onlyPerluDicek, setOnlyPerluDicek] = useState(false);
-  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; dok?: KatalogDokumen } | null>(null);
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'view'; dok?: KatalogDokumen } | null>(null);
+  const [nonaktifTarget, setNonaktifTarget] = useState<KatalogDokumen | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<KatalogDokumen | null>(null);
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return state.katalog.filter((d) => {
@@ -865,7 +1216,9 @@ const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }
       header: 'Nama Dokumen/Data',
       render: (d) => (
         <div>
-          <span className="font-bold text-slate-800">{d.nama}</span>
+          <button onClick={() => setModal({ mode: readOnly ? 'view' : 'edit', dok: d })} className="font-bold text-slate-800 hover:text-[var(--sd-primary)] hover:underline text-left">
+            {d.nama}
+          </button>
           {d.cek.length > 0 && <Badge color="warning" className="ml-2">Perlu Dicek</Badge>}
         </div>
       ),
@@ -881,13 +1234,14 @@ const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }
       header: 'Aksi',
       render: (d) =>
         readOnly ? (
-          <span className="text-[11px] text-slate-400">—</span>
+          <button onClick={() => setModal({ mode: 'view', dok: d })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat</button>
         ) : (
           <div className="flex items-center gap-2">
             <button onClick={() => setModal({ mode: 'edit', dok: d })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Ubah</button>
-            <button onClick={() => setKatalogDokumenActive(d.id, !d.aktif)} className="text-xs font-bold text-slate-500 hover:underline">
+            <button onClick={() => (d.aktif ? setNonaktifTarget(d) : setKatalogDokumenActive(d.id, true))} className="text-xs font-bold text-slate-500 hover:underline">
               {d.aktif ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
+            <button onClick={() => setDeleteTarget(d)} className="text-xs font-bold text-rose-500 hover:underline">Hapus</button>
           </div>
         ),
     },
@@ -919,13 +1273,59 @@ const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }
       {modal && (
         <KatalogFormModal mode={modal.mode} dok={modal.dok} onClose={() => setModal(null)} onSaved={(m) => { notify(m); setModal(null); }} />
       )}
+
+      {nonaktifTarget && (
+        <Modal
+          isOpen
+          onClose={() => setNonaktifTarget(null)}
+          title={`Nonaktifkan dokumen ${nonaktifTarget.nama}?`}
+          description="Dokumen ini tidak akan muncul lagi sebagai pilihan baru pada Permintaan Pengumpulan Data."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setNonaktifTarget(null)}>Batal</Button>
+              <Button variant="danger" onClick={() => { setKatalogDokumenActive(nonaktifTarget.id, false); notify(`${nonaktifTarget.nama} dinonaktifkan.`); setNonaktifTarget(null); }}>Nonaktifkan</Button>
+            </>
+          }
+        />
+      )}
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={`Hapus dokumen ${deleteTarget.nama}?`}
+          description="Tindakan ini tidak dapat dibatalkan. Dokumen yang sudah dipakai pada permintaan tidak dapat dihapus — nonaktifkan saja."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const res = deleteKatalogDokumen(deleteTarget.id);
+                  setDeleteTarget(null);
+                  if (res.ok) notify(`${deleteTarget.nama} berhasil dihapus.`);
+                  else setBlockedReason(res.reason ?? 'Data ini tidak dapat dihapus.');
+                }}
+              >
+                Hapus
+              </Button>
+            </>
+          }
+        />
+      )}
+
+      {blockedReason && (
+        <Modal isOpen onClose={() => setBlockedReason(null)} title="Tidak bisa dihapus" footer={<Button variant="outline" onClick={() => setBlockedReason(null)}>Tutup</Button>}>
+          <p className="text-xs text-slate-600">{blockedReason}</p>
+        </Modal>
+      )}
     </div>
   );
 };
 
 const CARA_SUMBER_DEFAULT: Record<KatalogDokumen['cara'], string> = { Upload: 'Satu Data Itwasum', Integrasi: 'E-Audit', Terjadwal: 'Google Drive' };
 
-const KatalogFormModal: React.FC<{ mode: 'create' | 'edit'; dok?: KatalogDokumen; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, dok, onClose, onSaved }) => {
+const KatalogFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; dok?: KatalogDokumen; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, dok, onClose, onSaved }) => {
   const [kat, setKat] = useState(dok?.kat ?? KATEGORI_DOKUMEN[0][0]);
   const [nama, setNama] = useState(dok?.nama ?? '');
   const [desk, setDesk] = useState(dok?.desk ?? '');
@@ -934,31 +1334,56 @@ const KatalogFormModal: React.FC<{ mode: 'create' | 'edit'; dok?: KatalogDokumen
   const [sumber, setSumber] = useState(dok?.sumber ?? CARA_SUMBER_DEFAULT.Upload);
   const [sifat, setSifat] = useState<KatalogDokumen['sifat']>(dok?.sifat ?? 'Opsional');
   const [error, setError] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const readOnly = mode === 'view';
+  const isDirty = !readOnly && (kat !== (dok?.kat ?? KATEGORI_DOKUMEN[0][0]) || nama !== (dok?.nama ?? '') || desk !== (dok?.desk ?? '') || jenis !== (dok?.jenis ?? 'Dokumen') || cara !== (dok?.cara ?? 'Upload') || sumber !== (dok?.sumber ?? CARA_SUMBER_DEFAULT.Upload) || sifat !== (dok?.sifat ?? 'Opsional'));
+  const attemptClose = () => (isDirty ? setConfirmDiscard(true) : onClose());
+
+  if (confirmDiscard) {
+    return (
+      <Modal
+        isOpen
+        onClose={() => setConfirmDiscard(false)}
+        title="Buang perubahan?"
+        description="Perubahan yang belum disimpan akan hilang."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmDiscard(false)}>Batal</Button>
+            <Button variant="danger" onClick={onClose}>Buang Perubahan</Button>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <Modal
       isOpen
-      onClose={onClose}
-      title={mode === 'create' ? 'Tambah Dokumen/Data' : `Ubah ${dok?.nama}`}
+      onClose={attemptClose}
+      title={mode === 'create' ? 'Tambah Dokumen/Data' : mode === 'view' ? `Detail Dokumen — ${dok?.nama}` : `Ubah ${dok?.nama}`}
       widthClassName="max-w-xl"
       footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button
-            onClick={() => {
-              if (!nama.trim()) return setError('Nama dokumen wajib diisi.');
-              if (mode === 'create') {
-                createKatalogDokumen({ kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat });
-                onSaved('Dokumen berhasil ditambahkan ke katalog.');
-              } else if (dok) {
-                updateKatalogDokumen(dok.id, { kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat });
-                onSaved('Dokumen katalog berhasil diperbarui.');
-              }
+        readOnly ? (
+          <Button variant="outline" onClick={onClose}>Tutup</Button>
+        ) : (
+          <>
+            <Button variant="outline" onClick={attemptClose}>Batal</Button>
+            <Button
+              onClick={() => {
+                if (!nama.trim()) return setError('Nama dokumen wajib diisi.');
+                if (mode === 'create') {
+                  createKatalogDokumen({ kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat });
+                  onSaved('Dokumen berhasil ditambahkan ke katalog.');
+                } else if (dok) {
+                  updateKatalogDokumen(dok.id, { kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat });
+                  onSaved('Dokumen katalog berhasil diperbarui.');
+                }
             }}
           >
             Simpan
-          </Button>
-        </>
+            </Button>
+          </>
+        )
       }
     >
       <div className="space-y-3">
@@ -966,20 +1391,20 @@ const KatalogFormModal: React.FC<{ mode: 'create' | 'edit'; dok?: KatalogDokumen
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1.5">Kategori</label>
-            <Select options={KATEGORI_DOKUMEN.map(([k, v]) => ({ value: k, label: v }))} value={kat} onChange={setKat} disabled={mode === 'edit'} />
+            <Select options={KATEGORI_DOKUMEN.map(([k, v]) => ({ value: k, label: v }))} value={kat} onChange={setKat} disabled={readOnly || mode === 'edit'} />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1.5">Jenis</label>
-            <Select options={[{ value: 'Dokumen', label: 'Dokumen' }, { value: 'Data', label: 'Data' }]} value={jenis} onChange={(v) => setJenis(v as KatalogDokumen['jenis'])} />
+            <Select options={[{ value: 'Dokumen', label: 'Dokumen' }, { value: 'Data', label: 'Data' }]} value={jenis} onChange={(v) => setJenis(v as KatalogDokumen['jenis'])} disabled={readOnly} />
           </div>
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Dokumen/Data</label>
-          <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Mis. Laporan Realisasi Anggaran" />
+          <Input value={nama} onChange={(e) => setNama(e.target.value)} disabled={readOnly} placeholder="Mis. Laporan Realisasi Anggaran" />
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1.5">Deskripsi</label>
-          <Textarea rows={2} value={desk} onChange={(e) => setDesk(e.target.value)} />
+          <Textarea rows={2} value={desk} onChange={(e) => setDesk(e.target.value)} disabled={readOnly} />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
@@ -988,15 +1413,16 @@ const KatalogFormModal: React.FC<{ mode: 'create' | 'edit'; dok?: KatalogDokumen
               options={[{ value: 'Upload', label: 'Upload' }, { value: 'Integrasi', label: 'Integrasi' }, { value: 'Terjadwal', label: 'Terjadwal' }]}
               value={cara}
               onChange={(v) => { setCara(v as KatalogDokumen['cara']); setSumber(CARA_SUMBER_DEFAULT[v as KatalogDokumen['cara']]); }}
+              disabled={readOnly}
             />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1.5">Sumber</label>
-            <Input value={sumber} onChange={(e) => setSumber(e.target.value)} />
+            <Input value={sumber} onChange={(e) => setSumber(e.target.value)} disabled={readOnly} />
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1.5">Sifat</label>
-            <Select options={[{ value: 'Wajib', label: 'Wajib' }, { value: 'Opsional', label: 'Opsional' }]} value={sifat} onChange={(v) => setSifat(v as KatalogDokumen['sifat'])} />
+            <Select options={[{ value: 'Wajib', label: 'Wajib' }, { value: 'Opsional', label: 'Opsional' }]} value={sifat} onChange={(v) => setSifat(v as KatalogDokumen['sifat'])} disabled={readOnly} />
           </div>
         </div>
       </div>

@@ -172,6 +172,18 @@ export const BERKAS_STATUS_LABEL: Record<BerkasStatus, string> = {
   fix: 'Perlu Perbaikan',
 };
 
+/** Cuplikan satu versi berkas/laporan sebelum diganti (Ganti Berkas) atau dikirim ulang
+ * (Kirim Perbaikan) — dipakai untuk modal "Riwayat Berkas". */
+export interface BerkasVersion {
+  nama: string;
+  sizeBytes: number;
+  tgl: string | null;
+  status: BerkasStatus;
+  catatan: string;
+  verifikatorOleh: string;
+  tglVerifikasi: string | null;
+}
+
 export interface BerkasSatker {
   id: string;
   nama: string;
@@ -186,6 +198,10 @@ export interface BerkasSatker {
   verifikatorOleh: string;
   /** ISO date saat diverifikasi (ok/fix). */
   tglVerifikasi: string | null;
+  /** Versi sebelumnya (Ganti Berkas / Kirim Perbaikan), terbaru di akhir array. */
+  versi?: BerkasVersion[];
+  /** Jika berkas ini dipakai kembali ("Pakai Berkas Lama") dari permintaan lain, id berkas asal. */
+  asalBerkasId?: string;
 }
 
 export type StageSatker = 'Belum Mulai' | 'Sedang Mengunggah' | 'Sudah Mengirim' | 'Selesai';
@@ -199,6 +215,15 @@ export interface LaporanSlotDef {
   dokId: string;
   /** Slot mengharuskan skor manual (mis. Penilaian Mandiri SPIP). */  
   butuhSkor?: boolean;
+  /** Slot meminta realisasi per indikator IKU (I1-I5), mis. TW1-TW4. */
+  butuhRealisasi?: boolean;
+  /** Bulan-tanggal "dibuka" & "tenggat", format `MM-DD` (relatif ke tahun anggaran slot). */
+  bukaMd: string;
+  tenggatMd: string;
+  /** Jika benar, tanggal "dibuka" jatuh di TA-1 (mis. Penetapan IKU dibuka Desember tahun lalu). */
+  bukaTahunSebelumnya?: boolean;
+  /** Jika benar, tenggat jatuh di TA+1 (mis. Laporan Semester II/Triwulan IV). */
+  tenggatTahunBerikut?: boolean;
 }
 
 export interface LaporanEntry {
@@ -215,6 +240,10 @@ export interface LaporanEntry {
   tglVerifikasi: string | null;
   skor: number | null;
   realisasi?: Record<string, number> | null;
+  /** Catatan tambahan pengunggah (dipisah dari `catatan` milik verifikator). */
+  keterangan?: string;
+  /** Versi sebelumnya (Kirim Perbaikan), terbaru di akhir array. */
+  versi?: BerkasVersion[];
 }
 
 export interface AuditUniverseState {

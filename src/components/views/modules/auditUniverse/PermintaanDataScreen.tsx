@@ -8,7 +8,7 @@
  * peran lain melihat saja.
  */
 import React, { useMemo, useState } from 'react';
-import { CalendarClock, Copy, FileWarning, Plus, Send, Trash2, X } from 'lucide-react';
+import { CalendarClock, Copy, Download, FileWarning, Files, Plus, Send, X } from 'lucide-react';
 import type { CurrentUserProfile } from '../../../../types';
 import {
   useAuditUniverseStore,
@@ -29,9 +29,13 @@ import {
   sendReminder,
   formatIsoDate,
   formatDateTime,
+  formatBytes,
   daysDiffFromToday,
+  getDokById,
+  BERKAS_STATUS_LABEL,
+  LAINNYA_DOC_ID,
 } from '../../../../data/auditUniverse';
-import type { Permintaan } from '../../../../data/auditUniverse';
+import type { Permintaan, BerkasSatker } from '../../../../data/auditUniverse';
 import { canManagePermintaan, displayNameForLog } from '../../../../data/auditUniverse/roleMapping';
 import { OrgSasaranPicker, orgLabel } from '../../masterData/OrgSasaranPicker';
 import {
@@ -324,6 +328,7 @@ const PermintaanDetail: React.FC<{ reqId: string; currentUser: CurrentUserProfil
   const canManage = canManagePermintaan(currentUser);
   const [extendModal, setExtendModal] = useState(false);
   const [newDeadline, setNewDeadline] = useState(req?.selesai ?? '');
+  const [berkasOrgId, setBerkasOrgId] = useState<string | null>(null);
   const oleh = displayNameForLog(currentUser);
 
   if (!req) {
@@ -389,6 +394,11 @@ const PermintaanDetail: React.FC<{ reqId: string; currentUser: CurrentUserProfil
                     <Badge color={st.stage === 'Selesai' ? 'success' : st.terlambat ? 'danger' : st.perluPerbaikan ? 'warning' : st.stage === 'Belum Mulai' ? 'neutral' : 'info'}>
                       {st.label}
                     </Badge>
+                    {files.some((f) => f.status !== 'draft') && (
+                      <button onClick={() => setBerkasOrgId(orgId)} className="text-[11px] font-bold text-[var(--sd-primary)] hover:underline">
+                        Lihat Berkas
+                      </button>
+                    )}
                     {canManage && req.status === 'Terkirim' && (
                       <button onClick={() => sendReminder(req.id, oleh, orgId)} className="text-[11px] font-bold text-[var(--sd-primary)] hover:underline">
                         Ingatkan
@@ -438,7 +448,73 @@ const PermintaanDetail: React.FC<{ reqId: string; currentUser: CurrentUserProfil
           {daysDiffFromToday(newDeadline) < 0 && <p className="text-[11px] text-amber-600 mt-1.5 font-semibold">Tanggal ini sudah lewat hari ini.</p>}
         </Modal>
       )}
+
+      {berkasOrgId && (
+        <BerkasDariSatkerModal reqId={req.id} orgId={berkasOrgId} onClose={() => setBerkasOrgId(null)} />
+      )}
     </div>
+  );
+};
+
+const BERKAS_BADGE_COLOR: Record<BerkasSatker['status'], BadgeColor> = { draft: 'neutral', wait: 'info', ok: 'success', fix: 'warning' };
+
+/** SF-513 "Berkas dari {Satker}" — daftar berkas terkirim + Unduh/Unduh Semua (simulasi). */
+const BerkasDariSatkerModal: React.FC<{ reqId: string; orgId: string; onClose: () => void }> = ({ reqId, orgId, onClose }) => {
+  useAuditUniverseStore();
+  const org = getOrgById(orgId);
+  const files = getBerkas(reqId, orgId).filter((f) => f.status !== 'draft');
+  const [toast, setToast] = useState('');
+
+  const simulateDownload = (label: string) => {
+    setToast(label);
+    setTimeout(() => setToast(''), 2500);
+  };
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={`Berkas dari ${org?.sing ?? orgId}`}
+      widthClassName="max-w-2xl"
+      footer={
+        <>
+          {files.length > 0 && (
+            <Button variant="outline" onClick={() => simulateDownload(`Mengunduh semua ${files.length} berkas ${org?.sing ?? orgId} sebagai .zip (simulasi)...`)}>
+              <Files className="w-3.5 h-3.5" /> Unduh Semua
+            </Button>
+          )}
+          <Button onClick={onClose}>Tutup</Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        {toast && <div className="p-2.5 rounded-[8px] bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-semibold">{toast}</div>}
+        {files.length === 0 ? (
+          <EmptyState title="Belum ada berkas terkirim dari Satker ini" />
+        ) : (
+          <ul className="space-y-2">
+            {files.map((f) => (
+              <li key={f.id} className="rounded-[10px] border border-slate-100 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-800 truncate">{f.nama}</div>
+                    <div className="text-[11px] text-slate-400">{f.dokId === LAINNYA_DOC_ID ? 'Lainnya' : getDokById(f.dokId)?.nama ?? f.dokId} · {formatBytes(f.sizeBytes)} · {formatIsoDate(f.tgl)}</div>
+                    {f.verifikatorOleh && <div className="text-[11px] text-slate-400 mt-0.5">Diverifikasi oleh {f.verifikatorOleh}{f.tglVerifikasi ? ` · ${formatIsoDate(f.tglVerifikasi)}` : ''}</div>}
+                    {f.status === 'fix' && f.catatan && <div className="text-[11px] text-amber-700 mt-1">Catatan: {f.catatan}</div>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge color={BERKAS_BADGE_COLOR[f.status]}>{BERKAS_STATUS_LABEL[f.status]}</Badge>
+                    <button onClick={() => simulateDownload(`Mengunduh ${f.nama} (simulasi)...`)} className="text-slate-400 hover:text-slate-600" title="Unduh">
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Modal>
   );
 };
 
