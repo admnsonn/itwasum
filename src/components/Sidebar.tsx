@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogOut, ChevronDown, Shield } from 'lucide-react';
+import { X, LogOut, ChevronDown } from 'lucide-react';
 import { MainNavId, CurrentUserProfile } from '../types';
 import {
   MODULE_GROUP_ORDER,
@@ -18,25 +18,6 @@ import {
  * satu sumber kebenaran (`MODULE_REGISTRY`) dan disaring lewat `getVisibleModulesForRole`, sehingga
  * seluruh menu yang sebelumnya di-comment otomatis "aktif kembali" sesuai aturan RBAC per peran.
  */
-
-function getRoleBadge(currentUser: CurrentUserProfile) {
-  switch (currentUser.peran) {
-    case 'super_admin':
-      return { label: 'ADM', color: 'bg-purple-600 text-white' };
-    case 'admin_polda':
-      return { label: 'L2-ADM', color: 'bg-blue-600 text-white' };
-    case 'pengawas_tim':
-    case 'ketua_tim':
-    case 'auditor':
-      return { label: 'AUD', color: 'bg-emerald-600 text-white' };
-    case 'auditee':
-      return { label: 'L3-ADT', color: 'bg-amber-600 text-white' };
-    case 'koordinator_pengendali':
-      return { label: 'DAL-L1', color: 'bg-indigo-600 text-white' };
-    default:
-      return { label: currentUser.level, color: 'bg-amber-500 text-slate-950' };
-  }
-}
 
 interface SidebarProps {
   activeNav: MainNavId;
@@ -63,15 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     (group) => ({ group, modules: visibleModules.filter((m) => m.group === group) })
   ).filter((g) => g.modules.length > 0);
 
-  const activeGroup = groupsWithModules.find((g) => g.modules.some((m) => m.id === activeNav))?.group;
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<ModuleGroupId>>(() => {
-    // Semua grup selain grup yang berisi rute aktif dimulai dalam keadaan terlipat.
-    const initial = new Set<ModuleGroupId>();
-    groupsWithModules.forEach((g) => {
-      if (g.group !== activeGroup) initial.add(g.group);
-    });
-    return initial;
-  });
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<ModuleGroupId>>(() => new Set());
 
   const toggleGroup = (group: ModuleGroupId) => {
     setCollapsedGroups((prev) => {
@@ -81,8 +54,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       return next;
     });
   };
-
-  const roleBadge = getRoleBadge(currentUser);
 
   return (
     <>
@@ -99,19 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Header: brand + role badge */}
-        <div className="px-3.5 pt-3.5 pb-3 border-b border-[#143B73] flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-[#143E78] flex items-center justify-center shrink-0">
-            <Shield className="w-4.5 h-4.5 text-amber-400" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-black text-white leading-tight">Satu Data Itwasum</div>
-            <div className="text-[10px] text-blue-300 truncate">{currentUser.titikWilayahNama}</div>
-          </div>
-          <span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black ${roleBadge.color}`}>{roleBadge.label}</span>
+        <div className="lg:hidden flex justify-end px-2 pt-2 shrink-0">
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/60"
+            className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-900/60"
             aria-label="Tutup Menu"
           >
             <X className="w-4 h-4" />
@@ -154,9 +116,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         >
                           <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'stroke-[2.2]' : 'stroke-[1.8]'}`} />
                           <span className="text-[11.5px] font-bold truncate flex-1">{mod.label}</span>
-                          {mod.kode && (
-                            <span className="text-[8px] font-mono text-blue-300/70 shrink-0">{mod.kode}</span>
-                          )}
                           {badge !== undefined && (
                             <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white font-bold text-[9px] flex items-center justify-center">
                               {badge}

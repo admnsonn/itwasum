@@ -368,6 +368,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.1',
     label: 'AI Foundation Platform & MLOps Pipeline',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: Cpu,
     sumberSpek: 'SPEKTEK III.A.5 (E.1, 100 OH)',
     status: 'baru',
@@ -378,6 +379,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.2',
     label: 'RAG Knowledge Hub Pengawasan',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: Database,
     sumberSpek: 'SPEKTEK III.A.5 (E.2, 160 OH)',
     status: 'baru',
@@ -388,6 +390,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.3',
     label: 'Auto Report Generator + Executive Summary',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: FileText,
     sumberSpek: 'SPEKTEK III.A.5 (E.3, 120 OH)',
     status: 'baru',
@@ -398,6 +401,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.4',
     label: 'Anomaly Alert Pengawasan',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: Radar,
     sumberSpek: 'SPEKTEK III.A.5 (E.4, 100 OH)',
     status: 'baru',
@@ -408,6 +412,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.5',
     label: 'ChatItwasum Copilot APIP-focused',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: MessageSquareText,
     sumberSpek: 'SPEKTEK III.A.5 (E.5, 180 OH); Modul Overview SF-008 Tanya Jawab Data',
     status: 'baru',
@@ -418,6 +423,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.6',
     label: 'Document AI Pengawasan',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: Bot,
     sumberSpek: 'SPEKTEK III.A.5 (E.6, 180 OH)',
     status: 'baru',
@@ -428,6 +434,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.7',
     label: 'AI Governance & AI Security',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: Shield,
     sumberSpek: 'SPEKTEK III.A.5 (E.7, 120 OH); SPEKTEK III.B.5 (dokumen wajib DOC-05)',
     status: 'baru',
@@ -438,6 +445,7 @@ export const MODULE_REGISTRY = [
     kode: 'E.8',
     label: 'Subscription Layanan AI Cloud Managed',
     group: 'ai-pengawasan',
+    rolesOverride: ['super_admin'],
     icon: CloudCog,
     sumberSpek: 'SPEKTEK III.A.5 (E.8, 1 Paket, 12 bulan)',
     status: 'baru',
@@ -450,6 +458,7 @@ export const MODULE_REGISTRY = [
     kode: 'A.1',
     label: 'API Consumer Layer ke DIV TIK / SuperApp Big Data Polri',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: Cable,
     sumberSpek: 'SPEKTEK III.A.1 (A.1, 100 OH)',
     status: 'baru',
@@ -460,6 +469,7 @@ export const MODULE_REGISTRY = [
     kode: 'A.2',
     label: 'Data Mart Pengawasan Itwasum',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: Database,
     sumberSpek: 'SPEKTEK III.A.1 (A.2, 125 OH)',
     status: 'baru',
@@ -470,6 +480,7 @@ export const MODULE_REGISTRY = [
     kode: 'A.3',
     label: 'Tata Kelola Data SDI',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: FolderKanban,
     sumberSpek: 'SPEKTEK III.A.1 (A.3, 80 OH)',
     status: 'baru',
@@ -480,6 +491,7 @@ export const MODULE_REGISTRY = [
     kode: 'A.4',
     label: 'Data Protection & DLP',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: KeyRound,
     sumberSpek: 'SPEKTEK III.A.1 (A.4, 75 OH)',
     status: 'baru',
@@ -490,6 +502,7 @@ export const MODULE_REGISTRY = [
     kode: 'C.1',
     label: 'Integrasi Data Service Contract via DIV TIK',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: Workflow,
     sumberSpek: 'SPEKTEK III.A.3 (C.1, 200 OH); SPEKTEK III.B.4 (dokumen wajib DOC-04)',
     status: 'baru',
@@ -500,6 +513,7 @@ export const MODULE_REGISTRY = [
     kode: 'C.2',
     label: 'Integrasi Data Quality, Schema Alignment & Reconciliation',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: GitBranch,
     sumberSpek: 'SPEKTEK III.A.3 (C.2, 150 OH)',
     status: 'baru',
@@ -510,6 +524,7 @@ export const MODULE_REGISTRY = [
     kode: 'D.1-D.2',
     label: 'Status Deployment & Environment',
     group: 'platform-data',
+    rolesOverride: ['super_admin'],
     icon: Server,
     sumberSpek:
       'SPEKTEK III.A.4 (D.1 Implementasi Sistem di Environment DC DIVTIK, 40 OH; D.2 Staging dan Konfigurasi DC DIVTIK, 40 OH); ' +
@@ -568,30 +583,34 @@ export function getModulesByGroup(group: ModuleGroupId): ModuleDefinition[] {
 
 /**
  * Aturan kelayakan akses per peran (RBAC ringan, konsisten dengan `rolesData.buildUserProfileFromConfig`):
+ *   - Modul dengan `rolesOverride` hanya tampil untuk peran yang tercantum (AI Pengawasan &
+ *     Platform Data & Integrasi: Super Admin saja).
  *   - super_admin / admin_polda (dapatOverview = 'tanpa_data'): hanya 'overview' + 'tata-kelola'
  *   - pengawas_tim / ketua_tim / auditor (dapatOverview = 'tidak'): 'overview' + 'pengawasan-audit' + 'profil-kinerja'
  *   - auditee (dapatOverview = 'tidak'): 'overview' + modul bertanda `auditeeVisible`
  *   - pimpinan_tertinggi / koordinator_pengendali (dapatOverview = 'penuh'): semua grup kecuali 'tata-kelola'
  */
 export function getVisibleModulesForRole(role: OfficialRole): ModuleDefinition[] {
-  const withExtra = (base: ModuleDefinition[]): ModuleDefinition[] => {
-    const extra = MODULE_REGISTRY.filter((m) => (m.extraRoles as OfficialRole[] | undefined)?.includes(role) && !base.includes(m));
-    return [...base, ...extra];
+  const inDefaultScope = (m: ModuleDefinition): boolean => {
+    if (role === 'super_admin' || role === 'admin_polda') {
+      return m.group === 'overview' || m.group === 'tata-kelola';
+    }
+    if (role === 'pengawas_tim' || role === 'ketua_tim' || role === 'auditor') {
+      return m.group === 'overview' || m.group === 'pengawasan-audit' || m.group === 'profil-kinerja';
+    }
+    if (role === 'auditee') {
+      return m.group === 'overview' || !!m.auditeeVisible;
+    }
+    return m.group !== 'tata-kelola';
   };
 
-  if (role === 'super_admin' || role === 'admin_polda') {
-    return withExtra(MODULE_REGISTRY.filter((m) => m.group === 'overview' || m.group === 'tata-kelola'));
-  }
-  if (role === 'pengawas_tim' || role === 'ketua_tim' || role === 'auditor') {
-    return withExtra(
-      MODULE_REGISTRY.filter(
-        (m) => m.group === 'overview' || m.group === 'pengawasan-audit' || m.group === 'profil-kinerja'
-      )
-    );
-  }
-  if (role === 'auditee') {
-    return withExtra(MODULE_REGISTRY.filter((m) => m.group === 'overview' || m.auditeeVisible));
-  }
-  // pimpinan_tertinggi & koordinator_pengendali: semua grup kecuali tata-kelola sistem
-  return withExtra(MODULE_REGISTRY.filter((m) => m.group !== 'tata-kelola'));
+  const base = MODULE_REGISTRY.filter((m) => {
+    if (m.rolesOverride?.length) return m.rolesOverride.includes(role);
+    return inDefaultScope(m);
+  });
+  const extra = MODULE_REGISTRY.filter((m) => {
+    if (m.rolesOverride?.length && !m.rolesOverride.includes(role)) return false;
+    return (m.extraRoles as OfficialRole[] | undefined)?.includes(role) && !base.includes(m);
+  });
+  return [...base, ...extra];
 }

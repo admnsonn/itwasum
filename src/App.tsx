@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
@@ -85,6 +85,13 @@ export default function App() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [preselectedLoginAccount, setPreselectedLoginAccount] = useState<PredefinedAccountConfig | undefined>(undefined);
   const [isMapFullscreen, setIsMapFullscreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const visible = getVisibleModulesForRole(currentUser.peran);
+    const allowed = visible.some((m) => m.id === activeNav) || activeNav === 'beranda';
+    if (!allowed) setActiveNav('beranda');
+  }, [isAuthenticated, currentUser.peran, activeNav, setActiveNav]);
 
   const handleSelectPolda = (poldaId: string | null) => {
     setSelectedPoldaId(poldaId);
