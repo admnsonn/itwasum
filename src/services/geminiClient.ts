@@ -56,7 +56,7 @@ function mockAnswer(question: string): string {
   const matched = MOCK_ANSWERS.find((m) => m.keywords.some((k) => lower.includes(k)));
   return (
     matched?.answer ||
-    'Pertanyaan Anda dijawab dari basis pengetahuan pengawasan terverifikasi karena VITE_GEMINI_API_KEY belum dikonfigurasi. Jawaban produksi memakai RAG Knowledge Hub (E.2) dan data mart aktif (A.2).'
+    'Pertanyaan Anda sedang dijawab memakai mode demo (mock) karena VITE_GEMINI_API_KEY belum dikonfigurasi. Jawaban riil akan memakai RAG Knowledge Hub Pengawasan (E.2) dan data mart aktif (A.2) sebagai konteks.'
   );
 }
 

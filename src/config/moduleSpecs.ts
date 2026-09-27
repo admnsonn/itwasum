@@ -8,7 +8,6 @@
  * `#/<moduleId>/<screenSlug>` via `useHashRoute`.
  */
 import type { ModuleId } from './moduleRegistry';
-import { MODULE_CONTENT } from '../content/modules';
 
 export interface ScreenSpec {
   /** Slug dipakai pada hash route: #/<moduleId>/<slug> */
@@ -32,6 +31,9 @@ export const MODULE_SPECS: Partial<Record<ModuleId, ModuleSpec>> = {
       { slug: 'daftar-auditi', nama: 'Daftar Auditi', deskripsi: 'Populasi lengkap objek audit (Mabes/Polda/Polres/Polsek) beserta status kelengkapan data.', subFeatures: ['SF-001 Tabel populasi auditi', 'SF-002 Filter status kelengkapan'] },
       { slug: 'detail-auditi', nama: 'Detail Auditi', deskripsi: 'Formulir tusi, struktur organisasi, dan data anggaran per satker auditi.', subFeatures: ['SF-003 Form tusi-struktur-anggaran'] },
       { slug: 'validasi-data', nama: 'Validasi Data', deskripsi: 'Dashboard kelengkapan data dan daftar satker yang belum siap diskoring.', subFeatures: ['SF-004 Dashboard kelengkapan', 'SF-005 Daftar Belum Siap Skoring'] },
+      { slug: 'permintaan-data', nama: 'Permintaan Pengumpulan Data', deskripsi: 'Admin membuat & mengirim permintaan dokumen ke Satker sasaran, memantau progres, dan menutup permintaan.', subFeatures: ['SF-511 Daftar permintaan', 'SF-512 Buat/ubah permintaan', 'SF-513 Detail progres & log'] },
+      { slug: 'portal-satker', nama: 'Portal Satker', deskripsi: 'Dashboard PIC Satker: permintaan data masuk, unggah berkas, dan laporan berkala SPIP/IKU.', subFeatures: ['SF-601 Dashboard PIC', 'SF-611 Permintaan masuk', 'SF-612 Unggah berkas', 'SF-602 Laporan SPIP', 'SF-603 Laporan IKU'] },
+      { slug: 'verifikasi-berkas', nama: 'Antrean Verifikasi Berkas', deskripsi: 'Verifikator Itwil menerima atau meminta perbaikan atas berkas dan laporan yang dikirim Satker.', subFeatures: ['SF-711 Antrean verifikasi', 'SF-712 Terima/minta perbaikan'] },
     ],
   },
   b13: {
@@ -60,6 +62,7 @@ export const MODULE_SPECS: Partial<Record<ModuleId, ModuleSpec>> = {
       { slug: 'kk-aktif', nama: 'Daftar KK Aktif', deskripsi: 'Kertas Kerja Audit aktif per penugasan dengan badge sisa waktu.', subFeatures: ['SF-001 Daftar KK + badge sisa waktu'] },
       { slug: 'form-pengisian', nama: 'Form Pengisian', deskripsi: 'Pengisian KK dengan skor otomatis dan unggah eviden multi-format.', subFeatures: ['SF-002 Skor otomatis read-only', 'SF-003 Upload eviden'] },
       { slug: 'antrean-validasi', nama: 'Antrean Validasi', deskripsi: 'Validasi berjenjang Ketua Tim - Pengawas Tim dan riwayat versi (diff).', subFeatures: ['SF-004 Validasi berjenjang', 'SF-005 Riwayat versi'] },
+      { slug: 'form-mr', nama: 'Form MR per Objek', deskripsi: 'Alur 7 tahap Form Manajemen Risiko per objek audit: profil & register risiko, RCM, KKP uji kontrol, konsep temuan, kesimpulan MR, dan rencana tindak lanjut.', subFeatures: ['SF-F1 Profil & Konteks Risiko', 'SF-F2 Register Risiko', 'SF-F3 Reviu & RCM', 'SF-F4 KKP Uji Kontrol', 'SF-F5 Konsep Temuan', 'SF-F6 Kesimpulan MR', 'SF-F7 Rencana Tindak Lanjut'] },
     ],
   },
   b8: {
@@ -128,7 +131,6 @@ export const MODULE_SPECS: Partial<Record<ModuleId, ModuleSpec>> = {
       { slug: 'konfigurasi-retensi', nama: 'Konfigurasi Retensi', deskripsi: 'Grafik volume log dan alert anomali (>200%), konfigurasi retensi.', subFeatures: ['SF-004 Grafik volume + alert anomali'] },
     ],
   },
-  ...Object.fromEntries(Object.entries(MODULE_CONTENT).map(([id, entry]) => [id, entry.spec])),
 };
 
 export function getModuleSpec(moduleId: string): ModuleSpec | undefined {

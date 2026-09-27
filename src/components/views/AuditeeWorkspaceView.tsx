@@ -386,7 +386,7 @@ export const AuditeeWorkspaceView: React.FC<AuditeeWorkspaceViewProps> = ({
               </div>
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-400">Kondisi Kamtibmas</span>
-                <span className="font-extrabold text-brand-700">418 Kasus &bull; Kondusif</span>
+                <span className="font-extrabold text-purple-700">418 Kasus &bull; Kondusif</span>
               </div>
             </div>
           </div>
@@ -534,7 +534,7 @@ export const AuditeeWorkspaceView: React.FC<AuditeeWorkspaceViewProps> = ({
                     )}
 
                     {t.catatanAuditee && (
-                      <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-slate-950">
+                      <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 text-xs text-purple-950">
                         <span className="font-extrabold text-purple-900 block mb-0.5">
                           Tanggapan / Langkah Tindak Lanjut Polres Kampar:
                         </span>

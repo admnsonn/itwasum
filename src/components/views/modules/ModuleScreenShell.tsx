@@ -14,11 +14,11 @@ import { Info } from 'lucide-react';
 import type { ModuleDefinition } from '../../../config/moduleRegistry';
 import { MODULE_STATUS_LABEL } from '../../../config/moduleRegistry';
 import type { ModuleSpec } from '../../../config/moduleSpecs';
-import { Breadcrumbs, TabNavigation, DataIntegrationNotice, type BreadcrumbItem } from '../../ui';
+import { Breadcrumbs, TabNavigation, type BreadcrumbItem } from '../../ui';
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   inti: 'bg-blue-50 text-blue-700 border-blue-200',
-  replikasi: 'bg-blue-50 text-brand-700 border-blue-200',
+  replikasi: 'bg-purple-50 text-purple-700 border-purple-200',
   baru: 'bg-amber-50 text-amber-700 border-amber-200',
   nyata: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
@@ -70,12 +70,9 @@ export const ModuleScreenShell: React.FC<ModuleScreenShellProps> = ({
             </span>
           </div>
         </div>
-        <div className="mt-2 flex flex-wrap items-start gap-2">
-          <div className="flex items-start gap-1.5 text-[10px] text-slate-400 font-mono">
-            <Info className="w-3 h-3 shrink-0 mt-0.5" />
-            <span>Sumber: {moduleDef.sumberSpek}</span>
-          </div>
-          <DataIntegrationNotice variant="badge" sumber={moduleDef.sumberSpek} />
+        <div className="mt-2 flex items-start gap-1.5 text-[10px] text-slate-400 font-mono">
+          <Info className="w-3 h-3 shrink-0 mt-0.5" />
+          <span>Sumber: {moduleDef.sumberSpek}</span>
         </div>
       </div>
 

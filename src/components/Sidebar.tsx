@@ -22,7 +22,7 @@ import {
 function getRoleBadge(currentUser: CurrentUserProfile) {
   switch (currentUser.peran) {
     case 'super_admin':
-      return { label: 'ADM', color: 'bg-brand-700 text-white' };
+      return { label: 'ADM', color: 'bg-purple-600 text-white' };
     case 'admin_polda':
       return { label: 'L2-ADM', color: 'bg-blue-600 text-white' };
     case 'pengawas_tim':
@@ -32,7 +32,7 @@ function getRoleBadge(currentUser: CurrentUserProfile) {
     case 'auditee':
       return { label: 'L3-ADT', color: 'bg-amber-600 text-white' };
     case 'koordinator_pengendali':
-      return { label: 'DAL-L1', color: 'bg-brand-700 text-white' };
+      return { label: 'DAL-L1', color: 'bg-indigo-600 text-white' };
     default:
       return { label: currentUser.level, color: 'bg-amber-500 text-slate-950' };
   }

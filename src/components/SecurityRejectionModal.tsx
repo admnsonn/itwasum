@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ShieldAlert, 
   X, 
@@ -40,8 +41,8 @@ export const SecurityRejectionModal: React.FC<SecurityRejectionModalProps> = ({
 
   const finalReason = rejectionReason || `Berdasarkan aturan Buku Manual E-Audit (Hal 3 & 5), user dipasang di titik wilayah dan hanya diizinkan melihat ke bawah dalam yurisdiksinya. Mencoba mengakses atau mengubah data jenjang lebih tinggi (${targetLevel}) atau di luar wewenang otomatis dicegat dan dicatat sebagai Akses Ditolak di log audit.`;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-150" onClick={onClose}>
       <div 
         className="bg-slate-900 border-2 border-rose-500/80 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden text-slate-100 ring-4 ring-rose-500/20"
         onClick={(e) => e.stopPropagation()}
@@ -142,6 +143,7 @@ export const SecurityRejectionModal: React.FC<SecurityRejectionModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

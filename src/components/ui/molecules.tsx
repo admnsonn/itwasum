@@ -6,6 +6,7 @@
  * Lihat catatan lisensi & konvensi di `atoms.tsx`.
  */
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Check,
   ChevronLeft,
@@ -17,7 +18,6 @@ import {
 } from 'lucide-react';
 import { cn } from './cn';
 import { Badge, Button, Card, Input, Select, Spinner, type SelectOption } from './atoms';
-import { FadeInUp } from './motion';
 
 /* ============================== Table ============================== */
 
@@ -199,8 +199,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, descriptio
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-stretch" role="dialog" aria-modal="true">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-stretch" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div
         className={cn(
@@ -210,7 +210,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, descriptio
             : cn('ml-auto h-full w-full', widthClassName || 'max-w-md')
         )}
       >
-        <FadeInUp className="flex flex-col flex-1 min-h-0">
         {(title || description) && (
           <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100">
             <div>
@@ -224,9 +223,9 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, descriptio
         )}
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-end gap-2">{footer}</div>}
-        </FadeInUp>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -364,7 +363,6 @@ export const StatCard: React.FC<{
   variant?: 'default' | 'metric';
   className?: string;
 }> = ({ label, value, change, footer, className }) => (
-  <FadeInUp>
   <Card className={cn('p-3.5', className)}>
     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate">{label}</div>
     <div className="text-xl font-extrabold text-slate-900 mt-1">{value}</div>
@@ -375,7 +373,6 @@ export const StatCard: React.FC<{
     )}
     {footer && <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">{footer}</div>}
   </Card>
-  </FadeInUp>
 );
 
 /* ============================== StepIndicator ============================== */

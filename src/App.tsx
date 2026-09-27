@@ -11,9 +11,7 @@ import { ModalConfirm } from './components/ModalConfirm';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BerandaView } from './components/views/BerandaView';
 import { PengawasanTemuanView } from './components/views/PengawasanTemuanView';
-import { TemuanAnalisisView } from './components/views/TemuanAnalisisView';
 import { KinerjaSatkerView } from './components/views/KinerjaSatkerView';
-import { RegionalDetailView } from './components/views/RegionalDetailView';
 import { TimAuditorView } from './components/views/TimAuditorView';
 import { PengaturanSistemView } from './components/views/PengaturanSistemView';
 import { LoginView } from './components/views/LoginView';
@@ -27,11 +25,35 @@ import { MainNavId, CurrentUserProfile } from './types';
 import { DEFAULT_USER_PROFILE, buildUserProfileFromConfig, PredefinedAccountConfig } from './data/rolesData';
 import { Menu } from 'lucide-react';
 import { useHashRoute } from './router/useHashRoute';
-import { getModuleById, getVisibleModulesForRole, MODULE_GROUPS, type LegacyViewId } from './config/moduleRegistry';
-import { Breadcrumbs } from './components/ui';
-import { PeriodPicker } from './context/PeriodContext';
+import { getModuleById, getVisibleModulesForRole, type LegacyViewId } from './config/moduleRegistry';
 
 const TIM_AUDIT_ROLES = ['pengawas_tim', 'ketua_tim', 'auditor', 'auditee'];
+
+const AUTH_SESSION_KEY = 'itwasum_auth_session';
+const AUTH_LOGGED_OUT_KEY = 'itwasum_logged_out';
+
+function getInitialAuthState(): { user: CurrentUserProfile; authenticated: boolean } {
+  if (typeof window === 'undefined') {
+    return { user: DEFAULT_USER_PROFILE, authenticated: true };
+  }
+  try {
+    const isExplicitlyLoggedOut = localStorage.getItem(AUTH_LOGGED_OUT_KEY) === 'true';
+    if (isExplicitlyLoggedOut) {
+      return { user: DEFAULT_USER_PROFILE, authenticated: false };
+    }
+    const saved = localStorage.getItem(AUTH_SESSION_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && parsed.id && parsed.peran) {
+        return { user: parsed as CurrentUserProfile, authenticated: true };
+      }
+    }
+    return { user: DEFAULT_USER_PROFILE, authenticated: true };
+  } catch (err) {
+    console.warn('Failed to parse auth session from localStorage:', err);
+    return { user: DEFAULT_USER_PROFILE, authenticated: true };
+  }
+}
 
 export default function App() {
   // Routing berbasis hash (lihat Plan 2 bagian 2.1): setiap modul punya URL stabil (#/<id>)
@@ -54,8 +76,8 @@ export default function App() {
       ? (activeNav as LegacyViewId)
       : undefined);
 
-  const [currentUser, setCurrentUser] = useState<CurrentUserProfile>(DEFAULT_USER_PROFILE);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUserProfile>(() => getInitialAuthState().user);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => getInitialAuthState().authenticated);
   const [isLoginViewOpen, setIsLoginViewOpen] = useState<boolean>(false);
   const [selectedPoldaId, setSelectedPoldaId] = useState<string | null>(null);
   const [targetModulePoldaFilter, setTargetModulePoldaFilter] = useState<string | undefined>(undefined);
@@ -72,10 +94,6 @@ export default function App() {
   };
 
   const handleNavigateToModule = (module: MainNavId, targetPoldaId?: string) => {
-    if (module === 'b7' && targetPoldaId) {
-      navigateModule('b7', targetPoldaId);
-      return;
-    }
     setActiveNav(module);
     if (targetPoldaId) {
       setTargetModulePoldaFilter(targetPoldaId);
@@ -83,6 +101,12 @@ export default function App() {
   };
 
   const handleConfirmLogout = () => {
+    try {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      localStorage.setItem(AUTH_LOGGED_OUT_KEY, 'true');
+    } catch (err) {
+      console.warn('Failed to update logout state:', err);
+    }
     setShowLogoutModal(false);
     setIsAuthenticated(false);
     setPreselectedLoginAccount(undefined);
@@ -91,6 +115,12 @@ export default function App() {
 
   // Enforce logout before login: terminate active session and open login view with targeted role
   const handleLogoutAndSwitchToRole = (account?: PredefinedAccountConfig) => {
+    try {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      localStorage.setItem(AUTH_LOGGED_OUT_KEY, 'true');
+    } catch (err) {
+      console.warn('Failed to update logout state:', err);
+    }
     setIsAuthenticated(false);
     setPreselectedLoginAccount(account);
     setIsLoginViewOpen(true);
@@ -103,6 +133,12 @@ export default function App() {
         currentUser={isAuthenticated ? currentUser : undefined}
         targetAccountConfig={preselectedLoginAccount}
         onLoginSuccess={(newProfile) => {
+          try {
+            localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(newProfile));
+            localStorage.removeItem(AUTH_LOGGED_OUT_KEY);
+          } catch (err) {
+            console.warn('Failed to persist auth session:', err);
+          }
           setCurrentUser(newProfile);
           setIsAuthenticated(true);
           setIsLoginViewOpen(false);
@@ -181,17 +217,6 @@ export default function App() {
             saat pindah rute, sehingga tiap modul punya isolasi kegagalan sendiri ("ErrorBoundary per
             rute" - Plan 2 bagian 2.1). */}
         <main className={`flex-1 min-w-0 ${isMapFullscreen ? 'p-0 h-screen overflow-hidden' : 'p-3 sm:p-5 lg:p-6 xl:p-8 overflow-x-hidden'}`}>
-          {!isMapFullscreen && (
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <Breadcrumbs
-                items={[
-                  { label: MODULE_GROUPS[activeModuleDef?.group ?? 'overview'].label },
-                  { label: activeModuleDef?.kode || activeModuleDef?.label || 'Beranda' },
-                ]}
-              />
-              <PeriodPicker className="w-[200px]" />
-            </div>
-          )}
           <ErrorBoundary key={activeNav}>
             {legacyTarget === 'beranda' && (
               currentUser.dapatOverview === 'tanpa_data' ? (
@@ -231,13 +256,6 @@ export default function App() {
               // yang menjelaskan pembatasan akses berbasis Surat Tugas, bukan tabel penugasan admin.
               activeModuleDef?.id === 'b14' && TIM_AUDIT_ROLES.includes(currentUser.peran) ? (
                 <EAuditRedirectView currentUser={currentUser} onSwitchAccount={() => setShowLogoutModal(true)} />
-              ) : activeModuleDef?.id === 'b2' || activeModuleDef?.id === 'b3' ? (
-                <TemuanAnalisisView
-                  poldaList={POLDA_DATA}
-                  initialPoldaFilter={targetModulePoldaFilter}
-                  currentUser={currentUser}
-                  initialTab={activeModuleDef?.legacyTab}
-                />
               ) : (
                 <PengawasanTemuanView
                   poldaList={POLDA_DATA}
@@ -249,20 +267,10 @@ export default function App() {
             )}
 
             {legacyTarget === 'kinerja' && (
-              hashRoute.subPath && POLDA_DATA.some((p) => p.id === hashRoute.subPath) ? (
-                <RegionalDetailView
-                  poldaId={hashRoute.subPath}
-                  poldaList={POLDA_DATA}
-                  currentUser={currentUser}
-                  onBack={() => navigateModule('b7')}
-                />
-              ) : (
-                <KinerjaSatkerView
-                  poldaList={POLDA_DATA}
-                  currentUser={currentUser}
-                  onOpenRegional={(poldaId) => navigateModule('b7', poldaId)}
-                />
-              )
+              <KinerjaSatkerView
+                poldaList={POLDA_DATA}
+                currentUser={currentUser}
+              />
             )}
 
             {legacyTarget === 'auditor' && (

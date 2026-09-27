@@ -23,8 +23,9 @@ import {
   Save,
   RotateCcw,
 } from 'lucide-react';
-import { CurrentUserProfile, MasterDataItem, UserAccount } from '../../types';
-import { USER_ACCOUNTS, MASTER_DATA_ITEMS } from '../../data/mockData';
+import { CurrentUserProfile, UserAccount } from '../../types';
+import { USER_ACCOUNTS } from '../../data/mockData';
+import { MasterDataTab } from './masterData/MasterDataTab';
 import { logUbahHakAkses } from '../../utils/auditLogger';
 import {
   MODULE_GROUP_ORDER,
@@ -60,10 +61,11 @@ type B9Tab = 'pengguna' | 'kontrol-akses' | 'data-master';
 
 export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const navigate = onSubPathChange ?? (() => {});
-  const activeTab: B9Tab = subPath === 'kontrol-akses' || subPath === 'data-master' ? (subPath as B9Tab) : 'pengguna';
+  const [subPathParent, ...subPathRest] = (subPath || '').split('/');
+  const activeTab: B9Tab = subPathParent === 'kontrol-akses' || subPathParent === 'data-master' ? (subPathParent as B9Tab) : 'pengguna';
+  const dataMasterSubPath = subPathRest.join('/') || undefined;
 
   const [userList, setUserList] = useState<UserAccount[]>(USER_ACCOUNTS);
-  const [masterList] = useState<MasterDataItem[]>(MASTER_DATA_ITEMS);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const notify = (msg: string) => {
@@ -107,7 +109,14 @@ export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ curr
         <TataKelolaPenggunaTab currentUser={currentUser} userList={userList} setUserList={setUserList} notify={notify} />
       )}
       {activeTab === 'kontrol-akses' && <OtorisasiAksesTab currentUser={currentUser} notify={notify} />}
-      {activeTab === 'data-master' && <DataMasterTab masterList={masterList} />}
+      {activeTab === 'data-master' && (
+        <MasterDataTab
+          readOnly={currentUser?.peran !== 'super_admin'}
+          subPath={dataMasterSubPath}
+          onSubPathChange={(sub) => navigate(sub ? `data-master/${sub}` : 'data-master')}
+          notify={notify}
+        />
+      )}
     </div>
   );
 };
@@ -575,50 +584,6 @@ const CustomRoleFooter: React.FC<{ onCancel: () => void; onCreate: (nama: string
 };
 
 /* ============================================================================================ *
- * Tab 3: Pengaturan Data Master Terpadu (dipertahankan)
+ * Tab 3: Pengaturan Data Master Terpadu -> lihat ./masterData/MasterDataTab.tsx
+ * (mereplikasi 27092026/prototipe-master-data.html, Plan "Migrate 27092026 prototypes")
  * ============================================================================================ */
-
-const DataMasterTab: React.FC<{ masterList: MasterDataItem[] }> = ({ masterList }) => {
-  const [category, setCategory] = useState('Semua');
-  const categories = ['Semua', 'Jenis Pengawasan', 'Tipologi Satker', 'Katalog Pra-Audit', 'Template Dokumen', 'Mapping Kebutuhan Dokumen'];
-  const filtered = category === 'Semua' ? masterList : masterList.filter((m) => m.kategori === category);
-
-  return (
-    <Card className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-        <div>
-          <Typography variant="headline-md">Pengaturan Data Master Terpadu</Typography>
-          <p className="text-xs text-slate-500 mt-0.5">Konsolidasi 5 sub-katalog pengawasan, tipologi, template, dan berkas pra-audit:</p>
-        </div>
-        <div className="flex items-center gap-1 bg-[var(--sd-surface)] p-1 rounded-[10px] flex-wrap">
-          {categories.map((cat) => (
-            <button key={cat} onClick={() => setCategory(cat)} className={`px-2.5 py-1 rounded-[8px] text-xs font-semibold transition-colors ${category === cat ? 'bg-[var(--sd-primary)] text-white' : 'text-slate-600 hover:text-slate-900'}`}>
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <EmptyState title="Tidak ada data master pada kategori ini." icon={<KeyRound className="w-6 h-6 text-slate-300" />} />
-      ) : (
-        <div className="space-y-2.5">
-          {filtered.map((item) => (
-            <div key={item.id} className="p-3.5 rounded-[10px] border border-[var(--sd-outline-variant)]/50 bg-slate-50 flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-[6px] text-xs font-mono font-bold bg-slate-200 text-slate-800">{item.kode}</span>
-                  <span className="font-bold text-xs text-slate-900">{item.nama}</span>
-                  <Badge color="info">{item.kategori}</Badge>
-                </div>
-                <p className="text-xs text-slate-600 mt-1">{item.keterangan}</p>
-                <div className="text-[11px] text-slate-400 mt-1">Update: {item.updateTerakhir}</div>
-              </div>
-              <Badge color="success">{item.status}</Badge>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-};

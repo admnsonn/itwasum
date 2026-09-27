@@ -7,7 +7,7 @@
  * (agregasi read-only), RiskMatrix/heatmap + slide-over satker, tren minimal 2 periode + tabel
  * satker menurun, form bobot total 1,00 + badge periode terbekukan.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import type { CurrentUserProfile, PoldaSatker } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
@@ -20,9 +20,7 @@ import {
   SPIP_SATKER_DATA,
   satkerMenurun,
 } from '../../../data/modules/lanjutan/spipTlhp';
-import { SPIP_MATURITY_LEVELS } from '../../../data/modules/lanjutan/constants';
-import { Badge, Card, DonutChart, ForbiddenState, ProgressBar, RiskMatrix, StatCard, Table, TrendLineChart, Typography, type TableColumn } from '../../ui';
-import { FadeInUp } from '../../ui/motion';
+import { Badge, Card, ForbiddenState, ProgressBar, RiskMatrix, StatCard, TrendLineChart, Typography } from '../../ui';
 import type { SpipSatkerEntry } from '../../../data/modules/lanjutan/spipTlhp';
 
 interface MonitoringMaturitasViewProps {
@@ -47,44 +45,6 @@ export const MonitoringMaturitasView: React.FC<MonitoringMaturitasViewProps> = (
   const menurun = satkerMenurun();
   const canConfigure = canConfigureRollup(currentUser);
 
-  const levelMaturitasSegments = useMemo(() => {
-    const colors = ['#BA1A1A', '#EAB308', '#3B82F6', '#002265', '#2D7A4A'];
-    return [1, 2, 3, 4, 5].map((lvl) => {
-      const meta = SPIP_MATURITY_LEVELS.find((l) => l.level === lvl);
-      return {
-        id: `lvl-${lvl}`,
-        label: meta ? `L${lvl} ${meta.label}` : `Level ${lvl}`,
-        value: SPIP_SATKER_DATA.filter((s) => s.levelMaturitas === lvl).length,
-        color: colors[lvl - 1],
-      };
-    }).filter((s) => s.value > 0);
-  }, []);
-
-  type GapRow = { id: string; satker: string; nilai: string; gap: string; gapNum: number };
-  const gapAnalysisRows = useMemo<GapRow[]>(
-    () =>
-      SPIP_SATKER_DATA.map((s) => {
-        const gap = Math.round((s.nilaiFinal - MATURITAS_NASIONAL) * 100) / 100;
-        return {
-          id: s.poldaId,
-          satker: s.namaSatker,
-          nilai: s.nilaiFinal.toFixed(2),
-          gap: gap >= 0 ? `+${gap.toFixed(2)}` : gap.toFixed(2),
-          gapNum: gap,
-        };
-      }).sort((a, b) => a.gapNum - b.gapNum),
-    []
-  );
-
-  const gapColumns: TableColumn<GapRow>[] = [
-    { key: 'satker', header: 'Satker', render: (r) => <span className="font-semibold text-slate-800">{r.satker}</span> },
-    { key: 'nilai', header: 'Nilai Final', render: (r) => r.nilai },
-    { key: 'nasional', header: 'Nasional', render: () => MATURITAS_NASIONAL.toFixed(2) },
-    { key: 'gap', header: 'Gap (Δ)', render: (r) => (
-      <Badge color={r.gapNum < -0.3 ? 'danger' : r.gapNum < 0 ? 'warning' : 'success'}>{r.gap}</Badge>
-    ) },
-  ];
-
   return (
     <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
       {activeScreen === 'dashboard-rollup' && (
@@ -95,25 +55,6 @@ export const MonitoringMaturitasView: React.FC<MonitoringMaturitasViewProps> = (
               <StatCard key={it.itwilId} label={`Rollup L1 — ${it.nama}`} value={it.rataRataMaturitas.toFixed(2)} footer={`${it.satkerCount} satker`} />
             ))}
           </div>
-          <FadeInUp>
-            <div className="grid lg:grid-cols-2 gap-4">
-              <Card>
-                <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Level Maturitas SPIP (L1–L5)</Typography>
-                <DonutChart segments={levelMaturitasSegments} centerLabel="Satker" centerValue={String(SPIP_SATKER_DATA.length)} />
-              </Card>
-              <Card>
-                <Typography variant="label-bold" className="text-slate-700 mb-2">Ringkasan Level per Itwil</Typography>
-                <ul className="space-y-2 text-xs">
-                  {MATURITAS_ROLLUP_ITWIL.map((it) => (
-                    <li key={it.itwilId} className="flex justify-between rounded-[8px] border border-slate-100 px-3 py-2">
-                      <span className="font-semibold text-slate-700">{it.nama}</span>
-                      <span className="font-extrabold text-[var(--sd-primary)]">{it.rataRataMaturitas.toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            </div>
-          </FadeInUp>
           <Card>
             <Typography variant="label-bold" className="text-slate-700 mb-3">Rollup L1 Itwil -&gt; L2 Satker (agregasi read-only)</Typography>
             <div className="space-y-3">
@@ -174,12 +115,6 @@ export const MonitoringMaturitasView: React.FC<MonitoringMaturitasViewProps> = (
               ]}
             />
           </Card>
-          <FadeInUp>
-            <Card>
-              <Typography variant="label-bold" className="text-slate-700 mb-2">Analisis Gap Satker vs Nasional (nilaiFinal − L0)</Typography>
-              <Table columns={gapColumns} data={gapAnalysisRows} rowKey={(r) => r.id} />
-            </Card>
-          </FadeInUp>
           <Card>
             <Typography variant="label-bold" className="text-slate-700 mb-2">Satker Menurun Periode Ini ({menurun.length})</Typography>
             <ul className="space-y-1.5">

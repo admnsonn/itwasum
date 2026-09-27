@@ -6,28 +6,26 @@
  * Validasi (Plan bagian 4). SF-001..005: skor otomatis read-only, upload eviden multi-format,
  * validasi berjenjang Ketua Tim -> Pengawas Tim, DiffView riwayat versi, badge sisa waktu.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import type { CurrentUserProfile } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { KERTAS_KERJA_DIGITAL, type KkEntry } from '../../../data/modules/lanjutan/pelaksanaan';
+import { FormMrPerObjek } from './kertasKerja/FormMrPerObjek';
 import {
   ApprovalStep,
   Badge,
   Button,
   Card,
   DiffView,
-  DonutChart,
   ProgressBar,
   Table,
-  Timeline,
   Typography,
   UploadDropzone,
   type BadgeColor,
   type TableColumn,
 } from '../../ui';
-import { FadeInUp } from '../../ui/motion';
 
 const STATUS_COLOR: Record<KkEntry['status'], BadgeColor> = {
   Draf: 'neutral',
@@ -43,10 +41,13 @@ interface KertasKerjaDigitalViewProps {
   onSubPathChange: (subPath?: string) => void;
 }
 
-export const KertasKerjaDigitalView: React.FC<KertasKerjaDigitalViewProps> = ({ subPath, onSubPathChange }) => {
+export const KertasKerjaDigitalView: React.FC<KertasKerjaDigitalViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const moduleDef = getModuleById('b15')!;
   const spec = getModuleSpec('b15')!;
-  const activeScreen = subPath || getDefaultScreenSlug('b15') || spec.screens[0].slug;
+  const isAuditeeOnly = currentUser.peran === 'auditee';
+  const defaultSlug = isAuditeeOnly ? 'form-mr' : getDefaultScreenSlug('b15') || spec.screens[0].slug;
+  const activeScreen = isAuditeeOnly ? 'form-mr' : subPath || defaultSlug;
+  const visibleSpec = isAuditeeOnly ? { ...spec, screens: spec.screens.filter((s) => s.slug === 'form-mr') } : spec;
   const [selected, setSelected] = useState<KkEntry>(KERTAS_KERJA_DIGITAL[0]);
 
   const columns: TableColumn<KkEntry>[] = [
@@ -68,58 +69,12 @@ export const KertasKerjaDigitalView: React.FC<KertasKerjaDigitalViewProps> = ({ 
 
   const antrean = KERTAS_KERJA_DIGITAL.filter((k) => k.status === 'Menunggu Validasi Ketua Tim' || k.status === 'Disetujui Ketua Tim');
 
-  const statusDistribution = useMemo(() => {
-    const palette: Record<KkEntry['status'], string> = {
-      Draf: '#94A3B8',
-      'Menunggu Validasi Ketua Tim': '#EAB308',
-      'Perlu Revisi': '#BA1A1A',
-      'Disetujui Ketua Tim': '#3B82F6',
-      Disahkan: '#2D7A4A',
-    };
-    return (Object.keys(STATUS_COLOR) as KkEntry['status'][]).map((status) => ({
-      id: status,
-      label: status,
-      value: KERTAS_KERJA_DIGITAL.filter((k) => k.status === status).length,
-      color: palette[status],
-    })).filter((s) => s.value > 0);
-  }, []);
-
-  const versionTimeline = useMemo(
-    () =>
-      selected.versions.map((v) => ({
-        id: `${selected.id}-v${v.versi}`,
-        title: `Versi ${v.versi} — ${v.diubahOleh}`,
-        description: v.ringkasanPerubahan + (v.skorSesudah != null ? ` (skor ${v.skorSesudah})` : ''),
-        timestamp: v.tanggal,
-        tone: v.versi === selected.versions[selected.versions.length - 1]?.versi ? 'success' as const : 'default' as const,
-      })),
-    [selected]
-  );
-
   return (
-    <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
+    <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={visibleSpec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
+      {activeScreen === 'form-mr' && <FormMrPerObjek currentUser={currentUser} />}
+
       {activeScreen === 'kk-aktif' && (
-        <div className="grid lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2"><Table columns={columns} data={KERTAS_KERJA_DIGITAL} rowKey={(r) => r.id} /></Card>
-          <div className="space-y-4">
-            <FadeInUp>
-              <Card>
-                <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Status KK</Typography>
-                <DonutChart segments={statusDistribution} centerLabel="KK Aktif" centerValue={String(KERTAS_KERJA_DIGITAL.length)} />
-              </Card>
-            </FadeInUp>
-            <FadeInUp>
-              <Card>
-                <Typography variant="label-bold" className="text-slate-700 mb-2">Riwayat Versi — {selected.judulProsedur}</Typography>
-                {selected.versions.length > 0 ? (
-                  <Timeline items={versionTimeline} />
-                ) : (
-                  <p className="text-xs text-slate-400">Belum ada riwayat versi.</p>
-                )}
-              </Card>
-            </FadeInUp>
-          </div>
-        </div>
+        <Card><Table columns={columns} data={KERTAS_KERJA_DIGITAL} rowKey={(r) => r.id} /></Card>
       )}
 
       {activeScreen === 'form-pengisian' && (

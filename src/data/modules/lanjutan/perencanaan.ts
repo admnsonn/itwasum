@@ -6,7 +6,6 @@
  */
 import { createSeededRng } from '../../../utils/seededRandom';
 import { POLDA_DATA } from '../../mockData';
-import { getSatkersByPolda, getMabesSatkers } from '../../domain/satkerRegistry';
 import { PKPT_RISK_FACTORS, PKPT_JENIS_KEGIATAN, type PkptJenisKegiatan } from './constants';
 
 export type AuditiKelengkapanStatus = 'Lengkap' | 'Sebagian' | 'Placeholder' | 'Perlu Pembaruan' | 'Nonaktif';
@@ -51,16 +50,13 @@ function buildAuditiForPolda(poldaId: string, poldaNama: string, index: number):
       skorRisikoInheren: rng.round(1.5, 4.8, 2),
     },
   ];
-  const polresPool = getSatkersByPolda(poldaId).filter(
-    (s) => s.tingkat === 'Polres' || s.tingkat === 'Polresta' || s.tingkat === 'Polrestabes'
-  );
-  const pickedPolres = rng.sample(polresPool, Math.min(4, polresPool.length));
-  pickedPolres.forEach((satker, i) => {
-    const r2 = createSeededRng(`b12-auditi-${satker.id}`);
+  const jumlahPolres = rng.int(2, 5);
+  for (let i = 0; i < jumlahPolres; i++) {
+    const r2 = createSeededRng(`b12-auditi-${poldaId}-polres-${i}`);
     entries.push({
-      id: `auditi-${satker.id}`,
+      id: `auditi-${poldaId}-polres-${i}`,
       poldaId,
-      nama: satker.nama,
+      nama: `Polres ${['Utara', 'Selatan', 'Timur', 'Barat', 'Tengah'][i % 5]} ${poldaNama.replace('Polda ', '')}`,
       tingkat: 'Polres',
       tusi: r2.pick(TUSI_SAMPLES),
       strukturOrganisasi: `${r2.int(8, 14)} Satuan Fungsi, ${r2.int(4, 10)} Polsek jajaran`,
@@ -71,19 +67,24 @@ function buildAuditiForPolda(poldaId: string, poldaNama: string, index: number):
       lamaBelumDiauditTahun: r2.int(0, 6),
       skorRisikoInheren: r2.round(1.0, 4.9, 2),
     });
-  });
+  }
   return entries;
 }
 
 export const AUDIT_UNIVERSE_DATA: AuditiEntry[] = POLDA_DATA.flatMap((p, idx) => buildAuditiForPolda(p.id, p.nama, idx));
 
 /** Satker Mabes tambahan sebagai populasi Audit Universe non-kewilayahan. */
-export const AUDIT_UNIVERSE_MABES: AuditiEntry[] = getMabesSatkers().map((s) => {
-  const rng = createSeededRng(`b12-mabes-${s.id}`);
+const MABES_SATKER_NAMES = [
+  'Bareskrim Polri', 'Korlantas Polri', 'Baintelkam Polri', 'Divpropam Polri',
+  'Divhumas Polri', 'Sops Polri', 'Srena Polri', 'Slog Polri', 'SSDM Polri',
+  'Lemdiklat Polri', 'Korbrimob Polri', 'Divkum Polri',
+];
+export const AUDIT_UNIVERSE_MABES: AuditiEntry[] = MABES_SATKER_NAMES.map((nama, i) => {
+  const rng = createSeededRng(`b12-mabes-${nama}`);
   return {
-    id: `auditi-${s.id}`,
+    id: `auditi-mabes-${i}`,
     poldaId: 'mabes',
-    nama: s.nama,
+    nama,
     tingkat: 'Satker Mabes',
     tusi: rng.pick(TUSI_SAMPLES),
     strukturOrganisasi: `${rng.int(4, 10)} Biro/Direktorat pusat`,

@@ -68,14 +68,14 @@ export function ajukanUsulanBaru(usulan: Omit<UsulanHakAkses, 'id' | 'tanggalUsu
     minute: '2-digit',
     timeZone: 'Asia/Jakarta'
   };
-  const existing = getUsulanList();
   const baru: UsulanHakAkses = {
-    id: `usulan-${existing.length + 1}-${usulan.targetUserNrp || 'x'}`,
+    id: `usulan-${Date.now()}`,
     tanggalUsulan: `${now.toLocaleDateString('id-ID', options)} WIB`,
     status: 'Menunggu Persetujuan',
     ...usulan
   };
 
+  const existing = getUsulanList();
   const updated = [baru, ...existing];
   saveUsulanList(updated);
   return baru;

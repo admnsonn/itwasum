@@ -33,7 +33,6 @@ interface CommandDirectoryPanelProps {
   selectedSatkerId?: string | null;
   onSelectSatkerItem: (item: SatkerMapItem) => void;
   onSelectPolda: (poldaId: string) => void;
-  onOpenRegional?: (poldaId: string) => void;
   onSelectJenjang?: (jenjang: JenjangPengguna) => void;
   onOpenLogoExplorer?: (satkerId?: string) => void;
   activeBidang?: BidangAudit;
@@ -48,7 +47,6 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
   selectedSatkerId,
   onSelectSatkerItem,
   onSelectPolda,
-  onOpenRegional,
   onSelectJenjang,
   onOpenLogoExplorer,
   activeBidang = 'semua',
@@ -611,29 +609,17 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
               const pItem = ALL_COMBINED_SATKERS_DATA.find(s => s.id === poldaId);
               const isSelected = selectedSatkerId === poldaId;
               return (
-                <span key={poldaId} className="inline-flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => onSelectPolda(poldaId)}
-                    className={`px-2 py-0.5 rounded-l text-[10px] font-bold border transition cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#0B2B5C] text-white border-[#0B2B5C]'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-[#0B2B5C] hover:text-[#0B2B5C]'
-                    }`}
-                  >
-                    {pItem?.singkatan || poldaId.replace('polda-', '').toUpperCase()}
-                  </button>
-                  {onOpenRegional && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenRegional(poldaId)}
-                      className="px-1.5 py-0.5 rounded-r text-[9px] font-black border border-l-0 border-slate-200 bg-slate-50 text-slate-600 hover:text-[#0B2B5C] hover:border-[#0B2B5C]"
-                      title="Buka kinerja Polda (B.7)"
-                    >
-                      IKU
-                    </button>
-                  )}
-                </span>
+                <button
+                  key={poldaId}
+                  onClick={() => onSelectPolda(poldaId)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#0B2B5C] text-white border-[#0B2B5C]'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-[#0B2B5C] hover:text-[#0B2B5C]'
+                  }`}
+                >
+                  {pItem?.singkatan || poldaId.replace('polda-', '').toUpperCase()}
+                </button>
               );
             })}
           </div>
@@ -702,21 +688,7 @@ export const CommandDirectoryPanel: React.FC<CommandDirectoryPanelProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      {onOpenRegional && satker.tingkat === 'Polda' && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenRegional(satker.id);
-                          }}
-                          className="px-1.5 py-0.5 rounded text-[9px] font-black border border-slate-200 bg-white text-slate-600 hover:text-[#0B2B5C]"
-                        >
-                          IKU
-                        </button>
-                      )}
-                      <ChevronRight className={`w-4 h-4 shrink-0 transition ${isSelected ? 'text-[#0B2B5C]' : 'text-slate-400'}`} />
-                    </div>
+                    <ChevronRight className={`w-4 h-4 shrink-0 transition ${isSelected ? 'text-[#0B2B5C]' : 'text-slate-400'}`} />
                   </div>
                 );
               })

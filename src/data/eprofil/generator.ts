@@ -10,8 +10,6 @@
  */
 import { createSeededRng } from '../../utils/seededRandom';
 import type { PoldaSatker } from '../../types';
-import { makeBmnCode, parseIdDate } from '../domain/docNumber';
-import { formatIdDateFixed } from '../domain/timeline';
 import type {
   EProfilAnomaliAset,
   EProfilDetail,
@@ -122,7 +120,7 @@ function buildSumberData(rng: ReturnType<typeof createSeededRng>, domainKey: EPr
   return docs[domainKey].map((nama, i) => ({
     id: `sumber-${domainKey}-${i}`,
     namaDokumen: nama,
-    updateTerakhir: formatIdDateFixed(parseIdDate(2026, rng.int(0, 11), rng.int(1, 28))),
+    updateTerakhir: `${rng.int(1, 28)} Agu 2026`,
   }));
 }
 
@@ -134,7 +132,6 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
   if (cached) return cached;
 
   const rng = createSeededRng(`eprofil-${anchor.id}`);
-  const legacy = anchor.eProfilLegacy;
   const rbsAnchor = anchor.rbsScoreAnchor ?? rng.int(40, 95);
   const confidence = rng.int(78, 97);
 
@@ -228,20 +225,14 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
         { label: 'Kecelakaan Lalu Lintas', value: rng.int(80, 700) },
         { label: 'Patroli Terlaksana', value: rng.int(200, 1500) },
       ],
-      top5TindakPidana: ['Pencurian', 'Narkotika', 'Penipuan/Penggelapan', 'KDRT', 'Kekerasan'].map((label) => {
-        const value = rng.int(30, 400);
-        return { label, value, displayValue: `${value} kasus` };
-      }),
-      risikoPerFungsi: ['Reserse Kriminal', 'Lalu Lintas', 'Sabhara', 'Intelkam', 'Binmas'].map((label) => {
-        const value = rng.int(20, 100);
-        return { label, value, displayValue: `${value}%` };
-      }),
+      top5TindakPidana: ['Pencurian', 'Narkotika', 'Penipuan/Penggelapan', 'KDRT', 'Kekerasan'].map((label) => ({ label, value: rng.int(30, 100), displayValue: `${rng.int(30, 400)} kasus` })),
+      risikoPerFungsi: ['Reserse Kriminal', 'Lalu Lintas', 'Sabhara', 'Intelkam', 'Binmas'].map((label) => ({ label, value: rng.int(20, 100), displayValue: `${rng.int(20, 100)}%` })),
     },
     sdm: {
       komposisi: [
-        { label: 'Perwira', value: legacy?.sdmPerwira ?? rng.int(500, 4000) },
-        { label: 'Bintara', value: legacy?.sdmBintara ?? rng.int(4000, 30000) },
-        { label: 'ASN/PNS', value: legacy?.sdmPns ?? rng.int(100, 1500) },
+        { label: 'Perwira', value: rng.int(500, 4000) },
+        { label: 'Bintara', value: rng.int(4000, 30000) },
+        { label: 'ASN/PNS', value: rng.int(100, 1500) },
       ],
       golongan: ['Gol. I', 'Gol. II', 'Gol. III', 'Gol. IV'].map((label) => ({ label, value: rng.int(200, 5000) })),
       mutasi: { masuk: rng.int(20, 200), keluar: rng.int(20, 200), promosi: rng.int(10, 90) },
@@ -249,20 +240,12 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
       kehadiranPersen: rng.int(88, 99),
     },
     sarpras: {
-      statusKendaraan: ['Layak Operasional', 'Perlu Perbaikan', 'Rusak Berat'].map((label) => {
-        const value = rng.int(5, 90);
-        return { label, value, displayValue: `${value}%` };
-      }),
+      statusKendaraan: ['Layak Operasional', 'Perlu Perbaikan', 'Rusak Berat'].map((label) => ({ label, value: rng.int(5, 90), displayValue: `${rng.int(5, 90)}%` })),
       statusKontrak: ['Aktif', 'Mendekati Jatuh Tempo', 'Jatuh Tempo'].map((label) => ({ label, value: rng.int(2, 40) })),
       kesehatanAsetPersen: rng.int(70, 98),
-      persediaan: [
-        { label: 'Amunisi', value: legacy?.sarprasSenpi ?? rng.int(100, 5000) },
-        { label: 'BBM', value: rng.int(100, 5000) },
-        { label: 'ATK & Cetak', value: rng.int(100, 5000) },
-        { label: 'Suku Cadang', value: legacy?.sarprasKendaraanR2 ?? rng.int(100, 5000) },
-      ],
+      persediaan: ['Amunisi', 'BBM', 'ATK & Cetak', 'Suku Cadang'].map((label) => ({ label, value: rng.int(100, 5000) })),
       anomaliAset: Array.from({ length: rng.int(2, 5) }, (_, i): EProfilAnomaliAset => ({
-        kodeAset: makeBmnCode(rng),
+        kodeAset: `BMN-${rng.int(10000, 99999)}`,
         namaAset: rng.pick(['Kendaraan Patroli R4', 'Radio HT Genggam', 'Genset Cadangan', 'Komputer Server Satwil', 'Rompi Anti Peluru']),
         kategori: rng.pick(['Alat Angkutan', 'Peralatan Komunikasi', 'Peralatan Kantor', 'Alat Keamanan']),
         lokasi: rng.pick(['Mako Utama', 'Gudang Logistik', 'Polsek Jajaran']),
@@ -271,13 +254,13 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
       })),
     },
     garkeu: (() => {
-      const paguRp = legacy?.garkeuDipa ?? `Rp ${rng.round(0.3, 2, 2)} Triliun`;
-      const realisasiRp = legacy?.garkeuRealisasi ?? `Rp ${rng.round(0.2, 1.8, 2)} Triliun`;
-      const persenRealisasi = legacy?.persenSerapan ?? rng.round(70, 96, 1);
+      const paguRp = anchor.eProfilLegacy?.garkeuDipa ?? `Rp ${rng.round(0.3, 2, 2)} Triliun`;
+      const realisasiRp = anchor.eProfilLegacy?.garkeuRealisasi ?? `Rp ${rng.round(0.2, 1.8, 2)} Triliun`;
+      const persenRealisasi = anchor.eProfilLegacy?.persenSerapan ?? rng.round(70, 96, 1);
       return {
         paguRp,
         realisasiRp,
-        sisaRp: legacy?.garkeuDipa && legacy?.garkeuRealisasi ? '—' : `Rp ${rng.round(0.02, 0.3, 2)} Triliun`,
+        sisaRp: `Rp ${rng.round(0.02, 0.3, 2)} Triliun`,
         persenRealisasi,
         trenVsTarget: ['Tw I', 'Tw II', 'Tw III', 'Tw IV'].map((periode) => ({ periode, realisasi: rng.round(15, 30, 1), target: rng.round(20, 28, 1) })),
         penyerapanDipaPersen: persenRealisasi,

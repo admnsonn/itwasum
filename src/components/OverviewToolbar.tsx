@@ -15,8 +15,8 @@ import { MessageSquareText, GitCompareArrows, Download, X, CheckCircle2 } from '
 import type { CurrentUserProfile } from '../types';
 import { ChatItwasumCopilotView } from './views/ChatItwasumCopilotView';
 import { logEkspor } from '../utils/auditLogger';
-import { DataIntegrationNotice } from './ui/DataIntegrationNotice';
-import { PERIOD_OPTIONS, PeriodPicker, usePeriod } from '../context/PeriodContext';
+
+const PERIODE_OPTIONS = ['Triwulan I 2026', 'Triwulan II 2026', 'Triwulan III 2026', 'Triwulan IV 2026'];
 
 interface OverviewToolbarProps {
   currentUser: CurrentUserProfile;
@@ -27,9 +27,8 @@ export const OverviewToolbar: React.FC<OverviewToolbarProps> = ({ currentUser, w
   const [openChat, setOpenChat] = useState(false);
   const [openCompare, setOpenCompare] = useState(false);
   const [exportDone, setExportDone] = useState(false);
-  const { periode } = usePeriod();
-  const [periodeA, setPeriodeA] = useState<string>(PERIOD_OPTIONS[0]);
-  const [periodeB, setPeriodeB] = useState<string>(PERIOD_OPTIONS[1]);
+  const [periodeA, setPeriodeA] = useState(PERIODE_OPTIONS[0]);
+  const [periodeB, setPeriodeB] = useState(PERIODE_OPTIONS[1]);
 
   const handleExport = () => {
     logEkspor(currentUser, 'PDF Laporan Eksekutif Nasional', wilayahLabel);
@@ -41,8 +40,6 @@ export const OverviewToolbar: React.FC<OverviewToolbarProps> = ({ currentUser, w
     <>
       <div className="flex flex-wrap items-center gap-2 bg-white rounded-2xl border border-slate-200/90 shadow-sm p-2.5">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mr-1">Alat Overview:</span>
-        <PeriodPicker className="min-w-[160px]" />
-        <span className="text-[10px] text-slate-400 font-mono">Periode aktif: {periode}</span>
         <button
           onClick={() => setOpenChat(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-[11px] font-bold hover:bg-blue-100 transition-colors"
@@ -52,7 +49,7 @@ export const OverviewToolbar: React.FC<OverviewToolbarProps> = ({ currentUser, w
         </button>
         <button
           onClick={() => setOpenCompare(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-brand-700 text-[11px] font-bold hover:bg-blue-100 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 text-[11px] font-bold hover:bg-purple-100 transition-colors"
         >
           <GitCompareArrows className="w-3.5 h-3.5" />
           Banding Antar Periode (SF-010)
@@ -102,7 +99,7 @@ export const OverviewToolbar: React.FC<OverviewToolbarProps> = ({ currentUser, w
                   onChange={(e) => setPeriodeA(e.target.value)}
                   className="text-xs font-bold border border-slate-200 rounded-xl px-2.5 py-2"
                 >
-                  {PERIOD_OPTIONS.map((p) => (
+                  {PERIODE_OPTIONS.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
@@ -111,7 +108,7 @@ export const OverviewToolbar: React.FC<OverviewToolbarProps> = ({ currentUser, w
                   onChange={(e) => setPeriodeB(e.target.value)}
                   className="text-xs font-bold border border-slate-200 rounded-xl px-2.5 py-2"
                 >
-                  {PERIOD_OPTIONS.map((p) => (
+                  {PERIODE_OPTIONS.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
@@ -129,7 +126,9 @@ export const OverviewToolbar: React.FC<OverviewToolbarProps> = ({ currentUser, w
                   </div>
                 ))}
               </div>
-              <DataIntegrationNotice variant="inline" sumber="Data Mart Pengawasan (A.2)" kontrak="C.1 Service Contract DIV TIK" />
+              <p className="text-[10px] text-slate-400 mt-3">
+                Nilai perbandingan bersifat ilustratif (mock deterministik) menunggu integrasi penuh Data Mart Pengawasan (A.2).
+              </p>
             </div>
           </div>
         </>

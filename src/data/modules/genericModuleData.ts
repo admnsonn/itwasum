@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  *
  * Generator konten mock deterministik untuk modul baru yang belum punya tampilan bespoke
- * (Plan 2, bagian 2.4 & 2.5). Dipakai oleh `ComposedModuleView` di runtime browser, dan bisa
+ * (Plan 2, bagian 2.4 & 2.5). Dipakai oleh `GenericModuleView` di runtime browser, dan bisa
  * dijalankan ulang secara identik lewat `scripts/gen-mock.ts` (tsx) karena seed berbasis kode
  * modul (`ModuleDefinition.kode`), bukan `Math.random()`.
  *
@@ -14,10 +14,6 @@
 
 import { createSeededRng } from '../../utils/seededRandom';
 import { POLDA_DATA } from '../mockData';
-import { pickSatker } from '../domain/satkerRegistry';
-import { makeDocNumber, parseIdDate } from '../domain/docNumber';
-import { drawMetric } from '../domain/metricScales';
-import { formatIdDateFixed } from '../domain/timeline';
 import type { ModuleDefinition } from '../../config/moduleRegistry';
 
 export type GenericTone = 'aman' | 'perhatian' | 'kritis' | 'netral';
@@ -397,41 +393,13 @@ const DEFAULT_BLUEPRINT: ModuleContentBlueprint = {
   tableColumns: ['Nama', 'Kategori', 'Nilai', 'Terakhir Diperbarui', 'Status'],
   entitySource: 'polda',
   chartLabel: 'Tren per Periode',
-  narrativeTemplate: (kode, label) => `Modul ${kode} ${label} sedang dalam tahap pengembangan konten awal sesuai lingkup SPEKTEK.`,
-  insightTemplates: ['Nilai simulasi terverifikasi ditampilkan untuk kebutuhan demonstrasi antarmuka hingga integrasi data mart aktif.'],
+  narrativeTemplate: (kode, label) => `Modul ${kode} ${label} sedang dalam tahap pengembangan mock data awal sesuai lingkup SPEKTEK.`,
+  insightTemplates: ['Data ditampilkan sebagai mock deterministik untuk kebutuhan demonstrasi antarmuka.'],
   filterTingkat: ['Mabes', 'Polda', 'Polres'],
 };
 
 const BIDANG_FILTER = ['Semua', 'Garkeu', 'Opsnal', 'Sarpras', 'SDM'];
 const PERIODE_FILTER = ['Triwulan I 2026', 'Triwulan II 2026', 'Triwulan III 2026', 'Triwulan IV 2026'];
-
-const INTEGRATION_DETAIL_NOTE =
-  'Kontainer data telah disiapkan; nilai simulasi terverifikasi menunggu pemuatan operasional dari data mart (A.2) dan Service Contract DIV TIK (C.1).';
-
-const ETL_JADWAL = ['Batch 02:00 WIB', 'Incremental 06:00', 'CDC 15 menit'];
-
-function formatKpiValue(rng: ReturnType<typeof createSeededRng>, unit: string, label: string): string {
-  const lowerLabel = label.toLowerCase();
-  const isPercent = unit === '%';
-  const isRp = unit === 'Rp';
-  const isSkor =
-    unit === 'skor' || lowerLabel.includes('spip') || lowerLabel.includes('maturitas') || lowerLabel.includes('risiko strategis');
-  if (isPercent) return `${rng.round(78, 99, 1)}%`;
-  if (isRp) {
-    const raw = rng.int(180, 950) * 1_000_000;
-    return `Rp ${raw.toLocaleString('id-ID')}`;
-  }
-  if (isSkor) return drawMetric(rng, 'spipTerintegrasi').toFixed(2);
-  if (unit === 'ms') return `${rng.int(40, 180)} ms`;
-  if (unit === 'hari' || lowerLabel.includes('aging')) return `${Math.round(drawMetric(rng, 'agingHari'))} hari`;
-  if (unit === 'jam') return `${rng.int(1, 24)} jam`;
-  if (unit === 'menit' || unit === 'detik') {
-    const n = unit === 'detik' ? rng.int(8, 120) : rng.int(1, 45);
-    return `${n} ${unit}`;
-  }
-  const raw = rng.int(6, 240);
-  return `${raw.toLocaleString('id-ID')}${unit ? ` ${unit}` : ''}`;
-}
 
 function toneFromScore(rng: ReturnType<typeof createSeededRng>, biasSafe = 0.6): GenericTone {
   const r = rng.next();
@@ -461,7 +429,14 @@ export function getGenericModuleContent(moduleDef: Pick<ModuleDefinition, 'kode'
   const kpis: GenericKpi[] = blueprint.kpiLabels.map((label, idx) => {
     const unit = blueprint.kpiUnits[idx];
     const tone = idx === 1 ? 'aman' : idx === 2 ? toneFromScore(rng, 0.5) : 'netral';
-    const value = formatKpiValue(rng, unit, label);
+    const isPercent = unit === '%';
+    const isRp = unit === 'Rp';
+    const raw = isPercent ? rng.round(78, 99, 1) : isRp ? rng.int(180, 950) * 1_000_000 : rng.int(6, 240);
+    const value = isPercent
+      ? `${raw}%`
+      : isRp
+      ? `Rp ${raw.toLocaleString('id-ID')}`
+      : `${raw.toLocaleString('id-ID')}${unit ? ` ${unit}` : ''}`;
     const deltaSign = rng.bool(0.65) ? '+' : '-';
     const delta = `${deltaSign}${rng.round(0.5, 6.5, 1)}% dibanding periode lalu`;
     return { id: `kpi-${idx}`, label, value, delta, tone };
@@ -485,7 +460,7 @@ export function getGenericModuleContent(moduleDef: Pick<ModuleDefinition, 'kode'
       detailCatatan: [
         `Kode modul sumber: ${moduleDef.kode}.`,
         rng.pick(blueprint.insightTemplates),
-        INTEGRATION_DETAIL_NOTE,
+        'Data ini adalah mock deterministik untuk demonstrasi; nilai riil menunggu integrasi data mart (A.2) & service contract DIV TIK (C.1).',
       ],
     };
   });
@@ -512,35 +487,25 @@ export function getGenericModuleContent(moduleDef: Pick<ModuleDefinition, 'kode'
 
 function genericColumnValue(columnLabel: string, rng: ReturnType<typeof createSeededRng>): string {
   const lower = columnLabel.toLowerCase();
-  if (lower.includes('jadwal')) {
-    return rng.pick(ETL_JADWAL);
-  }
-  if (lower.includes('nomor') || lower.includes('naskah') || lower.includes('surat')) {
-    const date = parseIdDate(2026, rng.int(0, 11), rng.int(1, 28));
-    const jenis = lower.includes('surat') ? 'USUL' : lower.includes('naskah') && lower.includes('keluar') ? 'SR' : 'ND';
-    return makeDocNumber({ jenis, seq: rng.int(100, 999), date, unitKode: 'WAS.1.1' });
-  }
   if (lower.includes('status') || lower.includes('tahap') || lower.includes('level')) {
     return rng.pick(['Draft', 'Dalam Proses', 'Menunggu Persetujuan', 'Selesai']);
   }
   if (lower.includes('skor') || lower.includes('nilai') || lower.includes('akurasi') || lower.includes('kepatuhan') || lower.includes('sla') || lower.includes('completeness') || lower.includes('accuracy') || lower.includes('timeliness')) {
-    if (lower.includes('skor') && (lower.includes('maturitas') || lower.includes('spip') || lower.includes('risiko'))) {
-      return drawMetric(rng, 'spipTerintegrasi').toFixed(2);
-    }
     return `${rng.round(70, 99, 1)}%`;
   }
   if (lower.includes('aging') || lower.includes('hari')) {
-    return `${Math.round(drawMetric(rng, 'agingHari'))} hari`;
+    return `${rng.int(1, 180)} hari`;
   }
   if (lower.includes('terakhir') || lower.includes('tanggal')) {
-    const date = parseIdDate(2026, rng.int(0, 11), rng.int(1, 28));
-    return formatIdDateFixed(date);
+    const tanggal = rng.int(1, 28);
+    const bulan = rng.pick(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep']);
+    return `${tanggal} ${bulan} 2026`;
   }
   if (lower.includes('versi')) {
     return `v${rng.int(1, 3)}.${rng.int(0, 9)}`;
   }
   if (lower.includes('auditor') || lower.includes('pemohon') || lower.includes('penyusun') || lower.includes('pemilik')) {
-    return pickSatker(rng, 'polda').nama;
+    return rng.pick(['Kompol Fitri Handayani', 'AKBP Wahyu Kuncoro', 'Kombes Pol. Dedi Supriyadi', 'Tim Data Steward Itwasum']);
   }
-  return rng.pick(ETL_JADWAL);
+  return rng.pick(DOMAIN_INTEGRASI);
 }

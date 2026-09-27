@@ -17,7 +17,6 @@ import type { CurrentUserProfile } from '../../types';
 import { askDataQuestion, isGeminiConfigured } from '../../services/geminiClient';
 import { logLLMQuestion, logLLMQuestionDenied } from '../../utils/auditLogger';
 import { Alert } from '../charts/Alert';
-import { DataIntegrationNotice } from '../ui/DataIntegrationNotice';
 
 interface ChatMessage {
   id: string;
@@ -78,7 +77,7 @@ export const ChatItwasumCopilotView: React.FC<ChatItwasumCopilotViewProps> = ({ 
       'Temuan BPK/IRSUS (B.2/B.3), IKU Satker (B.7), Manajemen Rekomendasi & TLHP (B.16).';
 
     const result = await askDataQuestion(question, contextSummary);
-    logLLMQuestion(currentUser, question, result.source === 'gemini' ? 'Gemini API' : 'Cadangan terverifikasi (API key kosong)');
+    logLLMQuestion(currentUser, question, result.source === 'gemini' ? 'Gemini API' : 'Mock deterministik (API key kosong)');
 
     setMessages((prev) => [
       ...prev,
@@ -99,11 +98,8 @@ export const ChatItwasumCopilotView: React.FC<ChatItwasumCopilotViewProps> = ({ 
         </p>
         <div className="mt-2">
           <Alert tone={isGeminiConfigured ? 'success' : 'warning'}>
-            {isGeminiConfigured ? 'Terhubung ke Gemini API' : 'Layanan percakapan memakai mode cadangan karena VITE_GEMINI_API_KEY belum dikonfigurasi'}
+            {isGeminiConfigured ? 'Terhubung ke Gemini API' : 'Mode Demo (mock) - VITE_GEMINI_API_KEY belum dikonfigurasi'}
           </Alert>
-          {!isGeminiConfigured && (
-            <DataIntegrationNotice variant="inline" className="mt-2" sumber="E.5 ChatItwasum" tahap="Integrasi Gemini / RAG E.2" />
-          )}
         </div>
       </div>
 
@@ -126,7 +122,7 @@ export const ChatItwasumCopilotView: React.FC<ChatItwasumCopilotViewProps> = ({ 
                 {m.role === 'assistant' && (
                   <div className="flex items-center gap-1 mb-1 text-[9px] font-bold text-slate-400 uppercase">
                     <Sparkles className="w-2.5 h-2.5" />
-                    ChatItwasum {m.source === 'gemini' ? '(Gemini)' : '(cadangan terverifikasi)'}
+                    ChatItwasum {m.source === 'mock' && '(mock)'}
                   </div>
                 )}
                 {m.text}

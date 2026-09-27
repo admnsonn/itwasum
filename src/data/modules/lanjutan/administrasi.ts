@@ -7,9 +7,6 @@
  */
 import { createSeededRng } from '../../../utils/seededRandom';
 import { AUDITOR_LIST } from '../../mockData';
-import { makeDocNumber, parseIdDate } from '../../domain/docNumber';
-import { formatIdDateFixed } from '../../domain/timeline';
-import { pickSatker, getAllSatkers } from '../../domain/satkerRegistry';
 import { EOFFICE_KECEPATAN, EOFFICE_KERAHASIAAN, type EOfficeKerahasiaan, LOG_ANOMALI_AMBANG_PERSEN } from './constants';
 
 /* ============================== B.4 Surat Usulan ============================== */
@@ -41,21 +38,19 @@ export const SURAT_USULAN_DATA: SuratUsulanEntry[] = Array.from({ length: 16 }, 
   const rng = createSeededRng(`b4-usulan-${i}`);
   const status = STATUS_USULAN[rng.int(0, STATUS_USULAN.length)];
   const tahapReview = status === 'Disahkan' || status === 'Dibatalkan Setelah Pengesahan' ? 3 : rng.int(1, 3);
-  const tanggal = parseIdDate(2026, rng.int(0, 11), rng.int(1, 28));
-  const satker = pickSatker(rng, rng.bool(0.7) ? 'polda' : 'all');
   return {
     id: `usulan-b4-${i}`,
-    nomorUsulan: makeDocNumber({ jenis: 'USUL', seq: 100 + i, date: tanggal, unitKode: 'WAS.1.1' }),
+    nomorUsulan: `USUL/${100 + i}/VIII/WAS.1.1/2026`,
     jenis: JENIS_USULAN[rng.int(0, JENIS_USULAN.length)],
     pemohon: rng.pick(AUDITOR_LIST).nama,
-    satkerPemohon: satker.nama,
+    satkerPemohon: rng.pick(['Itwasda Polda Riau', 'Itwasda Polda Jabar', 'Itbidjemen SDM Itwasum Polri', 'Itbidjemen Garkeu Itwasum Polri']),
     perihal: rng.pick([
       'Usulan mutasi personel auditor bidang Garkeu',
       'Usulan perubahan hak akses modul E-Profile satker',
       'Usulan penugasan khusus tim asistensi darurat',
       'Usulan penambahan bidang audit untuk auditor madya',
     ]),
-    tanggalPengajuan: formatIdDateFixed(tanggal),
+    tanggalPengajuan: `${rng.int(1, 28)} Agu 2026`,
     status,
     tahapReview,
     totalTahapReview: 3,
@@ -63,7 +58,7 @@ export const SURAT_USULAN_DATA: SuratUsulanEntry[] = Array.from({ length: 16 }, 
     reviewerAktif: status === 'Menunggu Review' ? rng.pick(['Kombes Pol. Dedi Supriyadi', 'AKBP Wahyu Kuncoro']) : undefined,
     sedangDikunci: status === 'Menunggu Review' && rng.bool(0.2) ? { oleh: rng.pick(['Kombes Pol. Dedi Supriyadi', 'AKBP Wahyu Kuncoro']), sisaMenit: rng.int(2, 15) } : undefined,
     riwayat: [
-      { tahap: 'Pengajuan', aktor: rng.pick(AUDITOR_LIST).nama, tanggal: formatIdDateFixed(tanggal), catatan: 'Usulan diajukan lengkap dengan lampiran dinas.' },
+      { tahap: 'Pengajuan', aktor: rng.pick(AUDITOR_LIST).nama, tanggal: `${rng.int(1, 28)} Agu 2026`, catatan: 'Usulan diajukan lengkap dengan lampiran dinas.' },
     ],
   };
 });
@@ -95,12 +90,9 @@ export const EOFFICE_DATA: EOfficeEntry[] = Array.from({ length: 20 }, (_, i) =>
   const kerahasiaan = rng.pick(EOFFICE_KERAHASIAAN);
   const arah: EOfficeArah = rng.bool(0.55) ? 'Masuk' : 'Keluar';
   const status = rng.pick<EOfficeStatus>(['Draf', 'Menunggu Disposisi', 'Didisposisikan', 'Selesai', 'Diarsipkan']);
-  const tanggal = parseIdDate(2026, rng.int(0, 11), rng.int(1, 28));
-  const jenis = arah === 'Masuk' ? 'ND' : 'SR';
-  const satkerTujuan = pickSatker(rng, 'polda');
   return {
     id: `naskah-${i}`,
-    nomorNaskah: makeDocNumber({ jenis, seq: 200 + i, date: tanggal, unitKode: 'Itwasum' }),
+    nomorNaskah: `${arah === 'Masuk' ? 'ND' : 'SR'}/${200 + i}/VIII/2026/Itwasum`,
     arah,
     perihal: rng.pick([
       'Permintaan Data Dukung Audit Kinerja Tahap II',
@@ -109,15 +101,15 @@ export const EOFFICE_DATA: EOfficeEntry[] = Array.from({ length: 20 }, (_, i) =>
       'Penyampaian Hasil Tindak Lanjut Temuan BPK',
       'Permohonan Perpanjangan Waktu Penyampaian Dokumen',
     ]),
-    pengirim: arah === 'Masuk' ? satkerTujuan.nama : 'Itwasum Polri',
-    tujuan: arah === 'Masuk' ? 'Itwasum Polri' : rng.pick(getAllSatkers().filter((s) => s.tingkat === 'Polda').map((s) => s.nama).slice(0, 6)),
-    tanggal: formatIdDateFixed(tanggal),
+    pengirim: arah === 'Masuk' ? rng.pick(['Polda Riau', 'Polda Jawa Barat', 'Polda Sumatera Utara', 'Sekretariat BPK RI']) : 'Itwasum Polri',
+    tujuan: arah === 'Masuk' ? 'Itwasum Polri' : rng.pick(['Polda Riau', 'Polda Jawa Barat', 'Polda Metro Jaya', 'Kapolri']),
+    tanggal: `${rng.int(1, 28)} Agu 2026`,
     kecepatan: kecepatan.label,
     slaHari: kecepatan.slaHari,
     kerahasiaan,
     status,
     disposisi: status === 'Didisposisikan' || status === 'Selesai' ? [
-      { tujuan: rng.pick(['Irwil I', 'Irwil III', 'Kabag Renmin']), instruksi: 'Mohon ditindaklanjuti dan dilaporkan hasilnya.', tanggal: formatIdDateFixed(tanggal) },
+      { tujuan: rng.pick(['Irwil I', 'Irwil III', 'Kabag Renmin']), instruksi: 'Mohon ditindaklanjuti dan dilaporkan hasilnya.', tanggal: `${rng.int(1, 28)} Agu 2026` },
     ] : [],
     tembusan: rng.sample(['Kapolri', 'Wakapolri', 'Irwasum', 'Kasetum Polri'], rng.int(0, 3)),
   };
@@ -131,9 +123,8 @@ export const LOG_VOLUME_30_HARI: LogVolumeDay[] = Array.from({ length: 30 }, (_,
   const rng = createSeededRng(`b10-volume-${i}`);
   const baseline = 40 + rng.int(-8, 12);
   const isAnomali = i === 24; // 1 hari lonjakan anomali untuk demo alert
-  const dayDate = parseIdDate(2026, 7, i + 1);
   return {
-    tanggal: formatIdDateFixed(dayDate),
+    tanggal: `${i + 1} Agu 2026`,
     jumlah: isAnomali ? Math.round(baseline * 3.4) : baseline,
   };
 });

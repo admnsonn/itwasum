@@ -20,9 +20,7 @@ import {
   DonutChart,
   EmptyState,
   FilterPanel,
-  HeatmapGrid,
   ProgressBar,
-  RiskMatrix,
   StatCard,
   Table,
   Timeline,
@@ -31,10 +29,9 @@ import {
   type BadgeColor,
   type TableColumn,
 } from '../../ui';
-import { FadeInUp } from '../../ui/motion';
-
-const TINGKAT_ROWS: AuditiEntry['tingkat'][] = ['Satker Mabes', 'Polda', 'Polres', 'Polsek'];
-const KELENGKAPAN_COLS: AuditiKelengkapanStatus[] = ['Lengkap', 'Sebagian', 'Placeholder', 'Perlu Pembaruan', 'Nonaktif'];
+import { PermintaanDataScreen } from './auditUniverse/PermintaanDataScreen';
+import { PortalSatkerScreen } from './auditUniverse/PortalSatkerScreen';
+import { VerifikasiBerkasScreen } from './auditUniverse/VerifikasiBerkasScreen';
 
 const STATUS_COLOR: Record<AuditiKelengkapanStatus, BadgeColor> = {
   Lengkap: 'success',
@@ -51,10 +48,19 @@ interface AuditUniverseViewProps {
   onSubPathChange: (subPath?: string) => void;
 }
 
-export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, onSubPathChange }) => {
+export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const moduleDef = getModuleById('b12')!;
   const spec = getModuleSpec('b12')!;
-  const activeScreen = subPath || getDefaultScreenSlug('b12') || spec.screens[0].slug;
+  const isAuditeeOnly = currentUser.peran === 'auditee';
+  const defaultSlug = isAuditeeOnly ? 'portal-satker' : getDefaultScreenSlug('b12') || spec.screens[0].slug;
+  const [rawScreenSlug, ...detailParts] = (subPath || defaultSlug).split('/');
+  const activeScreen = isAuditeeOnly ? 'portal-satker' : rawScreenSlug;
+  const detailPath = detailParts.join('/') || undefined;
+  const navigateDetail = (detail?: string) => onSubPathChange(detail ? `${activeScreen}/${detail}` : activeScreen);
+
+  // Auditee (PIC Satker) hanya melihat tab Portal Satker — sembunyikan tab lain di ModuleScreenShell
+  // dengan membatasi spec.screens yang diteruskan.
+  const visibleSpec = isAuditeeOnly ? { ...spec, screens: spec.screens.filter((s) => s.slug === 'portal-satker') } : spec;
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -98,33 +104,11 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, o
   const belumSiapSkoring = ALL_AUDITI.filter((a) => a.statusKelengkapan !== 'Lengkap');
   const rataKelengkapan = Math.round(ALL_AUDITI.reduce((s, a) => s + a.persenKelengkapan, 0) / ALL_AUDITI.length);
 
-  const heatmapKelengkapan = useMemo(() => {
-    const cells = TINGKAT_ROWS.flatMap((tingkat) =>
-      KELENGKAPAN_COLS.map((status) => {
-        const count = ALL_AUDITI.filter((a) => a.tingkat === tingkat && a.statusKelengkapan === status).length;
-        return { rowId: tingkat, colId: status, value: count, label: count ? `${count} auditi` : undefined };
-      })
-    );
-    return cells;
-  }, []);
-
-  const riskMatrixItems = useMemo(
-    () =>
-      ALL_AUDITI.map((a) => ({
-        id: a.id,
-        x: Math.min(5, Math.max(1, a.lamaBelumDiauditTahun + 1)),
-        y: Math.min(5, Math.max(1, a.skorRisikoInheren)),
-        label: a.nama,
-        riskLevel: a.skorRisikoInheren >= 4 ? 'kritis' as const : a.skorRisikoInheren >= 3 ? 'tinggi' as const : a.skorRisikoInheren >= 2 ? 'sedang' as const : 'rendah' as const,
-      })),
-    []
-  );
-
   return (
     <ModuleScreenShell
       moduleDef={moduleDef}
       groupLabel={MODULE_GROUPS[moduleDef.group].label}
-      spec={spec}
+      spec={visibleSpec}
       activeScreen={activeScreen}
       onScreenChange={onSubPathChange}
     >
@@ -136,16 +120,6 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, o
             <StatCard label="Perlu Pembaruan" value={ALL_AUDITI.filter((a) => a.statusKelengkapan === 'Perlu Pembaruan').length} />
             <StatCard label="Rata-Rata Kelengkapan" value={`${rataKelengkapan}%`} />
           </div>
-          <FadeInUp>
-            <Card>
-              <div className="text-xs font-bold text-slate-700 mb-3">Heatmap Tingkat Satker vs Status Kelengkapan</div>
-              <HeatmapGrid
-                rows={TINGKAT_ROWS.map((t) => ({ id: t, label: t }))}
-                cols={KELENGKAPAN_COLS.map((c) => ({ id: c, label: c }))}
-                cells={heatmapKelengkapan}
-              />
-            </Card>
-          </FadeInUp>
           <FilterPanel
             search={{ value: search, onChange: setSearch, placeholder: 'Cari nama satker/satwil auditi...' }}
             fields={[
@@ -228,12 +202,6 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, o
               }))}
             />
           </Card>
-          <FadeInUp className="lg:col-span-3">
-            <Card>
-              <div className="text-xs font-bold text-slate-700 mb-2">Peta Risiko Inheren (Lama Belum Diaudit × Skor Risiko)</div>
-              <RiskMatrix items={riskMatrixItems} />
-            </Card>
-          </FadeInUp>
           <Card className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-3">
               <ClipboardCheck className="w-4 h-4 text-[var(--sd-primary)]" />
@@ -257,6 +225,16 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ subPath, o
           </Card>
         </div>
       )}
+
+      {activeScreen === 'permintaan-data' && (
+        <PermintaanDataScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} />
+      )}
+
+      {activeScreen === 'portal-satker' && (
+        <PortalSatkerScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} />
+      )}
+
+      {activeScreen === 'verifikasi-berkas' && <VerifikasiBerkasScreen currentUser={currentUser} />}
     </ModuleScreenShell>
   );
 };

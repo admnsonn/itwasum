@@ -286,14 +286,6 @@ const EMBLEM_CONFIGS: Record<string, PoldaEmblemConfig> = {
     motto: 'Kasuari Bhakti',
     code: 'PBR'
   },
-  'polda-papua-barat': {
-    primaryColor: '#0369A1',
-    secondaryColor: '#FBBF24',
-    accentColor: '#059669',
-    symbolType: 'cenderawasih',
-    motto: 'Kasuari Bhakti',
-    code: 'PBR'
-  },
   'polda-papua': {
     primaryColor: '#18181B', // Papua Deep Black
     secondaryColor: '#DC2626', // Red

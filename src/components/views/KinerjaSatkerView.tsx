@@ -30,10 +30,9 @@ import { getRoleScopedPoldas } from '../../utils/roleScope';
 interface KinerjaSatkerViewProps {
   poldaList: PoldaSatker[];
   currentUser?: CurrentUserProfile;
-  onOpenRegional?: (poldaId: string) => void;
 }
 
-export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList, currentUser, onOpenRegional }) => {
+export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList, currentUser }) => {
   const scopedPoldaList = getRoleScopedPoldas(poldaList, currentUser);
   const [activeTab, setActiveTab] = useState<'iku' | 'irsus' | 'eprofil' | 'rbs'>('iku');
   const [selectedPulau, setSelectedPulau] = useState<string>('Semua');
@@ -160,21 +159,6 @@ export const KinerjaSatkerView: React.FC<KinerjaSatkerViewProps> = ({ poldaList,
                 </BarChart>
               </ResponsiveContainer>
             </div>
-
-            {onOpenRegional && (
-              <div className="flex flex-wrap gap-1.5">
-                {filteredPolda.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => onOpenRegional(p.id)}
-                    className="px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-700 hover:border-[#0B2B5C] hover:text-[#0B2B5C]"
-                  >
-                    Detail {p.singkatan}
-                  </button>
-                ))}
-              </div>
-            )}
 
             {/* Legend & Summary */}
             <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs text-slate-600 flex-wrap gap-2">

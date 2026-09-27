@@ -7,15 +7,13 @@
  * menentukan SLA disposisi, timeline disposisi, tembusan read-only, ForbiddenState untuk
  * naskah Rahasia.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import type { CurrentUserProfile } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { EOFFICE_DATA, type EOfficeEntry } from '../../../data/modules/lanjutan/administrasi';
-import { EOFFICE_KECEPATAN } from '../../../data/modules/lanjutan/constants';
-import { Badge, Button, Card, DonutChart, ForbiddenState, Input, Select, Table, Textarea, Timeline, Typography, type BadgeColor, type TableColumn } from '../../ui';
-import { FadeInUp } from '../../ui/motion';
+import { Badge, Button, Card, ForbiddenState, Input, Select, Table, Textarea, Timeline, Typography, type BadgeColor, type TableColumn } from '../../ui';
 
 const STATUS_COLOR: Record<EOfficeEntry['status'], BadgeColor> = {
   Draf: 'neutral',
@@ -62,26 +60,6 @@ export const EOfficeView: React.FC<EOfficeViewProps> = ({ currentUser, subPath, 
 
   const isRahasiaBlocked = selected.kerahasiaan === 'Rahasia' && !canViewRahasia;
 
-  const kecepatanMasukSegments = useMemo(() => {
-    const palette = ['#BA1A1A', '#EAB308', '#002265'];
-    return EOFFICE_KECEPATAN.map((k, i) => ({
-      id: k.id,
-      label: k.label,
-      value: naskahMasuk.filter((e) => e.kecepatan === k.label).length,
-      color: palette[i],
-    })).filter((s) => s.value > 0);
-  }, [naskahMasuk]);
-
-  const kecepatanAntreanSegments = useMemo(() => {
-    const palette = ['#BA1A1A', '#EAB308', '#002265'];
-    return EOFFICE_KECEPATAN.map((k, i) => ({
-      id: k.id,
-      label: k.label,
-      value: antreanDisposisi.filter((e) => e.kecepatan === k.label).length,
-      color: palette[i],
-    })).filter((s) => s.value > 0);
-  }, [antreanDisposisi]);
-
   return (
     <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
       {activeScreen === 'naskah-masuk' && (
@@ -98,22 +76,8 @@ export const EOfficeView: React.FC<EOfficeViewProps> = ({ currentUser, subPath, 
                 <div className="text-slate-500">Tanggal: {selected.tanggal}</div>
                 <div className="flex gap-1"><Badge color="primary">{selected.kecepatan}</Badge><Badge color={KERAHASIAAN_COLOR[selected.kerahasiaan]}>{selected.kerahasiaan}</Badge></div>
                 {selected.tembusan.length > 0 && <div className="text-slate-400">Tembusan (read-only): {selected.tembusan.join(', ')}</div>}
-                {selected.disposisi.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <Typography variant="label-bold" className="text-slate-600 mb-2">Timeline Disposisi</Typography>
-                    <Timeline items={selected.disposisi.map((d, i) => ({ id: `${selected.id}-dm-${i}`, title: `Ke ${d.tujuan}`, description: d.instruksi, timestamp: d.tanggal }))} />
-                  </div>
-                )}
               </div>
             )}
-            <FadeInUp className="mt-4">
-              <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Klasifikasi Kecepatan (Naskah Masuk)</Typography>
-              {kecepatanMasukSegments.length > 0 ? (
-                <DonutChart segments={kecepatanMasukSegments} centerLabel="Naskah" centerValue={String(naskahMasuk.length)} />
-              ) : (
-                <p className="text-xs text-slate-400">Belum ada naskah masuk.</p>
-              )}
-            </FadeInUp>
           </Card>
         </div>
       )}
@@ -132,18 +96,7 @@ export const EOfficeView: React.FC<EOfficeViewProps> = ({ currentUser, subPath, 
       )}
 
       {activeScreen === 'antrean-disposisi' && (
-        <div className="space-y-4">
-          <FadeInUp>
-            <Card>
-              <Typography variant="label-bold" className="text-slate-700 mb-2">Distribusi Kecepatan pada Antrean Disposisi</Typography>
-              {kecepatanAntreanSegments.length > 0 ? (
-                <DonutChart segments={kecepatanAntreanSegments} centerLabel="Antrean" centerValue={String(antreanDisposisi.length)} />
-              ) : (
-                <p className="text-xs text-slate-400">Antrean disposisi kosong.</p>
-              )}
-            </Card>
-          </FadeInUp>
-          <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid lg:grid-cols-3 gap-4">
           <Card className="lg:col-span-2"><Table columns={columns(antreanDisposisi)} data={antreanDisposisi} rowKey={(r) => r.id} /></Card>
           <Card>
             <Typography variant="label-bold" className="text-slate-700 mb-2">Timeline Disposisi — {selected.nomorNaskah}</Typography>
@@ -153,7 +106,6 @@ export const EOfficeView: React.FC<EOfficeViewProps> = ({ currentUser, subPath, 
               <Timeline items={selected.disposisi.map((d, i) => ({ id: `${selected.id}-${i}`, title: `Disposisi ke ${d.tujuan}`, description: d.instruksi, timestamp: d.tanggal }))} />
             )}
           </Card>
-          </div>
         </div>
       )}
 

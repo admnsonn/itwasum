@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, X } from 'lucide-react';
 
 interface ModalConfirmProps {
@@ -24,9 +25,9 @@ export const ModalConfirm: React.FC<ModalConfirmProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in" onClick={onCancel}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
         <div className="p-5 flex items-start gap-3.5">
@@ -78,6 +79,7 @@ export const ModalConfirm: React.FC<ModalConfirmProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

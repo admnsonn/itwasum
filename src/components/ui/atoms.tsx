@@ -80,7 +80,7 @@ const BADGE_COLOR_CLASS: Record<BadgeColor, { bg: string; text: string; dot: str
   danger: { bg: 'bg-[var(--sd-error-container)]', text: 'text-[var(--sd-error)]', dot: 'bg-[var(--sd-error)]', border: 'border-[var(--sd-error)]/30' },
   neutral: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400', border: 'border-slate-200' },
   primary: { bg: 'bg-[var(--sd-inverse-primary)]/40', text: 'text-[var(--sd-primary)]', dot: 'bg-[var(--sd-primary)]', border: 'border-[var(--sd-primary)]/20' },
-  indigo: { bg: 'bg-blue-50', text: 'text-brand-700', dot: 'bg-brand-700', border: 'border-blue-200' },
+  indigo: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500', border: 'border-indigo-200' },
   brown: { bg: 'bg-orange-50', text: 'text-orange-800', dot: 'bg-orange-600', border: 'border-orange-200' },
   teal: { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500', border: 'border-teal-200' },
   violet: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-500', border: 'border-violet-200' },

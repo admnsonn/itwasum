@@ -141,7 +141,7 @@ export interface ModuleDefinition {
   /**
    * Jika terisi, ModuleRouteView mendelegasikan render ke tampilan legacy yang sudah ada
    * (BerandaView/PengawasanTemuanView/KinerjaSatkerView/TimAuditorView/PengaturanSistemView)
-   * alih-alih ComposedModuleView. Dipakai untuk modul yang sudah punya implementasi mendalam.
+   * alih-alih GenericModuleView. Dipakai untuk modul yang sudah punya implementasi mendalam.
    */
   legacyViewId?: LegacyViewId;
   /** Sub-tab yang diteruskan ke tampilan legacy pengawasan (bpk/irsus/penugasan). */
@@ -150,6 +150,13 @@ export interface ModuleDefinition {
   rolesOverride?: OfficialRole[];
   /** Terlihat untuk peran auditee (default false untuk mayoritas modul internal APIP). */
   auditeeVisible?: boolean;
+  /**
+   * Peran tambahan yang dapat melihat modul ini meski grupnya di luar aturan default
+   * `getVisibleModulesForRole` (mis. Super Admin/Admin Polda perlu preview B.12 Audit
+   * Universe untuk mengelola Master Data & memantau Permintaan Pengumpulan Data — Plan
+   * "Migrate 27092026 prototypes").
+   */
+  extraRoles?: OfficialRole[];
   sumberSpek: string;
   status: ModuleStatus;
   deskripsi: string;
@@ -255,10 +262,14 @@ export const MODULE_REGISTRY = [
     label: 'Audit Universe',
     group: 'pengawasan-audit',
     icon: Layers,
-    sumberSpek: 'SPEKTEK III.A.2 (B.12, 80 OH); BA-SA-Lanjutan FSD/BR B.12 (Daftar Auditi/Detail Auditi/Validasi Data)',
+    auditeeVisible: true,
+    extraRoles: ['super_admin', 'admin_polda'],
+    sumberSpek:
+      'SPEKTEK III.A.2 (B.12, 80 OH); BA-SA-Lanjutan FSD/BR B.12 (Daftar Auditi/Detail Auditi/Validasi Data); ' +
+      'Prototipe 27/09/2026 (Permintaan Pengumpulan Data 5.1, Portal Satker 6.0-6.3, Antrean Verifikasi 7.1)',
     status: 'baru',
     deskripsi:
-      'Populasi lengkap objek audit (seluruh satker Mabes/Polda/Polres/Polsek) dengan skor risiko inheren 6 faktor dan status kelengkapan data sebagai basis penyusunan PKPT.',
+      'Populasi lengkap objek audit (seluruh satker Mabes/Polda/Polres/Polsek) dengan skor risiko inheren 6 faktor dan status kelengkapan data sebagai basis penyusunan PKPT. Termasuk siklus Permintaan Pengumpulan Data (Admin -> Satker -> Verifikator Itwil).',
   },
   {
     id: 'b13',
@@ -290,9 +301,12 @@ export const MODULE_REGISTRY = [
     label: 'Kertas Kerja Audit Digital',
     group: 'pengawasan-audit',
     icon: FileText,
-    sumberSpek: 'SPEKTEK III.A.2 (B.15, 140 OH); BA-SA-Lanjutan FSD/BR B.15 (KK Aktif/Form Pengisian/Antrean Validasi)',
+    auditeeVisible: true,
+    sumberSpek:
+      'SPEKTEK III.A.2 (B.15, 140 OH); BA-SA-Lanjutan FSD/BR B.15 (KK Aktif/Form Pengisian/Antrean Validasi); ' +
+      'Prototipe 27/09/2026 (Alur Form Manajemen Risiko per Objek Audit F1-F7)',
     status: 'baru',
-    deskripsi: 'Kertas Kerja Pemeriksaan (KKP/KKA) digital: eviden multifile, skor otomatis, dan validasi berjenjang Ketua Tim -> Pengawas Tim.',
+    deskripsi: 'Kertas Kerja Pemeriksaan (KKP/KKA) digital: eviden multifile, skor otomatis, validasi berjenjang Ketua Tim -> Pengawas Tim, dan alur Form Manajemen Risiko (MR) 7 tahap per objek audit yang memberi umpan balik skor RBIA untuk PKPT.',
   },
   {
     id: 'b16',
@@ -397,7 +411,7 @@ export const MODULE_REGISTRY = [
     icon: MessageSquareText,
     sumberSpek: 'SPEKTEK III.A.5 (E.5, 180 OH); Modul Overview SF-008 Tanya Jawab Data',
     status: 'baru',
-    deskripsi: 'Asisten percakapan AI untuk menjawab pertanyaan data pengawasan. Terhubung ke layanan Gemini bila kunci API tersedia; jika tidak, memakai cadangan terverifikasi.',
+    deskripsi: 'Asisten percakapan AI untuk menjawab pertanyaan data pengawasan (terhubung ke @google/genai, fallback mock bila API key kosong).',
   },
   {
     id: 'e6',
@@ -502,7 +516,8 @@ export const MODULE_REGISTRY = [
       'bukti nyata: evidence/infra-repoconfig-itwasum, evidence/helm-repoconfig-itwasum',
     status: 'nyata',
     deskripsi:
-      'Status environment Development & SIT yang berjalan (namespace, Ingress, Vault Secrets Operator, Helm chart, rilis CI terverifikasi), plus status migrasi ke DC DIVTIK.',
+      'Satu-satunya halaman berisi DATA NYATA (bukan mock): environment Development & SIT yang benar-benar berjalan ' +
+      '(namespace, Ingress, Vault Secrets Operator, 3 Helm chart, 167 rilis CI terverifikasi), plus status migrasi ke DC DIVTIK.',
   },
 
   // ========================= TATA KELOLA SISTEM =========================
@@ -559,17 +574,24 @@ export function getModulesByGroup(group: ModuleGroupId): ModuleDefinition[] {
  *   - pimpinan_tertinggi / koordinator_pengendali (dapatOverview = 'penuh'): semua grup kecuali 'tata-kelola'
  */
 export function getVisibleModulesForRole(role: OfficialRole): ModuleDefinition[] {
+  const withExtra = (base: ModuleDefinition[]): ModuleDefinition[] => {
+    const extra = MODULE_REGISTRY.filter((m) => (m.extraRoles as OfficialRole[] | undefined)?.includes(role) && !base.includes(m));
+    return [...base, ...extra];
+  };
+
   if (role === 'super_admin' || role === 'admin_polda') {
-    return MODULE_REGISTRY.filter((m) => m.group === 'overview' || m.group === 'tata-kelola');
+    return withExtra(MODULE_REGISTRY.filter((m) => m.group === 'overview' || m.group === 'tata-kelola'));
   }
   if (role === 'pengawas_tim' || role === 'ketua_tim' || role === 'auditor') {
-    return MODULE_REGISTRY.filter(
-      (m) => m.group === 'overview' || m.group === 'pengawasan-audit' || m.group === 'profil-kinerja'
+    return withExtra(
+      MODULE_REGISTRY.filter(
+        (m) => m.group === 'overview' || m.group === 'pengawasan-audit' || m.group === 'profil-kinerja'
+      )
     );
   }
   if (role === 'auditee') {
-    return MODULE_REGISTRY.filter((m) => m.group === 'overview' || m.auditeeVisible);
+    return withExtra(MODULE_REGISTRY.filter((m) => m.group === 'overview' || m.auditeeVisible));
   }
   // pimpinan_tertinggi & koordinator_pengendali: semua grup kecuali tata-kelola sistem
-  return MODULE_REGISTRY.filter((m) => m.group !== 'tata-kelola');
+  return withExtra(MODULE_REGISTRY.filter((m) => m.group !== 'tata-kelola'));
 }

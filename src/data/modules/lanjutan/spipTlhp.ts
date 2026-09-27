@@ -6,12 +6,7 @@
  * Maturitas, dan B.18 Early Warning (Plan bagian 3 & 4).
  */
 import { createSeededRng } from '../../../utils/seededRandom';
-import { POLDA_DATA, AUDITOR_LIST } from '../../mockData';
-import { ITWIL_POLDA_MAP, getItwilNama } from '../../domain/itwilMap';
-import { drawMetric } from '../../domain/metricScales';
-import { asesorName, pickPerson } from '../../domain/personnelRoster';
-import { formatIdDateFixed } from '../../domain/timeline';
-import { parseIdDate } from '../../domain/docNumber';
+import { POLDA_DATA } from '../../mockData';
 import {
   SPIP_KK_CODES,
   SPIP_ASSESSMENT_MECHANISMS,
@@ -52,21 +47,21 @@ export const SPIP_SATKER_DATA: SpipSatkerEntry[] = POLDA_DATA.map((p) => {
   const rng = createSeededRng(`b8-spip-${p.id}`);
   const kkScores: SpipKkScore[] = SPIP_KK_CODES.filter((k) => !k.startsWith('KKLEAD')).map((kode) => ({
     kode,
-    skor: drawMetric(rng, 'spipTerintegrasi'),
+    skor: rng.round(1.5, 5, 2),
     mekanisme: rng.pick(SPIP_ASSESSMENT_MECHANISMS).label,
-    asesor: asesorName(p.id, rng.pick(SPIP_ASSESSOR_ROLES).label),
+    asesor: rng.pick(SPIP_ASSESSOR_ROLES).label,
   }));
-  const kkleadI = drawMetric(rng, 'spipTerintegrasi');
-  const kkleadII = drawMetric(rng, 'spipTerintegrasi');
+  const kkleadI = rng.round(2, 5, 2);
+  const kkleadII = rng.round(2, 5, 2);
   const kk4 = kkScores.find((k) => k.kode === 'KK4')?.skor ?? 3;
   const penalti = kk4 < 2.5;
-  const kkleadIII = penalti ? Math.max(0, drawMetric(rng, 'spipTerintegrasi') - 0.5) : drawMetric(rng, 'spipTerintegrasi');
+  const kkleadIII = penalti ? Math.max(0, rng.round(1, 3.5, 2) - 0.5) : rng.round(2, 5, 2);
   const nilaiFinal = Math.round(((kkleadI + kkleadII + kkleadIII) / 3) * 100) / 100;
   return {
     poldaId: p.id,
     namaSatker: p.nama,
     tahunPenilaian: 2026,
-    tusiAsesor: SPIP_ASSESSOR_ROLES.map((r) => ({ roleId: r.id, nama: asesorName(p.id, r.label) })),
+    tusiAsesor: SPIP_ASSESSOR_ROLES.map((r) => ({ roleId: r.id, nama: rng.pick(['Kombes Pol.', 'AKBP', 'Kompol']) + ' ' + r.label.split(' ')[0] })),
     kkScores,
     nilaiKKLEAD_I: kkleadI,
     nilaiKKLEAD_II: kkleadII,
@@ -76,7 +71,7 @@ export const SPIP_SATKER_DATA: SpipSatkerEntry[] = POLDA_DATA.map((p) => {
     levelMaturitas: Math.min(5, Math.round(nilaiFinal)),
     levelLabel: getMaturityLabel(nilaiFinal),
     statusPenyimpulan: rng.pick(['Draf', 'Menunggu Reviu', 'Final']),
-    sesiEditAktif: rng.bool(0.15) ? { user: pickPerson(rng, p.id, 'irwasda').nama, sisaMenit: rng.int(2, 15) } : undefined,
+    sesiEditAktif: rng.bool(0.15) ? { user: rng.pick(['AKBP Dr. Hendri Rusmono', 'Kompol Fitri Handayani']), sisaMenit: rng.int(2, 15) } : undefined,
   };
 });
 
@@ -108,8 +103,6 @@ export const TLHP_DATA: TlhpEntry[] = POLDA_DATA.flatMap((p) => {
     const statusAging: TlhpEntry['statusAging'] = usiaHari > TLHP_AMBANG_KRITIS_HARI ? 'Kritis' : usiaHari > 365 ? 'Perhatian' : 'Normal';
     const statusTlhp = rng.pick<TlhpStatus>(['Belum Ditindaklanjuti', 'Dalam Proses', 'Selesai']);
     const buktiDiunggah = statusTlhp !== 'Belum Ditindaklanjuti' && rng.bool(0.7);
-    const rekomDate = parseIdDate(2026 - Math.floor(usiaHari / 365), rng.int(0, 11), rng.int(1, 28));
-    const verifDate = parseIdDate(2026, rng.int(0, 8), rng.int(1, 28));
     return {
       id: `tlhp-${p.id}-${i}`,
       poldaId: p.id,
@@ -122,7 +115,7 @@ export const TLHP_DATA: TlhpEntry[] = POLDA_DATA.flatMap((p) => {
         'Penertiban dokumen kepemilikan tanah/bangunan Mako jajaran',
         'Optimalisasi pengendalian internal pengelolaan PNBP',
       ]),
-      tanggalRekomendasi: formatIdDateFixed(rekomDate),
+      tanggalRekomendasi: `${rng.int(1, 28)} ${['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][rng.int(0,11)]} ${2026 - Math.floor(usiaHari / 365)}`,
       usiaHari,
       statusAging,
       statusTlhp,
@@ -131,8 +124,8 @@ export const TLHP_DATA: TlhpEntry[] = POLDA_DATA.flatMap((p) => {
       verifikasi: buktiDiunggah ? {
         hasil: rng.pick(['Selesai', 'Dalam Proses']),
         catatan: rng.pick(['Bukti dokumen lengkap dan sesuai rekomendasi.', 'Perlu bukti tambahan berupa BAST fisik.', 'Menunggu verifikasi lapangan tim asistensi.']),
-        verifikator: rng.pick(AUDITOR_LIST).nama,
-        tanggal: formatIdDateFixed(verifDate),
+        verifikator: rng.pick(['Kombes Pol. Bambang Suryo', 'AKBP Siti Nurhayati']),
+        tanggal: `${rng.int(1, 28)} Agu 2026`,
       } : undefined,
     };
   });
@@ -147,12 +140,20 @@ export interface MaturitasRollupItwil {
   satkerCount: number;
 }
 
-export const MATURITAS_ROLLUP_ITWIL: MaturitasRollupItwil[] = Object.entries(ITWIL_POLDA_MAP).map(([itwilId, poldaIds]) => {
+const ITWIL_MAP: Record<string, string[]> = {
+  'itwil-1': ['polda-aceh', 'polda-sumut', 'polda-sumbar', 'polda-riau', 'polda-kepri', 'polda-jambi'],
+  'itwil-2': ['polda-sumsel', 'polda-bengkulu', 'polda-lampung', 'polda-babel', 'polda-metro', 'polda-banten'],
+  'itwil-3': ['polda-jabar', 'polda-jateng', 'polda-diy', 'polda-jatim', 'polda-bali'],
+  'itwil-4': ['polda-kalbar', 'polda-kalteng', 'polda-kalsel', 'polda-kaltim', 'polda-kaltara'],
+  'itwil-5': ['polda-sulut', 'polda-gorontalo', 'polda-sulteng', 'polda-sulsel', 'polda-sultra', 'polda-sulbar', 'polda-ntb', 'polda-ntt', 'polda-maluku', 'polda-malut', 'polda-papua-barat', 'polda-papua'],
+};
+
+export const MATURITAS_ROLLUP_ITWIL: MaturitasRollupItwil[] = Object.entries(ITWIL_MAP).map(([itwilId, poldaIds], idx) => {
   const scores = poldaIds.map((id) => SPIP_SATKER_DATA.find((s) => s.poldaId === id)?.nilaiFinal ?? 0);
   const avg = scores.reduce((a, b) => a + b, 0) / (scores.length || 1);
   return {
     itwilId,
-    nama: getItwilNama(itwilId),
+    nama: `Inspektorat Wilayah ${['I', 'II', 'III', 'IV', 'V'][idx]}`,
     rataRataMaturitas: Math.round(avg * 100) / 100,
     satkerCount: poldaIds.length,
   };
@@ -200,9 +201,6 @@ export const EARLY_WARNING_ALERTS: EarlyWarningAlert[] = POLDA_DATA.flatMap((p) 
   if (!rng.bool(0.55)) return [];
   const rule = rng.pick(EARLY_WARNING_TRIGGER_RULES);
   const urgensi: EwUrgensi = rng.pick(['Kritis', 'Tinggi', 'Perhatian']);
-  const muncul = parseIdDate(2026, 7, rng.int(1, 28));
-  const snooze = rng.bool(0.2) ? parseIdDate(2026, 8, rng.int(1, 7)) : undefined;
-  const riwayatWaktu = parseIdDate(2026, 7, rng.int(1, 28));
   return [{
     id: `ew-${p.id}`,
     ruleId: rule.id,
@@ -211,12 +209,12 @@ export const EARLY_WARNING_ALERTS: EarlyWarningAlert[] = POLDA_DATA.flatMap((p) 
     namaSatker: p.nama,
     urgensi,
     pesan: `${rule.deskripsi} terdeteksi pada ${p.nama}.`,
-    munculSejak: formatIdDateFixed(muncul),
+    munculSejak: `${rng.int(1, 28)} Agu 2026`,
     slaProgressPersen: rng.int(10, 100),
     statusTindakLanjut: rng.pick(['Belum Ditindaklanjuti', 'Ditindaklanjuti', 'Snooze']),
-    snoozeSampai: snooze ? formatIdDateFixed(snooze) : undefined,
+    snoozeSampai: rng.bool(0.2) ? `${rng.int(1, 7)} Sep 2026` : undefined,
     riwayat: [
-      { waktu: `${formatIdDateFixed(riwayatWaktu)}, 09:${String(rng.int(10, 59)).padStart(2, '0')} WIB`, aksi: 'Peringatan dibuat sistem', aktor: 'Sistem Early Warning' },
+      { waktu: `${rng.int(1, 28)} Agu 2026, 09:${rng.int(10,59)} WIB`, aksi: 'Peringatan dibuat sistem', aktor: 'Sistem Early Warning' },
     ],
   }];
 });

@@ -1,5 +1,4 @@
 import { CurrentUserProfile, OfficialRole, WilayahLevel, BidangName } from '../types';
-import { OFFICEHOLDERS, OFFICEHOLDERS_AS_OF } from './domain/officeholders';
 
 export interface PredefinedAccountConfig {
   id: string;
@@ -32,20 +31,21 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
   // 1. Pimpinan Tertinggi (L0 - Nasional)
   {
     id: 'user-pimpinan-l0',
-    nama: OFFICEHOLDERS.irwasum.nama,
-    pangkat: OFFICEHOLDERS.irwasum.pangkat,
-    nrp: OFFICEHOLDERS.irwasum.nrp,
+    nama: 'Komjen Pol. Ahmad Dofiri, M.Si.',
+    pangkat: 'Komjen Pol',
+    nrp: '67060341',
     peran: 'pimpinan_tertinggi',
     peranLabel: 'Pimpinan Tertinggi',
     jenisPeran: 'Jabatan tetap',
     level: 'L0',
     titikWilayahId: 'nasional',
     titikWilayahNama: 'Mabes Polri (Nasional)',
-    sebutanPimpinan: 'Irwasum',
+    sebutanPimpinan: 'Kapolri / Irwasum',
     bidang: ['Opsnal', 'SDM', 'Logistik', 'Garkeu'],
     dapatOverview: 'penuh',
-    email: 'wahyu.widada@polri.go.id',
-    keteranganAkses: `Akses penuh L0 Nasional. Irwasum (${OFFICEHOLDERS.irwasum.dasar}). Data pejabat per ${OFFICEHOLDERS_AS_OF}. Dapat drill-down ke L1 Itwil, L2 Polda, L3 Polres.`
+    email: 'ahmad.dofiri@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=12',
+    keteranganAkses: 'Akses penuh L0 Nasional. Dapat drill-down ke L1 Itwil, L2 Polda, L3 Polres. Memantau seluruh 4 bidang pengawasan.'
   },
 
   // 2. Pimpinan Tertinggi (L1 - Itwil III)
@@ -64,6 +64,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Opsnal', 'SDM', 'Logistik', 'Garkeu'],
     dapatOverview: 'penuh',
     email: 'irwil3.itwasum@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=11',
     keteranganAkses: 'Akses penuh agregat Itwil III. Dapat turun ke L2 (7 Polda binaan) & L3 (Polres binaan). Tidak dapat melihat Nasional (L0) atau Itwil lain.'
   },
 
@@ -85,6 +86,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Opsnal', 'SDM', 'Logistik', 'Garkeu'],
     dapatOverview: 'penuh',
     email: 'irwasda.riau@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=53',
     keteranganAkses: 'Akses penuh Profil Polda Riau. Dapat turun ke L3 (12 Polres jajaran Riau). Tidak dapat melihat Nasional, Itwil, atau Polda lain (Sumbar, dll).'
   },
 
@@ -104,6 +106,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Opsnal', 'SDM', 'Logistik', 'Garkeu'],
     dapatOverview: 'penuh',
     email: 'bambang.suryo@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=68',
     keteranganAkses: 'Akses penuh wilayah pembinaan Itwil I (Aceh, Sumut, Sumbar, Riau, Kepri, Jambi). Drill-down L1 -> L2 -> L3. Memantau 4 bidang.'
   },
 
@@ -144,6 +147,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: [], // Document: "bidang admin sengaja kosong. Tugas admin mengelola akun, bukan baca data pengawasan"
     dapatOverview: 'tanpa_data',
     email: 'agus.triyono@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=14',
     keteranganAkses: 'Dapat Overview tanpa data pengawasan. Mengelola semua user nasional, menyetujui perubahan hak akses, kelola master satker, & log aktivitas semua wilayah.'
   },
 
@@ -165,6 +169,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: [], // Document: bidang kosong
     dapatOverview: 'tanpa_data',
     email: 'admin.itwasda.riau@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=59',
     keteranganAkses: 'Dapat Overview tanpa data pengawasan. Mengelola user wilayah Polda Riau dan Polres jajarannya, usul perubahan hak akses, & lihat log wilayahnya.'
   },
 
@@ -184,6 +189,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Opsnal', 'Garkeu'],
     dapatOverview: 'tidak',
     email: 'dedi.supriyadi@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=13',
     suratTugasNomor: 'ST/412/VIII/WAS.1.1/2026',
     suratTugasObjek: 'Audit Kinerja Tahap II Polda Riau & Jajaran',
     keteranganAkses: 'Kewenangan berbasis Surat Tugas (ST/412). Hak Overview tidak aktif, dialihkan ke E-Audit untuk supervisi Kertas Kerja (KKA) & pengesahan temuan.'
@@ -205,6 +211,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Opsnal', 'SDM', 'Logistik', 'Garkeu'],
     dapatOverview: 'tidak',
     email: 'wahyu.kuncoro@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=60',
     suratTugasNomor: 'ST/412/VIII/WAS.1.1/2026',
     suratTugasObjek: 'Lokus Mapolda Riau, Pekanbaru, Kampar, Dumai, Bengkalis',
     keteranganAkses: 'Kewenangan operasional tim periksa berbasis Surat Tugas (ST/412). Hak Overview dialihkan ke E-Audit untuk koordinasi KKP, uji petik fisik, & Naskah Hasil Audit Sementara (NHAS).'
@@ -226,6 +233,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Garkeu'],
     dapatOverview: 'tidak',
     email: 'fitri.handayani@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=47',
     suratTugasNomor: 'ST/412/VIII/WAS.1.1/2026',
     suratTugasObjek: 'Pengujian Sub-Bidang Garkeu & PNBP Polda Riau',
     keteranganAkses: 'Kewenangan teknis pengujian bukti dukung & KKP Garkeu ST/412. Hak Overview dialihkan ke E-Audit untuk pengisian lembar temuan pemeriksaan.'
@@ -248,6 +256,7 @@ export const PREDEFINED_ROLES_ACCOUNTS: PredefinedAccountConfig[] = [
     bidang: ['Opsnal', 'SDM', 'Logistik', 'Garkeu'],
     dapatOverview: 'tidak',
     email: 'kapolres.kampar@polri.go.id',
+    avatarUrl: 'https://i.pravatar.cc/160?img=64',
     suratTugasNomor: 'ST/412/VIII/WAS.1.1/2026',
     suratTugasObjek: 'Objek Audit Kinerja Tahap II T.A. 2026',
     keteranganAkses: 'Kewenangan Objek Periksa Satker L3 (Polres Kampar). Hak Overview dialihkan ke Portal E-Audit untuk tindak lanjut rekomendasi, unggah eviden sanggahan, & koordinasi pemeriksa.'

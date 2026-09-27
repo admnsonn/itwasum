@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Calculator, 
@@ -22,8 +23,8 @@ export const MetodologiModal: React.FC<MetodologiModalProps> = ({ isOpen, onClos
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-xs animate-in fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[100050] flex items-center justify-center p-3 sm:p-6 bg-slate-900/70 backdrop-blur-xs animate-in fade-in" onClick={onClose}>
       <div 
         className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -137,9 +138,9 @@ export const MetodologiModal: React.FC<MetodologiModalProps> = ({ isOpen, onClos
                 </div>
 
                 <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-1">
-                  <div className="flex items-center justify-between font-bold text-xs text-brand-700">
+                  <div className="flex items-center justify-between font-bold text-xs text-purple-700">
                     <span>3. SARPRAS (20%)</span>
-                    <span className="px-1.5 py-0.2 bg-blue-50 rounded text-[10px]">Logistik</span>
+                    <span className="px-1.5 py-0.2 bg-purple-50 rounded text-[10px]">Logistik</span>
                   </div>
                   <p className="text-[11px] text-slate-600">
                     Sertifikasi aset BMN, transparansi pengadaan e-katalog, dan kesiapan alutsista per Polsek.
@@ -298,6 +299,7 @@ export const MetodologiModal: React.FC<MetodologiModalProps> = ({ isOpen, onClos
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

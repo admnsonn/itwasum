@@ -39,7 +39,6 @@ import {
 } from '../../data/modules/d-deployment';
 import { BackgroundDashboard } from '../charts/BackgroundDashboard';
 import { AppPieChart } from '../charts/PieChart';
-import { DataIntegrationNotice } from '../ui/DataIntegrationNotice';
 
 const chartData = ['dev', 'sit'].map((env) => {
   const row: Record<string, string | number> = { env: env === 'dev' ? 'Development' : 'SIT' };
@@ -63,19 +62,13 @@ export const DeploymentEnvironmentView: React.FC = () => {
     <div className="space-y-4">
       <BackgroundDashboard
         title="Status Deployment & Environment (D.1-D.2)"
-        subtitle="D.1 Implementasi Sistem di Environment DC DIVTIK & D.2 Staging dan Konfigurasi DC DIVTIK. Angka di halaman ini dibaca dari repositori GitOps Development & SIT."
+        subtitle="D.1 Implementasi Sistem di Environment DC DIVTIK & D.2 Staging dan Konfigurasi DC DIVTIK. Satu-satunya halaman dengan data nyata (bukan mock), dibaca langsung dari dua repo GitOps referensi."
         stats={[
           { label: 'Total Commit Kedua Repo', value: `${totalCommits}`, icon: GitBranch },
           { label: 'Komponen Terdeploy', value: `${DEPLOYMENT_COMPONENTS.length / 2}`, icon: Boxes },
           { label: 'Binding Vault Secret', value: `${VAULT_SECRET_BINDINGS.length}`, icon: KeyRound },
           { label: 'Environment Cloud', value: '2 dari 3', icon: Cloud },
         ]}
-      />
-
-      <DataIntegrationNotice
-        variant="inline"
-        sumber="evidence/infra-repoconfig-itwasum & helm-repoconfig-itwasum"
-        tahap="Pra-migrasi DC DIVTIK"
       />
 
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3 flex flex-wrap items-center gap-3 text-[10px] text-slate-400 font-mono">
@@ -156,7 +149,7 @@ export const DeploymentEnvironmentView: React.FC = () => {
                   <tr key={idx} className="border-t border-slate-100">
                     <td className="px-3 py-2 font-bold text-slate-700 whitespace-nowrap">{c.componentLabel}</td>
                     <td className="px-3 py-2">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${c.envId === 'dev' ? 'bg-blue-50 text-blue-700' : 'bg-blue-50 text-brand-700'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${c.envId === 'dev' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
                         {c.envId.toUpperCase()}
                       </span>
                     </td>
@@ -201,7 +194,7 @@ export const DeploymentEnvironmentView: React.FC = () => {
                 {VAULT_SECRET_BINDINGS.map((v, idx) => (
                   <tr key={idx} className="border-t border-slate-100">
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold mr-1 ${v.envId === 'dev' ? 'bg-blue-50 text-blue-700' : 'bg-blue-50 text-brand-700'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold mr-1 ${v.envId === 'dev' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
                         {v.envId.toUpperCase()}
                       </span>
                       <span className="font-bold text-slate-700">{v.componentLabel}</span>
