@@ -58,18 +58,23 @@ import {
   createBidjemen,
   updateBidjemen,
   setBidjemenActive,
-  deleteBidjemen,
   createKatalogDokumen,
   updateKatalogDokumen,
   setKatalogDokumenActive,
   deleteKatalogDokumen,
+  createObjekPemeriksaan,
+  updateObjekPemeriksaan,
+  setObjekPemeriksaanActive,
+  getTemplateByDok,
+  createTemplateDokumen,
+  updateTemplateDokumen,
   resetAuditUniverseSeed,
   JENJANG_ORG_LIST,
   JENJANG_TIPOLOGI,
   ITWIL_LIST,
   KATEGORI_DOKUMEN,
 } from '../../../data/auditUniverse';
-import type { OrgUnit, Tipologi, JenisPengawasan, Bidjemen, KatalogDokumen, JenjangOrg } from '../../../data/auditUniverse';
+import type { OrgUnit, Tipologi, JenisPengawasan, Bidjemen, KatalogDokumen, JenjangOrg, ObjekPemeriksaan, TemplateDokumen } from '../../../data/auditUniverse';
 
 const JENJANG_INDUK_RULE: Record<JenjangOrg, JenjangOrg[]> = {
   'Mabes Polri': [],
@@ -336,9 +341,12 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
   const [tip, setTip] = useState(org?.tip ?? '');
   const [kode, setKode] = useState(org?.kode ?? '');
   const [ang, setAng] = useState<OrgUnit['ang']>(org?.ang ?? '');
+  const [berlakuMulai, setBerlakuMulai] = useState(org?.berlakuMulai ?? '');
+  const [berlakuSampai, setBerlakuSampai] = useState(org?.berlakuSampai ?? '');
   const [error, setError] = useState('');
   const [confirmItwil, setConfirmItwil] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [showRiwayat, setShowRiwayat] = useState(false);
 
   const indukOptions: SelectOption[] = state.orgUnits
     .filter((o) => JENJANG_INDUK_RULE[jenjang]?.includes(o.jenjang) && o.aktif)
@@ -353,7 +361,7 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
   const attemptClose = () => (isDirty ? setConfirmDiscard(true) : onClose());
 
   const doSave = () => {
-    const payload = { jenjang, induk, nama: nama.trim(), sing: sing.trim(), itwil: showItwil ? itwil : '', tip: showTipKode ? (tip || null) : null, kode, ang, peng: org?.peng ?? '', ketTip: org?.ketTip ?? '', perm: org?.perm ?? false, alasan: org?.alasan ?? '' };
+    const payload = { jenjang, induk, nama: nama.trim(), sing: sing.trim(), itwil: showItwil ? itwil : '', tip: showTipKode ? (tip || null) : null, kode, ang, peng: org?.peng ?? '', ketTip: org?.ketTip ?? '', perm: org?.perm ?? false, alasan: org?.alasan ?? '', berlakuMulai: berlakuMulai || undefined, berlakuSampai: berlakuSampai || undefined };
     if (mode === 'create') {
       createOrgUnit(payload);
       onSaved(`${sing} berhasil ditambahkan.`);
@@ -469,6 +477,37 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1.5">Status Anggaran (DIPA Mandiri)</label>
             <Select options={[{ value: 'ya', label: 'Ya, mandiri' }, { value: 'tidak', label: 'Tidak, dikelola induk' }]} value={ang} onChange={(v) => setAng(v as OrgUnit['ang'])} disabled={readOnly} />
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Berlaku Mulai</label>
+            <Input type="date" value={berlakuMulai} onChange={(e) => setBerlakuMulai(e.target.value)} disabled={readOnly} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Berlaku Sampai</label>
+            <Input type="date" value={berlakuSampai} onChange={(e) => setBerlakuSampai(e.target.value)} disabled={readOnly} />
+          </div>
+        </div>
+        {org && (
+          <div className="pt-2 border-t border-slate-100">
+            <button onClick={() => setShowRiwayat((v) => !v)} className="text-[11px] font-bold text-[var(--sd-primary)] hover:underline">
+              {showRiwayat ? 'Sembunyikan Riwayat Perubahan' : `Lihat Riwayat Perubahan (${org.history?.length ?? 0})`}
+            </button>
+            {showRiwayat && (
+              <ul className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
+                {(org.history ?? []).length === 0 ? (
+                  <li className="text-[11px] text-slate-400">Belum ada riwayat tercatat.</li>
+                ) : (
+                  [...(org.history ?? [])].reverse().map((h, i) => (
+                    <li key={i} className="text-[11px] text-slate-500 flex items-center justify-between gap-2 py-1 px-2 rounded-[6px] bg-slate-50">
+                      <span>{h.aksi} — <span className="text-slate-400">{h.oleh}</span></span>
+                      <span className="font-mono text-slate-400 shrink-0">{h.waktu}</span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
           </div>
         )}
         {mode === 'view' && org && (
@@ -688,6 +727,9 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
   const state = useAuditUniverseStore();
   const [target, setTarget] = useState<OrgUnit | null>(null);
   const [pick, setPick] = useState('');
+  const [skNomor, setSkNomor] = useState('');
+  const [skTanggal, setSkTanggal] = useState(new Date().toISOString().slice(0, 10));
+  const [skError, setSkError] = useState('');
   const [kosongkanTarget, setKosongkanTarget] = useState<OrgUnit | null>(null);
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
 
@@ -710,7 +752,7 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
           <span className="text-[11px] text-slate-400">—</span>
         ) : (
           <div className="flex items-center gap-2">
-            <button onClick={() => { setTarget(o); setPick(o.tip ?? ''); }} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">
+            <button onClick={() => { setTarget(o); setPick(o.tip ?? ''); setSkNomor(''); setSkError(''); }} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">
               {o.tip ? 'Ubah' : 'Tetapkan'}
             </button>
             {o.tip && (
@@ -742,7 +784,8 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
               <Button variant="outline" onClick={() => setTarget(null)}>Batal</Button>
               <Button
                 onClick={() => {
-                  assignTipologiToOrg(target.id, pick || null);
+                  const result = assignTipologiToOrg(target.id, pick || null, { nomor: skNomor, tanggal: skTanggal });
+                  if (!result.ok) return setSkError(result.reason ?? 'Gagal menyimpan.');
                   notify(`Tipologi ${target.sing} berhasil ditetapkan.`);
                   setTarget(null);
                 }}
@@ -752,13 +795,34 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
             </>
           }
         >
-          <label className="block text-xs font-bold text-slate-600 mb-1.5">Tipologi</label>
-          <Select
-            options={state.tipologi.filter((t) => t.jenjang === target.jenjang && t.aktif).map((t) => ({ value: t.id, label: t.nama }))}
-            value={pick}
-            onChange={setPick}
-            placeholder="Belum ditetapkan"
-          />
+          <div className="space-y-3">
+            {skError && <div className="p-2.5 rounded-[8px] bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">{skError}</div>}
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">Tipologi</label>
+              <Select
+                options={state.tipologi.filter((t) => t.jenjang === target.jenjang && t.aktif).map((t) => ({ value: t.id, label: t.nama }))}
+                value={pick}
+                onChange={setPick}
+                placeholder="Belum ditetapkan"
+              />
+            </div>
+            <div className="p-3 rounded-[10px] bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
+              Perubahan tipologi mensyaratkan persetujuan (Nomor SK) sesuai BR 4.2.
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Nomor SK Persetujuan</label>
+                <Input value={skNomor} onChange={(e) => setSkNomor(e.target.value)} placeholder="Mis. SK/123/IX/2026/ITWASUM" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Tanggal SK</label>
+                <Input type="date" value={skTanggal} onChange={(e) => setSkTanggal(e.target.value)} />
+              </div>
+            </div>
+            {target.tipSkNomor && (
+              <p className="text-[11px] text-slate-400">SK penetapan sebelumnya: {target.tipSkNomor} ({target.tipSkTanggal}) — disetujui oleh {target.tipDisetujuiOleh}.</p>
+            )}
+          </div>
         </Modal>
       )}
 
@@ -771,7 +835,7 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
           footer={
             <>
               <Button variant="outline" onClick={() => setKosongkanTarget(null)}>Batal</Button>
-              <Button variant="danger" onClick={() => { assignTipologiToOrg(kosongkanTarget.id, null); notify(`Tipologi ${kosongkanTarget.sing} dikosongkan.`); setKosongkanTarget(null); }}>Kosongkan</Button>
+              <Button variant="danger" onClick={() => { assignTipologiToOrg(kosongkanTarget.id, null, { nomor: '', tanggal: '' }); notify(`Tipologi ${kosongkanTarget.sing} dikosongkan.`); setKosongkanTarget(null); }}>Kosongkan</Button>
             </>
           }
         />
@@ -790,12 +854,120 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
  * 4.3 Jenis Pengawasan & Bidjemen
  * ============================================================================================ */
 const JenisPengawasanScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
-  const [tab, setTab] = useState<'jenis' | 'bidjemen'>('jenis');
+  const [tab, setTab] = useState<'jenis' | 'objek' | 'bidjemen'>('jenis');
   return (
     <div className="space-y-3">
-      <SegmentedControl options={[{ value: 'jenis', label: 'Jenis Pengawasan' }, { value: 'bidjemen', label: 'Bidjemen' }]} value={tab} onChange={(v) => setTab(v as 'jenis' | 'bidjemen')} />
-      {tab === 'jenis' ? <JenisPengawasanTable readOnly={readOnly} notify={notify} /> : <BidjemenTable readOnly={readOnly} notify={notify} />}
+      <SegmentedControl
+        options={[{ value: 'jenis', label: 'Jenis Pengawasan' }, { value: 'objek', label: 'Objek Pemeriksaan' }, { value: 'bidjemen', label: 'Bidjemen' }]}
+        value={tab}
+        onChange={(v) => setTab(v as 'jenis' | 'objek' | 'bidjemen')}
+      />
+      {tab === 'jenis' && <JenisPengawasanTable readOnly={readOnly} notify={notify} />}
+      {tab === 'objek' && <ObjekPemeriksaanTable readOnly={readOnly} notify={notify} />}
+      {tab === 'bidjemen' && <BidjemenTable readOnly={readOnly} notify={notify} />}
     </div>
+  );
+};
+
+/** 4.3 Objek Pemeriksaan — entitas anak Jenis Pengawasan (Plane B.1 Pra-Audit "Objek
+ * Pengawasan"), dengan bidang, siklus, dan dasar hukum. */
+const ObjekPemeriksaanTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+  const state = useAuditUniverseStore();
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; op?: ObjekPemeriksaan } | null>(null);
+
+  const columns: TableColumn<ObjekPemeriksaan>[] = [
+    { key: 'nama', header: 'Objek Pemeriksaan', render: (o) => <span className="font-bold text-slate-800">{o.nama}</span> },
+    { key: 'jp', header: 'Jenis Pengawasan', render: (o) => state.jenisPengawasan.find((j) => j.id === o.jpId)?.nama ?? o.jpId },
+    { key: 'bidang', header: 'Bidang', render: (o) => o.bidang },
+    { key: 'siklus', header: 'Siklus', render: (o) => <Badge color="info">{o.siklus}</Badge> },
+    { key: 'dasar', header: 'Dasar Hukum', render: (o) => <span className="text-[11px] text-slate-500">{o.dasarHukum}</span> },
+    { key: 'status', header: 'Status', render: (o) => { const s = STATUS_BADGE(o.aktif); return <Badge color={s.color}>{s.label}</Badge>; } },
+    ...(readOnly
+      ? []
+      : [
+          {
+            key: 'aksi',
+            header: 'Aksi',
+            render: (o: ObjekPemeriksaan) => (
+              <div className="flex items-center gap-2">
+                <button onClick={() => setModal({ mode: 'edit', op: o })} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Ubah</button>
+                <button onClick={() => setObjekPemeriksaanActive(o.id, !o.aktif)} className="text-xs font-bold text-slate-500 hover:underline">{o.aktif ? 'Nonaktifkan' : 'Aktifkan'}</button>
+              </div>
+            ),
+          } as TableColumn<ObjekPemeriksaan>,
+        ]),
+  ];
+
+  return (
+    <div className="space-y-3">
+      {!readOnly && (
+        <div className="flex justify-end">
+          <Button onClick={() => setModal({ mode: 'create' })}><Plus className="w-4 h-4" /> Tambah Objek Pemeriksaan</Button>
+        </div>
+      )}
+      <Table columns={columns} data={state.objekPemeriksaan} rowKey={(o) => o.id} />
+      {modal && (
+        <ObjekPemeriksaanFormModal
+          mode={modal.mode}
+          op={modal.op}
+          onClose={() => setModal(null)}
+          onSaved={(m) => { notify(m); setModal(null); }}
+        />
+      )}
+    </div>
+  );
+};
+
+const ObjekPemeriksaanFormModal: React.FC<{ mode: 'create' | 'edit'; op?: ObjekPemeriksaan; onClose: () => void; onSaved: (m: string) => void }> = ({ mode, op, onClose, onSaved }) => {
+  const state = useAuditUniverseStore();
+  const [jpId, setJpId] = useState(op?.jpId ?? state.jenisPengawasan.find((j) => !j.induk && j.aktif)?.id ?? '');
+  const [nama, setNama] = useState(op?.nama ?? '');
+  const [bidang, setBidang] = useState(op?.bidang ?? '');
+  const [siklus, setSiklus] = useState<ObjekPemeriksaan['siklus']>(op?.siklus ?? 'Tahunan');
+  const [dasarHukum, setDasarHukum] = useState(op?.dasarHukum ?? '');
+  const [error, setError] = useState('');
+
+  const handleSave = () => {
+    if (!nama.trim()) return setError('Nama objek pemeriksaan wajib diisi.');
+    if (mode === 'create') {
+      createObjekPemeriksaan({ jpId, nama: nama.trim(), bidang, siklus, dasarHukum });
+      onSaved('Objek Pemeriksaan berhasil ditambahkan.');
+    } else if (op) {
+      updateObjekPemeriksaan(op.id, { jpId, nama: nama.trim(), bidang, siklus, dasarHukum });
+      onSaved('Objek Pemeriksaan berhasil diperbarui.');
+    }
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={mode === 'create' ? 'Tambah Objek Pemeriksaan' : `Ubah ${op?.nama}`}
+      footer={<><Button variant="outline" onClick={onClose}>Batal</Button><Button onClick={handleSave}>Simpan</Button></>}
+    >
+      <div className="space-y-3">
+        {error && <div className="p-2.5 rounded-[8px] bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">{error}</div>}
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Jenis Pengawasan</label>
+          <Select options={state.jenisPengawasan.filter((j) => !j.induk && j.aktif).map((j) => ({ value: j.id, label: j.nama }))} value={jpId} onChange={setJpId} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Objek Pemeriksaan</label>
+          <Input value={nama} onChange={(e) => setNama(e.target.value)} />
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Bidang</label>
+            <Input value={bidang} onChange={(e) => setBidang(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Siklus</label>
+            <Select options={(['Tahunan', 'Semesteran', 'Triwulanan', 'Ad-hoc'] as const).map((s) => ({ value: s, label: s }))} value={siklus} onChange={(v) => setSiklus(v as ObjekPemeriksaan['siklus'])} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Dasar Hukum</label>
+          <Textarea value={dasarHukum} onChange={(e) => setDasarHukum(e.target.value)} rows={2} />
+        </div>
+      </div>
+    </Modal>
   );
 };
 
@@ -1021,7 +1193,6 @@ const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }
   const state = useAuditUniverseStore();
   const [modal, setModal] = useState<{ mode: 'create' | 'edit' | 'view'; bj?: Bidjemen } | null>(null);
   const [nonaktifTarget, setNonaktifTarget] = useState<Bidjemen | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Bidjemen | null>(null);
 
   const columns: TableColumn<Bidjemen>[] = [
     { key: 'id', header: 'Kode', render: (b) => <span className="font-mono text-[11px] text-slate-400">{b.id}</span> },
@@ -1049,7 +1220,6 @@ const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }
             <button onClick={() => (b.aktif ? setNonaktifTarget(b) : setBidjemenActive(b.id, true))} className="text-xs font-bold text-slate-500 hover:underline">
               {b.aktif ? 'Nonaktifkan' : 'Aktifkan'}
             </button>
-            <button onClick={() => setDeleteTarget(b)} className="text-xs font-bold text-rose-500 hover:underline">Hapus</button>
           </div>
         ),
     },
@@ -1057,13 +1227,9 @@ const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }
 
   return (
     <div className="space-y-3">
-      {!readOnly && (
-        <div className="flex justify-end">
-          <Button onClick={() => setModal({ mode: 'create' })}>
-            <Plus className="w-4 h-4" /> Tambah Bidjemen
-          </Button>
-        </div>
-      )}
+      <div className="p-2.5 rounded-[10px] bg-slate-50 border border-slate-200 text-[11px] text-slate-500">
+        Bidjemen dibatasi hanya 4 entri baku (BR 4.3) — tidak dapat ditambah/dihapus, hanya nama/singkatan/cakupan dan status aktifnya yang dapat diubah.
+      </div>
       <Table columns={columns} data={state.bidjemen} rowKey={(b) => b.id} />
       {modal && (
         <BidjemenFormModal mode={modal.mode} bj={modal.bj} onClose={() => setModal(null)} onSaved={(m) => { notify(m); setModal(null); }} />
@@ -1083,29 +1249,6 @@ const BidjemenTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }
         />
       )}
 
-      {deleteTarget && (
-        <Modal
-          isOpen
-          onClose={() => setDeleteTarget(null)}
-          title={`Hapus Bidjemen ${deleteTarget.nama}?`}
-          description="Tindakan ini tidak dapat dibatalkan."
-          footer={
-            <>
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  deleteBidjemen(deleteTarget.id);
-                  notify(`${deleteTarget.nama} berhasil dihapus.`);
-                  setDeleteTarget(null);
-                }}
-              >
-                Hapus
-              </Button>
-            </>
-          }
-        />
-      )}
     </div>
   );
 };
@@ -1187,6 +1330,112 @@ const BidjemenFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; bj?: Bidje
  * 4.4 Katalog Data & Dokumen
  * ============================================================================================ */
 const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+  const [tab, setTab] = useState<'daftar' | 'template'>('daftar');
+  return (
+    <div className="space-y-3">
+      <SegmentedControl options={[{ value: 'daftar', label: 'Daftar Dokumen' }, { value: 'template', label: 'Template' }]} value={tab} onChange={(v) => setTab(v as 'daftar' | 'template')} />
+      {tab === 'daftar' ? <KatalogDaftarTable readOnly={readOnly} notify={notify} /> : <TemplateTable readOnly={readOnly} notify={notify} />}
+    </div>
+  );
+};
+
+/** 4.4 tab Template — skema field & contoh baku per dokumen berjenis "Data" (Plane B.1
+ * Pra-Audit "Template", digabung sebagai tab di dalam 4.4 Katalog per keputusan plan). */
+const TemplateTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+  const state = useAuditUniverseStore();
+  const [editing, setEditing] = useState<TemplateDokumen | null>(null);
+  const dataDocs = state.katalog.filter((d) => d.jenis === 'Data');
+
+  const columns: TableColumn<KatalogDokumen>[] = [
+    { key: 'dok', header: 'Dokumen/Data', render: (d) => <span className="font-bold text-slate-800">{d.nama}</span> },
+    { key: 'template', header: 'Template', render: (d) => { const t = getTemplateByDok(d.id); return t ? <span>{t.nama} <Badge color="info">v{t.versi}</Badge></span> : <span className="text-slate-400">Belum ada template</span>; } },
+    { key: 'fields', header: 'Jumlah Field', render: (d) => getTemplateByDok(d.id)?.fields.length ?? '–' },
+    { key: 'contoh', header: 'Contoh Baku', render: (d) => { const t = getTemplateByDok(d.id); return t ? <span className="font-mono text-[11px] text-slate-500">{t.contohBakuUrl}</span> : '–'; } },
+    ...(readOnly
+      ? []
+      : [
+          {
+            key: 'aksi',
+            header: 'Aksi',
+            render: (d: KatalogDokumen) => {
+              const t = getTemplateByDok(d.id);
+              return (
+                <button
+                  onClick={() => {
+                    if (t) setEditing(t);
+                    else setEditing(createTemplateDokumen({ dokId: d.id, nama: `Template ${d.nama}`, fields: [{ nama: 'Nama Satker', tipe: 'Teks' }], contohBakuUrl: `contoh-baku_${d.id}.xlsx` }));
+                  }}
+                  className="text-xs font-bold text-[var(--sd-primary)] hover:underline"
+                >
+                  {t ? 'Ubah' : 'Buat Template'}
+                </button>
+              );
+            },
+          } as TableColumn<KatalogDokumen>,
+        ]),
+  ];
+
+  return (
+    <div className="space-y-3">
+      {dataDocs.length === 0 ? (
+        <EmptyState title="Belum ada dokumen berjenis Data pada katalog" />
+      ) : (
+        <Card><Table columns={columns} data={dataDocs} rowKey={(d) => d.id} /></Card>
+      )}
+      {editing && (
+        <Modal isOpen onClose={() => setEditing(null)} title={`Ubah Template — ${editing.nama}`} widthClassName="max-w-lg"
+          footer={<Button onClick={() => { notify('Template berhasil disimpan.'); setEditing(null); }}>Simpan</Button>}
+        >
+          <TemplateEditor template={editing} />
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+const TemplateEditor: React.FC<{ template: TemplateDokumen }> = ({ template }) => {
+  const [nama, setNama] = useState(template.nama);
+  const [contohBakuUrl, setContohBakuUrl] = useState(template.contohBakuUrl);
+  const [fields, setFields] = useState(template.fields);
+
+  React.useEffect(() => {
+    updateTemplateDokumen(template.id, { nama, contohBakuUrl, fields });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nama, contohBakuUrl, fields]);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Template</label>
+        <Input value={nama} onChange={(e) => setNama(e.target.value)} />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 mb-1.5">Skema Field</label>
+        <div className="space-y-1.5">
+          {fields.map((f, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input value={f.nama} onChange={(e) => setFields((prev) => prev.map((p, pi) => (pi === i ? { ...p, nama: e.target.value } : p)))} className="flex-1" />
+              <Select
+                options={(['Teks', 'Angka', 'Tanggal', 'Pilihan'] as const).map((t) => ({ value: t, label: t }))}
+                value={f.tipe}
+                onChange={(v) => setFields((prev) => prev.map((p, pi) => (pi === i ? { ...p, tipe: v as TemplateDokumen['fields'][number]['tipe'] } : p)))}
+                className="w-28"
+              />
+              <button onClick={() => setFields((prev) => prev.filter((_, pi) => pi !== i))} className="text-rose-500 text-xs font-bold">Hapus</button>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setFields((prev) => [...prev, { nama: 'Field Baru', tipe: 'Teks' }])} className="mt-2 text-xs font-bold text-[var(--sd-primary)] hover:underline">+ Tambah Field</button>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama Berkas Contoh Baku</label>
+        <Input value={contohBakuUrl} onChange={(e) => setContohBakuUrl(e.target.value)} />
+      </div>
+    </div>
+  );
+};
+
+const KatalogDaftarTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
   const [search, setSearch] = useState('');
   const [kategoriFilter, setKategoriFilter] = useState('');
@@ -1227,7 +1476,7 @@ const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }
     { key: 'jenis', header: 'Jenis', render: (d) => d.jenis },
     { key: 'cara', header: 'Cara Pengambilan', render: (d) => d.cara },
     { key: 'sumber', header: 'Sumber', render: (d) => <span className="text-[11px] text-slate-400">{d.sumber}</span> },
-    { key: 'sifat', header: 'Sifat', render: (d) => <Badge color={d.sifat === 'Wajib' ? 'danger' : 'neutral'}>{d.sifat}</Badge> },
+    { key: 'sifat', header: 'Sifat', render: (d) => <Badge color={d.sifat === 'Wajib' ? 'danger' : d.sifat === 'Kondisional' ? 'warning' : 'neutral'}>{d.sifat}</Badge> },
     { key: 'status', header: 'Status', render: (d) => { const s = STATUS_BADGE(d.aktif); return <Badge color={s.color}>{s.label}</Badge>; } },
     {
       key: 'aksi',
@@ -1333,6 +1582,12 @@ const KatalogFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; dok?: Katal
   const [cara, setCara] = useState<KatalogDokumen['cara']>(dok?.cara ?? 'Upload');
   const [sumber, setSumber] = useState(dok?.sumber ?? CARA_SUMBER_DEFAULT.Upload);
   const [sifat, setSifat] = useState<KatalogDokumen['sifat']>(dok?.sifat ?? 'Opsional');
+  const [bidjemenId, setBidjemenId] = useState(dok?.bidjemenId ?? '');
+  const [objekPemeriksaanId, setObjekPemeriksaanId] = useState(dok?.objekPemeriksaanId ?? '');
+  const [periodisitas, setPeriodisitas] = useState<NonNullable<KatalogDokumen['periodisitas']>>(dok?.periodisitas ?? 'Tahunan');
+  const [berlakuMulai, setBerlakuMulai] = useState(dok?.berlakuMulai ?? '');
+  const [berlakuSampai, setBerlakuSampai] = useState(dok?.berlakuSampai ?? '');
+  const state = useAuditUniverseStore();
   const [error, setError] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const readOnly = mode === 'view';
@@ -1371,12 +1626,13 @@ const KatalogFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; dok?: Katal
             <Button
               onClick={() => {
                 if (!nama.trim()) return setError('Nama dokumen wajib diisi.');
+                const extra = { bidjemenId: bidjemenId || undefined, objekPemeriksaanId: objekPemeriksaanId || undefined, periodisitas, berlakuMulai: berlakuMulai || undefined, berlakuSampai: berlakuSampai || undefined };
                 if (mode === 'create') {
-                  createKatalogDokumen({ kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat });
+                  createKatalogDokumen({ kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat, versi: 1, ...extra });
                   onSaved('Dokumen berhasil ditambahkan ke katalog.');
                 } else if (dok) {
-                  updateKatalogDokumen(dok.id, { kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat });
-                  onSaved('Dokumen katalog berhasil diperbarui.');
+                  updateKatalogDokumen(dok.id, { kat, nama: nama.trim(), desk, jenis, cara, sumber, sifat, versi: (dok.versi ?? 1) + 1, ...extra });
+                  onSaved(`Dokumen katalog berhasil diperbarui (versi ${(dok.versi ?? 1) + 1}).`);
                 }
             }}
           >
@@ -1422,9 +1678,34 @@ const KatalogFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; dok?: Katal
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-600 mb-1.5">Sifat</label>
-            <Select options={[{ value: 'Wajib', label: 'Wajib' }, { value: 'Opsional', label: 'Opsional' }]} value={sifat} onChange={(v) => setSifat(v as KatalogDokumen['sifat'])} disabled={readOnly} />
+            <Select options={[{ value: 'Wajib', label: 'Wajib' }, { value: 'Kondisional', label: 'Kondisional' }, { value: 'Opsional', label: 'Opsional' }]} value={sifat} onChange={(v) => setSifat(v as KatalogDokumen['sifat'])} disabled={readOnly} />
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Bidjemen</label>
+            <Select options={state.bidjemen.filter((b) => b.aktif).map((b) => ({ value: b.id, label: b.nama }))} value={bidjemenId} onChange={setBidjemenId} placeholder="Tidak terkait" disabled={readOnly} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Objek Pemeriksaan</label>
+            <Select options={state.objekPemeriksaan.filter((o) => o.aktif).map((o) => ({ value: o.id, label: o.nama }))} value={objekPemeriksaanId} onChange={setObjekPemeriksaanId} placeholder="Tidak terkait" disabled={readOnly} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Periodisitas</label>
+            <Select options={(['Tahunan', 'Semesteran', 'Triwulanan', 'Bulanan', 'Insidentil'] as const).map((p) => ({ value: p, label: p }))} value={periodisitas} onChange={(v) => setPeriodisitas(v as NonNullable<KatalogDokumen['periodisitas']>)} disabled={readOnly} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Berlaku Mulai</label>
+            <Input type="date" value={berlakuMulai} onChange={(e) => setBerlakuMulai(e.target.value)} disabled={readOnly} />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1.5">Berlaku Sampai</label>
+            <Input type="date" value={berlakuSampai} onChange={(e) => setBerlakuSampai(e.target.value)} disabled={readOnly} />
+          </div>
+        </div>
+        {dok?.versi && <p className="text-[11px] text-slate-400">Versi saat ini: v{dok.versi}.</p>}
       </div>
     </Modal>
   );

@@ -208,7 +208,8 @@ export const RiskMatrix: React.FC<{
   yLabel?: string;
   height?: number;
   className?: string;
-}> = ({ items, xLabel = 'Kemungkinan', yLabel = 'Dampak', height = 260, className }) => (
+  onItemClick?: (item: RiskMatrixItem) => void;
+}> = ({ items, xLabel = 'Kemungkinan', yLabel = 'Dampak', height = 260, className, onItemClick }) => (
   <div className={className} style={{ height }}>
     <ResponsiveContainer width="100%" height="100%">
       <ScatterChart margin={{ top: 8, right: 16, left: -8, bottom: 8 }}>
@@ -227,7 +228,7 @@ export const RiskMatrix: React.FC<{
             );
           }}
         />
-        <Scatter data={items} isAnimationActive={false}>
+        <Scatter data={items} isAnimationActive={false} onClick={onItemClick ? (p: any) => onItemClick(p as RiskMatrixItem) : undefined} cursor={onItemClick ? 'pointer' : undefined}>
           {items.map((it) => (
             <Cell key={it.id} fill={it.color || RISK_LEVEL_COLOR[it.riskLevel || 'sedang']} />
           ))}

@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { CurrentUserProfile, UserAccount } from '../../types';
 import { USER_ACCOUNTS } from '../../data/mockData';
-import { MasterDataTab } from './masterData/MasterDataTab';
 import { logUbahHakAkses } from '../../utils/auditLogger';
 import {
   MODULE_GROUP_ORDER,
@@ -50,6 +49,9 @@ import {
 } from '../../data/accessMatrixData';
 import { AccountStatus, AccountStatusBadge, Badge, Button, Card, Checkbox, Input, Select, Typography } from '../ui/atoms';
 import { EmptyState, FilterField, FilterPanel, Modal, Pagination, TabNavigation, usePagination } from '../ui/molecules';
+import { getAuditLogs } from '../../utils/auditLogger';
+import { buildExportFilename, simulateExport } from '../../utils/simulateExport';
+import { GoogleAuthenticationPanel } from './settings/GoogleAuthenticationPanel';
 
 interface PengaturanSistemViewProps {
   currentUser?: CurrentUserProfile;
@@ -57,13 +59,12 @@ interface PengaturanSistemViewProps {
   onSubPathChange?: (subPath?: string) => void;
 }
 
-type B9Tab = 'pengguna' | 'kontrol-akses' | 'data-master';
+type B9Tab = 'pengguna' | 'kontrol-akses' | 'riwayat-hak-akses' | 'parameter';
 
 export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const navigate = onSubPathChange ?? (() => {});
-  const [subPathParent, ...subPathRest] = (subPath || '').split('/');
-  const activeTab: B9Tab = subPathParent === 'kontrol-akses' || subPathParent === 'data-master' ? (subPathParent as B9Tab) : 'pengguna';
-  const dataMasterSubPath = subPathRest.join('/') || undefined;
+  const [subPathParent] = (subPath || '').split('/');
+  const activeTab: B9Tab = (['kontrol-akses', 'riwayat-hak-akses', 'parameter'].includes(subPathParent) ? subPathParent : 'pengguna') as B9Tab;
 
   const [userList, setUserList] = useState<UserAccount[]>(USER_ACCOUNTS);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -99,7 +100,8 @@ export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ curr
         tabs={[
           { id: 'pengguna', label: 'Tata Kelola Pengguna' },
           { id: 'kontrol-akses', label: 'Otorisasi Akses' },
-          { id: 'data-master', label: 'Pengaturan Data Master Terpadu' },
+          { id: 'riwayat-hak-akses', label: 'Riwayat Perubahan Hak Akses' },
+          { id: 'parameter', label: 'Pengaturan Parameter' },
         ]}
         activeTab={activeTab}
         onTabChange={(id) => navigate(id === 'pengguna' ? undefined : id)}
@@ -109,17 +111,108 @@ export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ curr
         <TataKelolaPenggunaTab currentUser={currentUser} userList={userList} setUserList={setUserList} notify={notify} />
       )}
       {activeTab === 'kontrol-akses' && <OtorisasiAksesTab currentUser={currentUser} notify={notify} />}
-      {activeTab === 'data-master' && (
-        <MasterDataTab
-          readOnly={currentUser?.peran !== 'super_admin'}
-          subPath={dataMasterSubPath}
-          onSubPathChange={(sub) => navigate(sub ? `data-master/${sub}` : 'data-master')}
-          notify={notify}
-        />
+      {activeTab === 'riwayat-hak-akses' && <RiwayatPerubahanHakAksesTab />}
+      {activeTab === 'parameter' && <PengaturanParameterTab />}
+    </div>
+  );
+};
+
+/* ============================================================================================ *
+ * Tab: Riwayat Perubahan Hak Akses (Plan "Align itwasum with Plane BA/SA", todo p6-b8b9)
+ * ============================================================================================ */
+const RiwayatPerubahanHakAksesTab: React.FC = () => {
+  const [search, setSearch] = useState('');
+  const [detailTarget, setDetailTarget] = useState<ReturnType<typeof getAuditLogs>[number] | null>(null);
+  const logs = getAuditLogs().filter((l) => l.kejadian === 'Ubah hak akses user');
+  const filtered = logs.filter((l) => !search || l.user.toLowerCase().includes(search.toLowerCase()) || (l.detail.yangDiminta ?? '').toLowerCase().includes(search.toLowerCase()));
+  const { pageItems, page, totalPages, setPage } = usePagination(filtered, 8);
+
+  return (
+    <div className="space-y-4">
+      <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <Typography variant="headline-md">Riwayat Perubahan Hak Akses</Typography>
+          <p className="text-xs text-slate-500 mt-0.5">Jejak audit setiap perubahan matriks peran & hak akses, termasuk nilai sebelum dan sesudah.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama pelaku/target..." className="w-56" />
+          <Button
+            variant="outline"
+            onClick={() => simulateExport({ filename: buildExportFilename(['Riwayat_Perubahan_Hak_Akses', new Date().toISOString().slice(0, 10)]), format: 'csv' })}
+          >
+            <Download className="w-4 h-4" />Ekspor
+          </Button>
+        </div>
+      </Card>
+
+      {filtered.length === 0 ? (
+        <EmptyState title="Belum ada riwayat perubahan hak akses" icon={<ShieldAlert className="w-6 h-6 text-slate-300" />} />
+      ) : (
+        <Card className="p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead className="bg-[var(--sd-surface)] text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">Waktu</th>
+                  <th className="px-4 py-3">Pelaku</th>
+                  <th className="px-4 py-3">Perubahan</th>
+                  <th className="px-4 py-3 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pageItems.map((l) => (
+                  <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 text-slate-500 font-mono text-xs">{l.waktu}</td>
+                    <td className="px-4 py-3"><div className="font-bold text-slate-900">{l.user}</div><div className="text-[11px] text-slate-400">{l.peran}</div></td>
+                    <td className="px-4 py-3 text-slate-600">{l.detail.yangDiminta}</td>
+                    <td className="px-4 py-3 text-right"><button onClick={() => setDetailTarget(l)} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat Detail</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-3 border-t border-[var(--sd-outline-variant)]/40">
+            <Pagination currentPage={page} totalItems={filtered.length} pageSize={8} onPageChange={setPage} itemLabel="riwayat" />
+          </div>
+        </Card>
+      )}
+
+      {detailTarget && (
+        <Modal isOpen onClose={() => setDetailTarget(null)} title="Detail Perubahan Hak Akses" footer={<Button onClick={() => setDetailTarget(null)}>Tutup</Button>}>
+          <div className="space-y-3 text-xs">
+            <div><span className="text-slate-400 font-bold uppercase text-[10px]">Waktu</span><div className="font-bold text-slate-800">{detailTarget.waktu}</div></div>
+            <div><span className="text-slate-400 font-bold uppercase text-[10px]">Pelaku</span><div className="font-bold text-slate-800">{detailTarget.user} ({detailTarget.peran})</div></div>
+            <div><span className="text-slate-400 font-bold uppercase text-[10px]">Target Perubahan</span><div className="font-bold text-slate-800">{detailTarget.detail.yangDiminta}</div></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-2.5 rounded-[8px] bg-rose-50 border border-rose-200">
+                <div className="text-[10px] font-bold uppercase text-rose-500">Nilai Sebelum</div>
+                <div className="text-rose-800 mt-1">{detailTarget.detail.nilaiLama || '—'}</div>
+              </div>
+              <div className="p-2.5 rounded-[8px] bg-emerald-50 border border-emerald-200">
+                <div className="text-[10px] font-bold uppercase text-emerald-600">Nilai Sesudah</div>
+                <div className="text-emerald-800 mt-1 whitespace-pre-line">{detailTarget.detail.nilaiBaru || '—'}</div>
+              </div>
+            </div>
+            <div><span className="text-slate-400 font-bold uppercase text-[10px]">Disetujui/Diproses Oleh</span><div className="font-bold text-slate-800">{detailTarget.detail.siapaMenyetujui || '—'}</div></div>
+          </div>
+        </Modal>
       )}
     </div>
   );
 };
+
+/* ============================================================================================ *
+ * Tab: Pengaturan Parameter > Google Authentication (FR-GAUTH)
+ * ============================================================================================ */
+const PengaturanParameterTab: React.FC = () => (
+  <div className="space-y-4">
+    <Card>
+      <Typography variant="headline-md">Pengaturan Parameter</Typography>
+      <p className="text-xs text-slate-500 mt-0.5">Parameter integrasi tingkat sistem yang dipakai lintas modul.</p>
+    </Card>
+    <GoogleAuthenticationPanel />
+  </div>
+);
 
 /* ============================================================================================ *
  * Tab 1: Tata Kelola Pengguna
@@ -138,6 +231,7 @@ const TataKelolaPenggunaTab: React.FC<{
   const [showTambahModal, setShowTambahModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showFreezeModal, setShowFreezeModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserAccount | null>(null);
 
   const canManage = currentUser?.canManageUsers === 'all' || currentUser?.canManageUsers === 'wilayah';
 
@@ -235,7 +329,7 @@ const TataKelolaPenggunaTab: React.FC<{
                   <td className="px-4 py-3"><AccountStatusBadge status={mapStatus(u.status)} /></td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <Button variant="ghost" size="sm" disabled={!canManage}>Edit Akun</Button>
+                      <Button variant="ghost" size="sm" disabled={!canManage} onClick={() => setEditTarget(u)}>Edit Akun</Button>
                       {(u.status === 'Dibekukan' || u.status === 'Non-Aktif') && (
                         <Button variant="outline" size="sm" disabled={!canManage} onClick={() => handleRestore(u)}>Pulihkan Akses</Button>
                       )}
@@ -251,7 +345,7 @@ const TataKelolaPenggunaTab: React.FC<{
         </div>
       </Card>
 
-      <TambahAkunModal isOpen={showTambahModal} onClose={() => setShowTambahModal(false)} onSave={handleCreate} />
+      <TambahAkunModal isOpen={showTambahModal} onClose={() => setShowTambahModal(false)} onSave={handleCreate} existing={userList} />
       <ImportMassalModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={(rows) => { setUserList((prev) => [...rows, ...prev]); setShowImportModal(false); notify(`${rows.length} akun berhasil diimpor secara massal.`); }} />
       <FreezeAkunModal
         isOpen={showFreezeModal}
@@ -263,14 +357,72 @@ const TataKelolaPenggunaTab: React.FC<{
           notify(`${ids.length} akun berhasil dibekukan secara darurat.`);
         }}
       />
+      {editTarget && (
+        <EditAkunModal
+          user={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={(patch) => {
+            setUserList((prev) => prev.map((u) => (u.id === editTarget.id ? { ...u, ...patch } : u)));
+            setEditTarget(null);
+            notify(`Akun ${editTarget.nama} berhasil diperbarui.`);
+          }}
+        />
+      )}
     </div>
   );
 };
 
-const TambahAkunModal: React.FC<{ isOpen: boolean; onClose: () => void; onSave: (u: UserAccount) => void }> = ({ isOpen, onClose, onSave }) => {
-  const [form, setForm] = useState({ nama: '', nrp: '', pangkatNrp: 'AKP / 88040112', role: 'Admin Satker', satker: '', email: '', wilayahLock: '' });
+/** Edit Akun — satker, SPRIN (nomor dokumen legal), dan status Aktif/Tidak Aktif/Suspend
+ * (Plan p6-b8b9). "Tidak Aktif" = `Non-Aktif`, "Suspend" = `Dibekukan` pada tipe data yang ada. */
+const EDIT_STATUS_OPTIONS: { value: UserAccount['status']; label: string }[] = [
+  { value: 'Aktif', label: 'Aktif' },
+  { value: 'Non-Aktif', label: 'Tidak Aktif' },
+  { value: 'Dibekukan', label: 'Suspend' },
+];
+
+const EditAkunModal: React.FC<{ user: UserAccount; onClose: () => void; onSave: (patch: Partial<UserAccount>) => void }> = ({ user, onClose, onSave }) => {
+  const [satker, setSatker] = useState(user.satker);
+  const [sprin, setSprin] = useState(user.dokumenLegal?.nomor ?? '');
+  const [status, setStatus] = useState<UserAccount['status']>(user.status);
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={`Edit Akun — ${user.nama}`}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button variant="primary" onClick={() => onSave({ satker, satkerAsal: satker, dokumenLegal: sprin ? { nomor: sprin } : undefined, status })}>Simpan</Button>
+        </div>
+      }
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Satker</label>
+          <Input value={satker} onChange={(e) => setSatker(e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Nomor SPRIN / SKEP</label>
+          <Input value={sprin} onChange={(e) => setSprin(e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-600 mb-1.5">Status Akun</label>
+          <Select value={status} onChange={(v) => setStatus(v as UserAccount['status'])} options={EDIT_STATUS_OPTIONS} />
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const TambahAkunModal: React.FC<{ isOpen: boolean; onClose: () => void; onSave: (u: UserAccount) => void; existing: UserAccount[] }> = ({ isOpen, onClose, onSave, existing }) => {
+  const [form, setForm] = useState({ nama: '', nrp: '', pangkatNrp: 'AKP / 88040112', role: 'Admin Satker', satker: '', email: '', wilayahLock: '', skepSprin: '' });
+  const [legalFile, setLegalFile] = useState<{ nomor: string; namaBerkas: string } | null>(null);
+  const [error, setError] = useState('');
 
   const handleSubmit = () => {
+    if (form.nrp && existing.some((u) => u.nrp === form.nrp)) return setError('NRP/NIP sudah terdaftar pada akun lain.');
+    if (form.email && existing.some((u) => u.email.toLowerCase() === form.email.toLowerCase())) return setError('Email sudah terdaftar pada akun lain.');
     onSave({
       id: `u-${Date.now()}`,
       nama: form.nama || 'AKP Pengguna Baru, S.H.',
@@ -284,8 +436,11 @@ const TambahAkunModal: React.FC<{ isOpen: boolean; onClose: () => void; onSave: 
       email: form.email || 'user.baru@polri.go.id',
       status: 'Menunggu Aktivasi',
       loginTerakhir: 'Belum pernah login',
+      dokumenLegal: legalFile ? { nomor: legalFile.nomor } : undefined,
     });
-    setForm({ nama: '', nrp: '', pangkatNrp: 'AKP / 88040112', role: 'Admin Satker', satker: '', email: '', wilayahLock: '' });
+    setForm({ nama: '', nrp: '', pangkatNrp: 'AKP / 88040112', role: 'Admin Satker', satker: '', email: '', wilayahLock: '', skepSprin: '' });
+    setLegalFile(null);
+    setError('');
   };
 
   return (
@@ -296,15 +451,33 @@ const TambahAkunModal: React.FC<{ isOpen: boolean; onClose: () => void; onSave: 
       footer={<div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Batal</Button><Button variant="primary" onClick={handleSubmit}>Buat Akun &amp; Aktifkan</Button></div>}
     >
       <div className="space-y-3">
+        {error && <div className="p-2.5 rounded-[8px] bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">{error}</div>}
         <Input placeholder="Nama Lengkap & Gelar*" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} />
         <div className="grid grid-cols-2 gap-3">
-          <Input placeholder="NRP/NIP*" value={form.nrp} onChange={(e) => setForm({ ...form, nrp: e.target.value })} />
+          <Input placeholder="NRP/NIP* (unik)" value={form.nrp} onChange={(e) => setForm({ ...form, nrp: e.target.value })} />
           <Input placeholder="Pangkat & NRP tampilan*" value={form.pangkatNrp} onChange={(e) => setForm({ ...form, pangkatNrp: e.target.value })} />
         </div>
         <Select value={form.role} onChange={(v) => setForm({ ...form, role: v })} options={['Admin Satker', 'Auditor Madya', 'Auditor Utama', 'Super Admin'].map((r) => ({ value: r, label: r }))} />
         <Input placeholder="Satker Asal (SIPP)*" value={form.satker} onChange={(e) => setForm({ ...form, satker: e.target.value })} />
         <Input placeholder="Penguncian Wilayah (contoh: Polda Jawa Barat)" value={form.wilayahLock} onChange={(e) => setForm({ ...form, wilayahLock: e.target.value })} />
-        <Input placeholder="Email Kedinasan Polri*" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <Input placeholder="Email Kedinasan Polri* (unik)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <div className="p-3 rounded-[10px] border border-dashed border-slate-300 space-y-2">
+          <div className="text-xs font-bold text-slate-600">Dokumen Legal (SKEP/SPRIN) — wajib dilampirkan</div>
+          <Input placeholder="Nomor SKEP/SPRIN*" value={form.skepSprin} onChange={(e) => setForm({ ...form, skepSprin: e.target.value })} />
+          <label className="flex items-center gap-2 text-xs text-[var(--sd-primary)] font-bold cursor-pointer">
+            <UploadCloud className="w-4 h-4" />
+            {legalFile ? legalFile.namaBerkas : 'Unggah Berkas SKEP/SPRIN (PDF, maks 5MB)'}
+            <input
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) setLegalFile({ nomor: form.skepSprin || `SKEP/${Date.now()}`, namaBerkas: f.name });
+              }}
+            />
+          </label>
+        </div>
       </div>
     </Modal>
   );
@@ -432,6 +605,11 @@ const OtorisasiAksesTab: React.FC<{ currentUser?: CurrentUserProfile; notify: (m
   };
 
   const handleCreateCustomRole = (nama: string) => {
+    const allNames = [...PREDEFINED_ROLE_CARDS.map((r) => r.nama), ...customRoles.map((r) => r.nama)];
+    if (allNames.some((n) => n.toLowerCase() === nama.toLowerCase())) {
+      notify(`Nama peran "${nama}" sudah dipakai — pilih nama lain.`);
+      return;
+    }
     const id = `custom-${Date.now()}`;
     const newRole: CustomRoleDef = { id, nama, subLabel: 'Peran kustom' };
     const updated = [...customRoles, newRole];
@@ -584,6 +762,7 @@ const CustomRoleFooter: React.FC<{ onCancel: () => void; onCreate: (nama: string
 };
 
 /* ============================================================================================ *
- * Tab 3: Pengaturan Data Master Terpadu -> lihat ./masterData/MasterDataTab.tsx
+ * Data Master Terpadu dipindah seluruhnya ke B.12 -> lihat ./masterData/MasterDataTab.tsx
+ * (dirender dari AuditUniverseView, bukan dari sini lagi).
  * (mereplikasi 27092026/prototipe-master-data.html, Plan "Migrate 27092026 prototypes")
  * ============================================================================================ */

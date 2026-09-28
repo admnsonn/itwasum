@@ -26,12 +26,24 @@ import { DEFAULT_USER_PROFILE, buildUserProfileFromConfig, PredefinedAccountConf
 import { Menu } from 'lucide-react';
 import { useHashRoute } from './router/useHashRoute';
 import { getModuleById, getVisibleModulesForRole, type LegacyViewId } from './config/moduleRegistry';
+import {
+  SESSION_KEY as AUTH_SESSION_KEY,
+  SESSION_TOKEN_KEY,
+  AUTH_LOGGED_OUT_KEY,
+  createSession,
+  loadSession,
+  isSessionValid,
+  touchSession,
+  clearSession,
+  type StoredSession,
+} from './data/auth/sessionSecurity';
 
 const TIM_AUDIT_ROLES = ['pengawas_tim', 'ketua_tim', 'auditor', 'auditee'];
 
-const AUTH_SESSION_KEY = 'itwasum_auth_session';
-const AUTH_LOGGED_OUT_KEY = 'itwasum_logged_out';
-
+/** B.11 (Plan "Align itwasum with Plane BA/SA", todo p7-b11): sesi 24 jam sliding + token
+ * tunggal lintas tab. Format lama (`CurrentUserProfile` mentah tanpa pembungkus sesi) tetap
+ * dimigrasikan otomatis menjadi sesi baru agar akun yang sedang login sebelum fitur ini tidak
+ * mendadak ter-logout. */
 function getInitialAuthState(): { user: CurrentUserProfile; authenticated: boolean } {
   if (typeof window === 'undefined') {
     return { user: DEFAULT_USER_PROFILE, authenticated: true };
@@ -41,11 +53,22 @@ function getInitialAuthState(): { user: CurrentUserProfile; authenticated: boole
     if (isExplicitlyLoggedOut) {
       return { user: DEFAULT_USER_PROFILE, authenticated: false };
     }
-    const saved = localStorage.getItem(AUTH_SESSION_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === 'object' && parsed.id && parsed.peran) {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Bentuk lama: profil mentah (id/peran langsung di root, tanpa `.user`/`.sessionToken`).
+      if (parsed && typeof parsed === 'object' && parsed.id && parsed.peran && !parsed.sessionToken) {
+        createSession(parsed as CurrentUserProfile);
         return { user: parsed as CurrentUserProfile, authenticated: true };
+      }
+      const session = parsed as StoredSession;
+      if (session?.user?.id) {
+        if (isSessionValid(session)) {
+          touchSession();
+          return { user: session.user, authenticated: true };
+        }
+        clearSession('Sesi Anda telah berakhir. Silakan masuk kembali.');
+        return { user: DEFAULT_USER_PROFILE, authenticated: false };
       }
     }
     return { user: DEFAULT_USER_PROFILE, authenticated: true };
@@ -93,6 +116,48 @@ export default function App() {
     if (!allowed) setActiveNav('beranda');
   }, [isAuthenticated, currentUser.peran, activeNav, setActiveNav]);
 
+  // B.11 (Plan "Align itwasum with Plane BA/SA", todo p7-b11): sesi tunggal lintas tab (dipaksa
+  // keluar bila token sesi diganti oleh login lain) + kadaluarsa 24 jam sliding, dicek berkala
+  // dan disegarkan pada tiap perpindahan rute (proksi "aktivitas pengguna").
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== SESSION_TOKEN_KEY) return;
+      const session = loadSession();
+      if (session && e.newValue && e.newValue !== session.sessionToken) {
+        clearSession('Sesi Anda diakhiri karena login pada perangkat/tab lain.');
+        setIsAuthenticated(false);
+        setIsLoginViewOpen(true);
+      }
+    };
+    const interval = window.setInterval(() => {
+      const session = loadSession();
+      if (!isSessionValid(session)) {
+        clearSession('Sesi Anda telah berakhir setelah 24 jam tidak aktif. Silakan masuk kembali.');
+        setIsAuthenticated(false);
+        setIsLoginViewOpen(true);
+      }
+    }, 30000);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.clearInterval(interval);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) touchSession();
+  }, [isAuthenticated, activeNav, hashRoute.subPath]);
+
+  // Master Data (4.1-4.4) pindah seluruhnya ke B.12 (Plan "Align itwasum with Plane BA/SA",
+  // todo p1-b12-nav-master) — tautan lama `#/b9/data-master/...` dialihkan otomatis.
+  useEffect(() => {
+    if (activeNav === 'b9' && hashRoute.subPath?.startsWith('data-master')) {
+      const rest = hashRoute.subPath.slice('data-master'.length).replace(/^\//, '');
+      navigateModule('b12', rest ? `data-master/${rest}` : 'data-master');
+    }
+  }, [activeNav, hashRoute.subPath, navigateModule]);
+
   const handleSelectPolda = (poldaId: string | null) => {
     setSelectedPoldaId(poldaId);
     if (activeNav !== 'beranda') {
@@ -108,12 +173,7 @@ export default function App() {
   };
 
   const handleConfirmLogout = () => {
-    try {
-      localStorage.removeItem(AUTH_SESSION_KEY);
-      localStorage.setItem(AUTH_LOGGED_OUT_KEY, 'true');
-    } catch (err) {
-      console.warn('Failed to update logout state:', err);
-    }
+    clearSession();
     setShowLogoutModal(false);
     setIsAuthenticated(false);
     setPreselectedLoginAccount(undefined);
@@ -122,12 +182,7 @@ export default function App() {
 
   // Enforce logout before login: terminate active session and open login view with targeted role
   const handleLogoutAndSwitchToRole = (account?: PredefinedAccountConfig) => {
-    try {
-      localStorage.removeItem(AUTH_SESSION_KEY);
-      localStorage.setItem(AUTH_LOGGED_OUT_KEY, 'true');
-    } catch (err) {
-      console.warn('Failed to update logout state:', err);
-    }
+    clearSession();
     setIsAuthenticated(false);
     setPreselectedLoginAccount(account);
     setIsLoginViewOpen(true);
@@ -139,13 +194,8 @@ export default function App() {
       <LoginView
         currentUser={isAuthenticated ? currentUser : undefined}
         targetAccountConfig={preselectedLoginAccount}
-        onLoginSuccess={(newProfile) => {
-          try {
-            localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(newProfile));
-            localStorage.removeItem(AUTH_LOGGED_OUT_KEY);
-          } catch (err) {
-            console.warn('Failed to persist auth session:', err);
-          }
+        onLoginSuccess={(newProfile, rememberIdentifier) => {
+          createSession(newProfile, rememberIdentifier);
           setCurrentUser(newProfile);
           setIsAuthenticated(true);
           setIsLoginViewOpen(false);

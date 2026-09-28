@@ -33,6 +33,8 @@ import { getRoleScopedPoldas } from '../../utils/roleScope';
 import { MABES_SATKERS_DATA } from '../../data/mabesSatkerData';
 import { ALL_COMBINED_SATKERS_DATA } from '../../data/allSatkersData';
 import { createSeededRng } from '../../utils/seededRandom';
+import { useSearchMin } from '../ui/useSearchMin';
+import { buildExportFilename, simulateExport } from '../../utils/simulateExport';
 import {
   Badge,
   Breadcrumbs,
@@ -44,10 +46,11 @@ import {
   Select,
   Typography,
 } from '../ui/atoms';
-import { EmptyState, Search, SegmentedControl, TabNavigation, TabDef } from '../ui/molecules';
-import { AiFindingsTable, AnalysisDataSources, AuditRecommendationSection, RingkasanAnalisisAi } from '../ui/eprofilMolecules';
-import { HorizontalMetricChart, HorizontalMetricItem, SatkerRiskRadar } from '../ui/charts';
-import { anchorFromPolda, anchorFromSatkerMabes, EProfilAnchor, EProfilDetail, getEProfilDetail } from '../../data/eprofil';
+import { EmptyState, Search, SegmentedControl, TabNavigation, TabDef, Pagination, usePagination, type TableColumn, Table } from '../ui/molecules';
+import { AiFindingsTable, AnalysisDataSources, AuditRecommendationSection, DaftarTemuanAiScreen, RingkasanAnalisisAi } from '../ui/eprofilMolecules';
+import { DonutChart, HorizontalMetricChart, HorizontalMetricItem, SatkerRiskRadar, TrendLineChart, RiskMatrix, type RiskMatrixItem } from '../ui/charts';
+import { anchorFromPolda, anchorFromSatkerMabes, EProfilAnchor, EProfilDetail, EProfilTemuanDomainKey, getEProfilDetail } from '../../data/eprofil';
+import type { EProfilOrgNode } from '../../data/eprofil/types';
 
 interface EProfileSatkerViewProps {
   poldaList: PoldaSatker[];
@@ -113,10 +116,13 @@ const EProfileLandingScreen: React.FC<{
   currentUser?: CurrentUserProfile;
   onSelect: (id: string) => void;
 }> = ({ poldaList, currentUser, onSelect }) => {
-  const [search, setSearch] = useState('');
+  const searchCtl = useSearchMin(3, 100);
+  const search = searchCtl.applied;
   const [tingkat, setTingkat] = useState<TingkatFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [visibleCount, setVisibleCount] = useState(6);
+  const [showRbsMatrix, setShowRbsMatrix] = useState(false);
+  const [loadState, setLoadState] = useState<'ok' | 'error'>('ok');
 
   const scopedPoldas = useMemo(() => getRoleScopedPoldas(poldaList, currentUser), [poldaList, currentUser]);
   const scopedPoldaIds = useMemo(() => new Set(scopedPoldas.map((p) => p.id)), [scopedPoldas]);
@@ -211,16 +217,41 @@ const EProfileLandingScreen: React.FC<{
         </div>
       </div>
 
-      {/* Filter card */}
-      <Card className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="flex-1">
-          <Search value={search} onChange={setSearch} placeholder="Cari nama Satker atau Satwil..." />
+      {/* Filter card (SF-LP-002: min 3 - maks 100 karakter, Cari untuk menerapkan) */}
+      <Card className="flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex-1">
+            <Search value={searchCtl.draft} onChange={searchCtl.setDraft} placeholder="Cari nama Satker atau Satwil (min. 3 karakter)..." />
+          </div>
+          <Button variant="primary" className="shrink-0" disabled={!searchCtl.isValid} onClick={() => { searchCtl.submit(); setVisibleCount(6); }}>
+            <SearchIcon className="w-4 h-4" />Cari
+          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-slate-500 shrink-0">Filter Tingkat:</span>
+            <SegmentedControl options={TINGKAT_FILTER_OPTIONS} value={tingkat} onChange={(v) => { setTingkat(v as TingkatFilter); setVisibleCount(6); }} />
+          </div>
         </div>
-        <Button variant="primary" className="shrink-0"><SearchIcon className="w-4 h-4" />Cari</Button>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-slate-500 shrink-0">Filter Tingkat:</span>
-          <SegmentedControl options={TINGKAT_FILTER_OPTIONS} value={tingkat} onChange={(v) => { setTingkat(v as TingkatFilter); setVisibleCount(6); }} />
-        </div>
+        {!searchCtl.isValid && (
+          <p className="text-[11px] text-amber-600 font-semibold">Kata kunci pencarian minimal 3 karakter (maks. 100).</p>
+        )}
+      </Card>
+
+      {loadState === 'error' ? (
+        <EmptyState
+          title="Gagal memuat direktori Satker"
+          description="Terjadi gangguan sementara saat memuat data. Silakan coba lagi."
+          icon={<Building2 className="w-8 h-8 text-rose-300" />}
+          action={<Button variant="outline" onClick={() => setLoadState('ok')}>Muat Ulang</Button>}
+        />
+      ) : (
+        <>
+      {/* RBS Matrix 5x5 — heatmap Kemungkinan x Dampak seluruh Satker */}
+      <Card>
+        <button onClick={() => setShowRbsMatrix((v) => !v)} className="w-full flex items-center justify-between text-left">
+          <Typography variant="headline-md">RBS Matrix — Risk-Based Supervision (5x5)</Typography>
+          <span className="text-xs font-bold text-[var(--sd-primary)]">{showRbsMatrix ? 'Sembunyikan' : 'Tampilkan'}</span>
+        </button>
+        {showRbsMatrix && <RbsMatrixSection cards={cards} onSelect={onSelect} />}
       </Card>
 
       {/* Direktori */}
@@ -271,6 +302,36 @@ const EProfileLandingScreen: React.FC<{
           </div>
         )}
       </div>
+      </>
+      )}
+    </div>
+  );
+};
+
+/** RBS Matrix 5x5 (Kemungkinan x Dampak) — memetakan riskScore setiap Satker ke koordinat
+ * skala 1-5 secara deterministik; memilih titik membuka Ringkasan Pra-Audit Satker itu
+ * (Plan p2-b1, "RBS Matrix"). */
+const RbsMatrixSection: React.FC<{ cards: DirectoryCardData[]; onSelect: (id: string) => void }> = ({ cards, onSelect }) => {
+  const items: RiskMatrixItem[] = useMemo(
+    () =>
+      cards.map((c) => {
+        const rng = createSeededRng(`rbs-matrix-${c.id}`);
+        const dampak = Math.min(5, Math.max(1, Math.round(1 + (c.riskScore / 100) * 4 + rng.round(-0.4, 0.4, 1))));
+        const kemungkinan = Math.min(5, Math.max(1, Math.round(1 + rng.round(0, 4, 1))));
+        return {
+          id: c.id,
+          x: kemungkinan,
+          y: dampak,
+          label: `${c.nama} — Skor ${c.riskScore}`,
+          riskLevel: c.riskLevel === 'TINGGI' ? 'tinggi' : c.riskLevel === 'SEDANG' ? 'sedang' : 'rendah',
+        };
+      }),
+    [cards]
+  );
+  return (
+    <div className="mt-3">
+      <p className="text-xs text-slate-500 mb-2">Setiap titik mewakili satu Satker/Satwil. Klik titik untuk membuka Ringkasan Pra-Audit-nya.</p>
+      <RiskMatrix items={items} onItemClick={(item) => onSelect(item.id)} height={320} />
     </div>
   );
 };
@@ -279,7 +340,7 @@ const EProfileLandingScreen: React.FC<{
  * Detail (#/b1/{idSatker}) — header + 5 tab
  * ============================================================================================ */
 
-type EProfileTab = 'ringkasan' | 'operasional' | 'sdm' | 'sarpras' | 'garkeu';
+type EProfileTab = 'ringkasan' | 'operasional' | 'sdm' | 'sarpras' | 'garkeu' | 'struktur-organisasi';
 
 const DETAIL_TABS: TabDef[] = [
   { id: 'ringkasan', label: 'Ringkasan Eksekutif' },
@@ -302,7 +363,9 @@ const EProfileDetailScreen: React.FC<{
   onBack: () => void;
 }> = ({ satkerId, poldaList, currentUser, onBack }) => {
   const [tab, setTab] = useState<EProfileTab>('ringkasan');
-  const [jenisAudit, setJenisAudit] = useState('reguler');
+  const [jenisAudit, setJenisAudit] = useState<'reguler' | 'khusus' | 'tematik'>('reguler');
+  const [exportDenied, setExportDenied] = useState(false);
+  const [fullTemuanDomain, setFullTemuanDomain] = useState<EProfilTemuanDomainKey | 'eksekutif' | null>(null);
 
   const polda = useMemo(() => poldaList.find((p) => p.id === satkerId), [poldaList, satkerId]);
   const mabesSatker = useMemo<SatkerMabesItem | undefined>(() => (polda ? undefined : MABES_SATKERS_DATA.find((m) => m.id === satkerId)), [polda, satkerId]);
@@ -312,11 +375,15 @@ const EProfileDetailScreen: React.FC<{
   );
 
   const anchor: EProfilAnchor = useMemo(() => {
-    if (polda) return anchorFromPolda(polda);
-    if (mabesSatker) return anchorFromSatkerMabes(mabesSatker);
-    if (mapSatker) return { id: mapSatker.id, nama: mapSatker.nama, rbsScoreAnchor: mapSatker.skorRisiko !== undefined ? 100 - mapSatker.skorRisiko : undefined };
-    return { id: satkerId, nama: satkerId };
-  }, [polda, mabesSatker, mapSatker, satkerId]);
+    const base: EProfilAnchor = polda
+      ? anchorFromPolda(polda)
+      : mabesSatker
+      ? anchorFromSatkerMabes(mabesSatker)
+      : mapSatker
+      ? { id: mapSatker.id, nama: mapSatker.nama, rbsScoreAnchor: mapSatker.skorRisiko !== undefined ? 100 - mapSatker.skorRisiko : undefined }
+      : { id: satkerId, nama: satkerId };
+    return { ...base, jenisAudit };
+  }, [polda, mabesSatker, mapSatker, satkerId, jenisAudit]);
 
   const detail: EProfilDetail = useMemo(() => getEProfilDetail(anchor), [anchor]);
 
@@ -360,31 +427,69 @@ const EProfileDetailScreen: React.FC<{
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-          <div className="w-40">
-            <Select
-              value={jenisAudit}
-              onChange={setJenisAudit}
-              options={[
-                { value: 'reguler', label: 'Jenis Audit: Reguler' },
-                { value: 'khusus', label: 'Jenis Audit: Khusus' },
-                { value: 'tematik', label: 'Jenis Audit: Tematik' },
-              ]}
-            />
+        <div className="flex flex-col items-end gap-1.5 shrink-0 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="w-40">
+              <Select
+                value={jenisAudit}
+                onChange={(v) => setJenisAudit(v as typeof jenisAudit)}
+                options={[
+                  { value: 'reguler', label: 'Jenis Audit: Reguler' },
+                  { value: 'khusus', label: 'Jenis Audit: Khusus' },
+                  { value: 'tematik', label: 'Jenis Audit: Tematik' },
+                ]}
+              />
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (!canExport) return setExportDenied(true);
+                simulateExport({
+                  filename: buildExportFilename(['Ringkasan_Eksekutif', displaySingkatan, new Date().toISOString().slice(0, 10)]),
+                  format: 'pdf',
+                });
+              }}
+            >
+              <Download className="w-4 h-4" />Ekspor Laporan
+            </Button>
           </div>
-          {canExport && <Button variant="primary"><Download className="w-4 h-4" />Ekspor Laporan</Button>}
+          {exportDenied && (
+            <p className="text-[11px] text-rose-600 font-semibold">Anda tidak memiliki hak ekspor. Hubungi Admin Itwasum.</p>
+          )}
         </div>
       </Card>
 
-      <TabNavigation tabs={DETAIL_TABS} activeTab={tab} onTabChange={(id) => setTab(id as EProfileTab)} />
+      <TabNavigation
+        tabs={[...DETAIL_TABS, { id: 'struktur-organisasi', label: 'Struktur Organisasi' }]}
+        activeTab={tab}
+        onTabChange={(id) => setTab(id as EProfileTab)}
+      />
 
-      {tab === 'ringkasan' && <RingkasanEksekutifTab polda={polda} detail={detail} canView={canView} />}
-      {tab === 'operasional' && <OperasionalKinerjaTab polda={polda} detail={detail} canView={canView} />}
-      {tab === 'sdm' && <SdmTab detail={detail} canView={canView} />}
-      {tab === 'sarpras' && <SarprasTab detail={detail} canView={canView} />}
-      {tab === 'garkeu' && <GarkeuTab detail={detail} canView={canView} />}
+      {fullTemuanDomain ? (
+        <DaftarTemuanAiScreen
+          domainLabel={fullTemuanDomain === 'eksekutif' ? 'Ringkasan Eksekutif' : DOMAIN_TAB_LABEL[fullTemuanDomain]}
+          data={fullTemuanDomain === 'eksekutif' ? detail.temuanAiEksekutif : detail.temuanAiByDomain[fullTemuanDomain]}
+          onBack={() => setFullTemuanDomain(null)}
+        />
+      ) : (
+        <>
+          {tab === 'ringkasan' && <RingkasanEksekutifTab polda={polda} detail={detail} canView={canView} onLihatSemua={() => setFullTemuanDomain('eksekutif')} />}
+          {tab === 'operasional' && <OperasionalKinerjaTab polda={polda} detail={detail} canView={canView} onLihatSemua={() => setFullTemuanDomain('operasional')} />}
+          {tab === 'sdm' && <SdmTab detail={detail} canView={canView} onLihatSemua={() => setFullTemuanDomain('sdm')} />}
+          {tab === 'sarpras' && <SarprasTab detail={detail} canView={canView} onLihatSemua={() => setFullTemuanDomain('sarpras')} />}
+          {tab === 'garkeu' && <GarkeuTab detail={detail} canView={canView} onLihatSemua={() => setFullTemuanDomain('garkeu')} />}
+          {tab === 'struktur-organisasi' && <StrukturOrganisasiTab root={detail.strukturOrganisasi} />}
+        </>
+      )}
     </div>
   );
+};
+
+const DOMAIN_TAB_LABEL: Record<EProfilTemuanDomainKey, string> = {
+  operasional: 'Operasional & Kinerja',
+  sdm: 'SDM',
+  sarpras: 'Sarana & Prasarana',
+  garkeu: 'Garkeu',
 };
 
 /* ============================== Kartu generik & Metric (dipertahankan dari versi lama) ============================== */
@@ -409,7 +514,7 @@ const Metric: React.FC<{ label: string; value: string | number; sub?: string }> 
 
 /* ============================== Tab: Ringkasan Eksekutif ============================== */
 
-const RingkasanEksekutifTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDetail; canView: boolean }> = ({ polda, detail, canView }) => (
+const RingkasanEksekutifTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDetail; canView: boolean; onLihatSemua: () => void }> = ({ polda, detail, canView, onLihatSemua }) => (
   <div className="space-y-4">
     <RingkasanAnalisisAi {...detail.aiSummary} canView={canView} />
 
@@ -429,7 +534,7 @@ const RingkasanEksekutifTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDeta
     </SectionCard>
 
     <SectionCard title="5 Temuan Teratas AI" icon={Sparkles}>
-      <AiFindingsTable variant="executive" data={detail.temuanAiEksekutif} />
+      <AiFindingsTable variant="executive" data={detail.temuanAiEksekutif} onLihatSemua={onLihatSemua} />
     </SectionCard>
 
     {polda && (
@@ -478,7 +583,7 @@ const STATUS_COLOR: Record<'Tercapai' | 'Mendekati Target' | 'Belum Tercapai', '
   'Belum Tercapai': 'danger',
 };
 
-const OperasionalKinerjaTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDetail; canView: boolean }> = ({ polda, detail, canView }) => {
+const OperasionalKinerjaTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDetail; canView: boolean; onLihatSemua: () => void }> = ({ polda, detail, canView, onLihatSemua }) => {
   const top5Items: HorizontalMetricItem[] = detail.operasional.top5TindakPidana.map((t) => ({ id: t.label, label: t.label, percent: t.value, displayValue: t.displayValue || `${t.value}`, color: 'var(--sd-primary)' }));
   const risikoItems: HorizontalMetricItem[] = detail.operasional.risikoPerFungsi.map((t) => ({ id: t.label, label: t.label, percent: t.value, displayValue: t.displayValue || `${t.value}%`, color: '#ba1a1a' }));
 
@@ -516,7 +621,7 @@ const OperasionalKinerjaTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDeta
       </SectionCard>
 
       <SectionCard title="5 Temuan Teratas AI Operasional / Kinerja" icon={Sparkles}>
-        <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.operasional} />
+        <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.operasional} onLihatSemua={onLihatSemua} />
       </SectionCard>
 
       <SectionCard title="Statistik Operasional" icon={ClipboardList}>
@@ -549,7 +654,7 @@ const OperasionalKinerjaTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDeta
 
 /* ============================== Tab: SDM ============================== */
 
-const SdmTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ detail, canView }) => (
+const SdmTab: React.FC<{ detail: EProfilDetail; canView: boolean; onLihatSemua: () => void }> = ({ detail, canView, onLihatSemua }) => (
   <div className="space-y-4">
     <RingkasanAnalisisAi {...detail.aiSummary} canView={canView} />
 
@@ -586,7 +691,7 @@ const SdmTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ detail,
     <AuditRecommendationSection data={detail.rekomendasiByDomain.sdm} />
 
     <SectionCard title="5 Temuan Teratas AI SDM" icon={Sparkles}>
-      <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.sdm} />
+      <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.sdm} onLihatSemua={onLihatSemua} />
     </SectionCard>
 
     <AnalysisDataSources data={detail.sumberDataByDomain.sdm} />
@@ -601,12 +706,29 @@ const KONDISI_COLOR: Record<'Baik' | 'Rusak Ringan' | 'Rusak Berat', 'success' |
   'Rusak Berat': 'danger',
 };
 
-const SarprasTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ detail, canView }) => {
+const SarprasTab: React.FC<{ detail: EProfilDetail; canView: boolean; onLihatSemua: () => void }> = ({ detail, canView, onLihatSemua }) => {
   const kendaraanItems: HorizontalMetricItem[] = detail.sarpras.statusKendaraan.map((k) => ({ id: k.label, label: k.label, percent: k.value, displayValue: k.displayValue || `${k.value}%`, color: 'var(--sd-primary)' }));
+  const kondisiSegments = detail.sarpras.kondisiDonut.map((k, i) => ({ id: k.kondisi, label: k.kondisi, value: k.jumlah, color: ['#2D7A4A', '#F59E0B', '#BA1A1A'][i] }));
 
   return (
     <div className="space-y-4">
       <RingkasanAnalisisAi {...detail.aiSummary} canView={canView} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <SectionCard title="Total & Nilai Aset BMN" icon={ShieldCheck}>
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="Total Unit BMN" value={detail.sarpras.totalUnitBmn.toLocaleString('id-ID')} />
+            <Metric label="Nilai BMN" value={detail.sarpras.nilaiBmnRp} />
+          </div>
+        </SectionCard>
+        <SectionCard title="Distribusi Kondisi Aset" icon={ClipboardList}>
+          <DonutChart segments={kondisiSegments} size={140} />
+        </SectionCard>
+      </div>
+
+      <SectionCard title="Tren Inventaris BMN per Triwulan" icon={Truck}>
+        <TrendLineChart data={detail.sarpras.inventoryTrend} xKey="periode" series={[{ dataKey: 'value', label: 'Jumlah Unit', color: 'var(--sd-primary)' }]} />
+      </SectionCard>
 
       <SectionCard title="Status Kendaraan Dinas" icon={Truck}>
         <HorizontalMetricChart items={kendaraanItems} />
@@ -662,7 +784,7 @@ const SarprasTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ det
       </SectionCard>
 
       <SectionCard title="5 Temuan Teratas AI Sarpras" icon={Sparkles}>
-        <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.sarpras} />
+        <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.sarpras} onLihatSemua={onLihatSemua} />
       </SectionCard>
 
       <AuditRecommendationSection data={detail.rekomendasiByDomain.sarpras} />
@@ -673,7 +795,7 @@ const SarprasTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ det
 
 /* ============================== Tab: Garkeu ============================== */
 
-const GarkeuTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ detail, canView }) => (
+const GarkeuTab: React.FC<{ detail: EProfilDetail; canView: boolean; onLihatSemua: () => void }> = ({ detail, canView, onLihatSemua }) => (
   <div className="space-y-4">
     <RingkasanAnalisisAi {...detail.aiSummary} canView={canView} />
 
@@ -720,11 +842,130 @@ const GarkeuTab: React.FC<{ detail: EProfilDetail; canView: boolean }> = ({ deta
       </SectionCard>
     </div>
 
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <SectionCard title="Breakdown Status Siklus Pembayaran" icon={ClipboardList}>
+        <HorizontalMetricChart items={detail.garkeu.siklusStatusBreakdown.map((s) => ({ id: s.label, label: s.label, percent: s.value, displayValue: `${s.value}%`, color: 'var(--sd-primary)' }))} />
+      </SectionCard>
+      <SectionCard title="KPI Kepatuhan Pajak" icon={Coins}>
+        <div className="space-y-2">
+          {detail.garkeu.taxComplianceKpis.map((k) => (
+            <div key={k.label} className="flex items-center justify-between text-xs">
+              <span className="text-slate-600">{k.label}</span>
+              <Badge color={k.status}>{k.value}</Badge>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
+
+    <SectionCard title="Tren Arus Kas Masuk vs Keluar" icon={Coins}>
+      <TrendLineChart
+        data={detail.garkeu.arusKasTrend}
+        xKey="periode"
+        series={[
+          { dataKey: 'masuk', label: 'Kas Masuk (Rp M)', color: '#2D7A4A' },
+          { dataKey: 'keluar', label: 'Kas Keluar (Rp M)', color: '#BA1A1A', dashed: true },
+        ]}
+      />
+    </SectionCard>
+
+    <SectionCard title="Tabel DIPA & PNBP per Bulan" icon={Coins}>
+      <DipaPnbpTable rows={detail.garkeu.dipaPnbpTable} />
+    </SectionCard>
+
     <SectionCard title="5 Temuan Teratas AI Garkeu" icon={Sparkles}>
-      <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.garkeu} />
+      <AiFindingsTable variant="domain" data={detail.temuanAiByDomain.garkeu} onLihatSemua={onLihatSemua} />
     </SectionCard>
 
     <AuditRecommendationSection data={detail.rekomendasiByDomain.garkeu} />
     <AnalysisDataSources data={detail.sumberDataByDomain.garkeu} />
   </div>
 );
+
+const DipaPnbpTable: React.FC<{ rows: EProfilDetail['garkeu']['dipaPnbpTable'] }> = ({ rows }) => {
+  const { pageItems, page, setPage } = usePagination(rows, 6);
+  const columns: TableColumn<EProfilDetail['garkeu']['dipaPnbpTable'][number]>[] = [
+    { key: 'periode', header: 'Periode', render: (r) => <span className="font-bold text-slate-700">{r.periode}</span> },
+    { key: 'dipa', header: 'DIPA', render: (r) => r.dipaRp },
+    { key: 'pnbp', header: 'PNBP', render: (r) => r.pnbpRp },
+    { key: 'status', header: 'Status', render: (r) => <Badge color={STATUS_COLOR[r.status]}>{r.status}</Badge> },
+  ];
+  return (
+    <div>
+      <Table columns={columns} data={pageItems} rowKey={(r) => r.periode} />
+      <Pagination currentPage={page} totalItems={rows.length} pageSize={6} onPageChange={setPage} className="mt-2" />
+    </div>
+  );
+};
+
+/* ============================== Tab: Struktur Organisasi (SF-001/002) ============================== */
+
+const StrukturOrganisasiTab: React.FC<{ root: EProfilOrgNode }> = ({ root }) => {
+  const [zoom, setZoom] = useState(1);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<EProfilOrgNode>(root);
+
+  const toggle = (id: string) => setCollapsed((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+
+  const renderNode = (node: EProfilOrgNode): React.ReactNode => (
+    <div key={node.id} className="flex flex-col items-center">
+      <button
+        onClick={() => setSelected(node)}
+        className={`rounded-[10px] border px-3 py-2 text-center min-w-36 ${selected.id === node.id ? 'border-[var(--sd-primary)] bg-[var(--sd-inverse-primary)]/30' : 'border-slate-200 bg-white'}`}
+      >
+        <div className="text-[10px] font-bold text-slate-400 uppercase">{node.jabatan}</div>
+        <div className="text-xs font-bold text-slate-800">{node.pangkat} {node.nama}</div>
+      </button>
+      {node.children.length > 0 && (
+        <>
+          <button onClick={() => toggle(node.id)} className="text-[10px] font-bold text-[var(--sd-primary)] my-1 hover:underline">
+            {collapsed.has(node.id) ? `+ ${node.children.length} unit` : '− ciutkan'}
+          </button>
+          {!collapsed.has(node.id) && (
+            <div className="flex items-start gap-4 pt-2 border-t border-slate-200">
+              {node.children.map((child) => renderNode(child))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-4">
+      <SectionCard title="Struktur Organisasi" icon={Users}>
+        <div className="flex items-center justify-end gap-2 mb-3">
+          <button onClick={() => setZoom((z) => Math.max(0.6, z - 0.1))} className="w-7 h-7 rounded-[8px] border border-slate-200 text-slate-500 font-bold">−</button>
+          <span className="text-[11px] font-mono text-slate-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom((z) => Math.min(1.6, z + 0.1))} className="w-7 h-7 rounded-[8px] border border-slate-200 text-slate-500 font-bold">+</button>
+        </div>
+        <div className="overflow-auto lg:col-span-2 pb-2" style={{ maxHeight: 480 }}>
+          <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top left', width: 'max-content' }} className="p-2">
+            {renderNode(root)}
+          </div>
+        </div>
+      </SectionCard>
+      <SectionCard title="Detail Pejabat" icon={ClipboardList}>
+        <div className="space-y-2 text-xs">
+          <div>
+            <div className="text-[10px] font-bold uppercase text-slate-400">Jabatan</div>
+            <div className="font-bold text-slate-800">{selected.jabatan}</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-slate-400">Nama & Pangkat</div>
+            <div className="font-bold text-slate-800">{selected.pangkat} {selected.nama}</div>
+          </div>
+          <div>
+            <div className="text-[10px] font-bold uppercase text-slate-400">Jumlah Unit di Bawah</div>
+            <div className="font-bold text-slate-800">{selected.children.length}</div>
+          </div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+};

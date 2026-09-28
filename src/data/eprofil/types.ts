@@ -119,6 +119,18 @@ export interface EProfilSarpras {
   kesehatanAsetPersen: number;
   persediaan: EProfilLabeledValue[];
   anomaliAset: EProfilAnomaliAset[];
+  /** Chart depth (Plan p2-b1): total unit & nilai BMN, donut kondisi aset, tren inventaris. */
+  totalUnitBmn: number;
+  nilaiBmnRp: string;
+  kondisiDonut: { kondisi: 'Baik' | 'Rusak Ringan' | 'Rusak Berat'; jumlah: number }[];
+  inventoryTrend: { periode: string; value: number }[];
+}
+
+export interface EProfilDipaPnbpRow {
+  periode: string;
+  dipaRp: string;
+  pnbpRp: string;
+  status: 'Tercapai' | 'Mendekati Target' | 'Belum Tercapai';
 }
 
 export interface EProfilGarkeu {
@@ -132,6 +144,23 @@ export interface EProfilGarkeu {
   siklusPembayaranHariRataRata: number;
   pajakDipungutRp: string;
   arusKasBersihRp: string;
+  /** Chart depth (Plan p2-b1): tabel DIPA/PNBP berpaginasi, breakdown status siklus bayar,
+   * tren arus kas, KPI kepatuhan pajak. */
+  dipaPnbpTable: EProfilDipaPnbpRow[];
+  siklusStatusBreakdown: EProfilLabeledValue[];
+  arusKasTrend: { periode: string; masuk: number; keluar: number }[];
+  taxComplianceKpis: { label: string; value: string; status: 'success' | 'warning' | 'danger' }[];
+}
+
+/* ============================================================================================ *
+ * Struktur Organisasi (SF-001/002, tab baru B.1)
+ * ============================================================================================ */
+export interface EProfilOrgNode {
+  id: string;
+  jabatan: string;
+  nama: string;
+  pangkat: string;
+  children: EProfilOrgNode[];
 }
 
 export interface EProfilDetail {
@@ -147,4 +176,5 @@ export interface EProfilDetail {
   sdm: EProfilSdm;
   sarpras: EProfilSarpras;
   garkeu: EProfilGarkeu;
+  strukturOrganisasi: EProfilOrgNode;
 }

@@ -44,6 +44,12 @@ export const ModuleScreenShell: React.FC<ModuleScreenShellProps> = ({
 }) => {
   const activeScreenDef = spec.screens.find((s) => s.slug === activeScreen) ?? spec.screens[0];
 
+  // Nav 2-level (mis. B.12 Ringkasan/Konfigurasi/Pengumpulan & Verifikasi/Risiko & Perencanaan)
+  // — hanya aktif jika Screen Spec modul ini memakai `section`.
+  const sections = Array.from(new Set(spec.screens.map((s) => s.section).filter((s): s is string => !!s)));
+  const hasSections = sections.length > 0;
+  const activeSection = activeScreenDef?.section ?? sections[0] ?? '';
+
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: groupLabel },
     { label: moduleDef.kode || moduleDef.label },
@@ -76,11 +82,39 @@ export const ModuleScreenShell: React.FC<ModuleScreenShellProps> = ({
         </div>
       </div>
 
-      <TabNavigation
-        tabs={spec.screens.map((s) => ({ id: s.slug, label: s.nama }))}
-        activeTab={activeScreenDef?.slug || ''}
-        onTabChange={onScreenChange}
-      />
+      {hasSections ? (
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {sections.map((sec) => (
+              <button
+                key={sec}
+                onClick={() => {
+                  const firstInSection = spec.screens.find((s) => (s.section ?? '') === sec);
+                  if (firstInSection) onScreenChange(firstInSection.slug);
+                }}
+                className={`px-3 py-1.5 rounded-[8px] text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
+                  sec === activeSection
+                    ? 'bg-[var(--sd-primary)] text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {sec}
+              </button>
+            ))}
+          </div>
+          <TabNavigation
+            tabs={spec.screens.filter((s) => (s.section ?? '') === activeSection).map((s) => ({ id: s.slug, label: s.nama }))}
+            activeTab={activeScreenDef?.slug || ''}
+            onTabChange={onScreenChange}
+          />
+        </div>
+      ) : (
+        <TabNavigation
+          tabs={spec.screens.map((s) => ({ id: s.slug, label: s.nama }))}
+          activeTab={activeScreenDef?.slug || ''}
+          onTabChange={onScreenChange}
+        />
+      )}
 
       {activeScreenDef?.deskripsi && (
         <p className="text-xs text-slate-500 -mt-1">{activeScreenDef.deskripsi}</p>

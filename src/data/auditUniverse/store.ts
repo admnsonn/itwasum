@@ -27,7 +27,23 @@ import type {
   JenisPengawasan,
   OrgUnit,
   Tipologi,
+  MappingRule,
+  AturanValidasi,
+  ObjekAudit,
+  ObjekAuditStatus,
+  PenilaianRisiko,
+  PenilaianRisikoStatus,
+  RisikoFaktorKey,
+  StatusRentangRisikoLite,
+  BaselinePrioritas,
+  ObjekPemeriksaan,
+  TemplateDokumen,
+  MasterDataHistoryEntry,
+  DokumenSlot,
+  DokumenSlotStatus,
+  ClaimEntry,
 } from './types';
+import { RISIKO_FAKTOR_LIST } from './types';
 import { addDaysIso, daysDiffFromToday, isoDateTime, startOfToday } from './dateUtils';
 import { ORG_UNITS_SEED } from './seeds/orgUnits';
 import { TIPOLOGI_SEED } from './seeds/tipologi';
@@ -40,7 +56,133 @@ import type { LaporanSlotDef, BerkasVersion } from './types';
 
 const STORAGE_KEY = 'itwasum_audit_universe_v1';
 /** Bump when the seed/shape changes so stale localStorage from an older shape is discarded. */
-const SEED_VERSION = 2;
+const SEED_VERSION = 5;
+
+/** Deterministic string hash -> [0,1), used to seed Objek Audit/Risiko demo data reproducibly. */
+function seededFraction(key: string): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return (h % 10000) / 10000;
+}
+
+function skorToLevel(skor: number): StatusRentangRisikoLite {
+  if (skor >= 20) return 'sangat_tinggi';
+  if (skor >= 16) return 'tinggi';
+  if (skor >= 12) return 'sedang';
+  if (skor >= 6) return 'rendah';
+  return 'sangat_rendah';
+}
+
+/** 5.1 Mapping Ketentuan Pengumpulan — satu mapping per Jenis Pengawasan induk yang dipakai,
+ * menghubungkannya ke katalog dokumen "Wajib" yang relevan (demo-representatif, bisa diubah admin). */
+function buildMappingSeed(jenisPengawasan: JenisPengawasan[], katalog: KatalogDokumen[]): MappingRule[] {
+  const wajibIds = katalog.filter((d) => d.sifat === 'Wajib' && d.aktif).map((d) => d.id);
+  const induk = jenisPengawasan.filter((j) => !j.induk && j.aktif);
+  return induk.map((jp, idx) => ({
+    id: `MAP-${String(idx + 1).padStart(3, '0')}`,
+    jpId: jp.id,
+    tipologiIds: [],
+    dokumenIds: wajibIds.slice((idx * 4) % Math.max(1, wajibIds.length - 5), (idx * 4) % Math.max(1, wajibIds.length - 5) + 5),
+    aktif: true,
+    versi: 1,
+    berlakuMulai: `${new Date().getFullYear()}-01-01`,
+    catatan: `Dokumen wajib untuk pengumpulan data terkait ${jp.nama}.`,
+  }));
+}
+
+/** 5.2 Aturan Validasi — satu aturan default per dokumen berjenis "Dokumen" pada katalog. */
+function buildAturanValidasiSeed(katalog: KatalogDokumen[]): AturanValidasi[] {
+  return katalog
+    .filter((d) => d.jenis === 'Dokumen')
+    .map((d) => ({
+      id: `AV-${d.id}`,
+      dokId: d.id,
+      formatDiizinkan: ['pdf', 'jpg', 'png'],
+      ukuranMaksMb: d.kat === 'AUD' || d.kat === 'LGL' ? 20 : 10,
+      wajibTtd: d.kat === 'AUD' || d.kat === 'LGL' || d.kat === 'RSK',
+      ambangKelengkapanPct: 80,
+      aktif: d.aktif,
+    }));
+}
+
+/** F3 Objek Audit + 8.1/8.2 Penilaian Risiko — satu Objek Audit per Satker beranggaran
+ * (jenjang Polda/Satker Mabes/Satker Polda) untuk TA berjalan, dinilai risikonya bila statusnya
+ * cukup matang (demo-deterministik lewat `seededFraction`, bukan acak per render). */
+function buildObjekAuditAndRisikoSeed(
+  orgUnits: OrgUnit[],
+  jenisPengawasan: JenisPengawasan[],
+  now: Date
+): { objekAudit: ObjekAudit[]; penilaianRisiko: PenilaianRisiko[]; baselinePrioritas: BaselinePrioritas[] } {
+  const tahunAnggaran = String(now.getFullYear());
+  const jpUtama = jenisPengawasan.find((j) => j.id === 'JP-01' && j.aktif) ?? jenisPengawasan.find((j) => !j.induk && j.aktif);
+  const targetOrgs = orgUnits.filter((o) => o.aktif && ['Polda', 'Satker Mabes', 'Satker Polda'].includes(o.jenjang) && !!o.tip);
+
+  const objekAudit: ObjekAudit[] = [];
+  const penilaianRisiko: PenilaianRisiko[] = [];
+
+  targetOrgs.forEach((org, idx) => {
+    const f = seededFraction(org.id);
+    const status: ObjekAuditStatus = f < 0.15 ? 'Draft' : f < 0.35 ? 'Siap Dinilai' : 'Dinilai';
+    const objId = `OBJ-${tahunAnggaran}-${String(idx + 1).padStart(3, '0')}`;
+    objekAudit.push({
+      id: objId,
+      orgId: org.id,
+      tahunAnggaran,
+      jpId: jpUtama?.id ?? 'JP-01',
+      status,
+      kelengkapanPct: status === 'Draft' ? Math.round(20 + f * 40) : Math.round(70 + f * 30),
+      catatan: '',
+    });
+
+    if (status === 'Dinilai') {
+      const faktor: Record<RisikoFaktorKey, number> = {} as Record<RisikoFaktorKey, number>;
+      RISIKO_FAKTOR_LIST.forEach((fk, fi) => {
+        faktor[fk.key] = 1 + Math.round(seededFraction(`${org.id}-${fk.key}-${fi}`) * 4);
+      });
+      const totalMax = RISIKO_FAKTOR_LIST.length * 5;
+      const skor = Math.round((Object.values(faktor).reduce((a, b) => a + b, 0) / totalMax) * 25);
+      const statusRisiko: PenilaianRisikoStatus = f < 0.6 ? 'Disetujui' : f < 0.8 ? 'Diajukan' : 'Dikembalikan';
+      penilaianRisiko.push({
+        id: `RSK-${objId}`,
+        objekAuditId: objId,
+        orgId: org.id,
+        tahunAnggaran,
+        faktor,
+        skor,
+        level: skorToLevel(skor),
+        catatan: '',
+        status: statusRisiko,
+        dinilaiOleh: 'Tim Risiko Itwasum',
+        tglDinilai: addDaysIso(now, -Math.round(f * 30)),
+        direviewOleh: statusRisiko === 'Dikembalikan' || statusRisiko === 'Disetujui' ? 'Koordinator Pengendali' : '',
+        tglReview: statusRisiko === 'Disetujui' ? addDaysIso(now, -Math.round(f * 10)) : null,
+        catatanReview: statusRisiko === 'Dikembalikan' ? 'Lengkapi bukti pendukung faktor Kompleksitas Operasi & SDM sebelum diajukan kembali.' : '',
+      });
+    }
+  });
+
+  const approved = penilaianRisiko.filter((p) => p.status === 'Disetujui').sort((a, b) => b.skor - a.skor);
+  const baselinePrioritas: BaselinePrioritas[] = approved.length
+    ? [
+        {
+          id: `BASE-${tahunAnggaran}-01`,
+          versi: 1,
+          tahunAnggaran: String(now.getFullYear() + 1),
+          lockedAt: addDaysIso(now, -14),
+          lockedOleh: 'Koordinator Pengendali',
+          items: approved.map((p, rank) => ({
+            objekAuditId: p.objekAuditId,
+            rank: rank + 1,
+            skor: p.skor,
+            masuk: rank < Math.max(1, Math.round(approved.length * 0.6)),
+            alasan: rank < Math.max(1, Math.round(approved.length * 0.6)) ? 'Termasuk kapasitas OH PKPT tahun berikutnya.' : 'Ditunda — menunggu kapasitas OH tersedia.',
+          })),
+        },
+      ]
+    : [];
+
+  return { objekAudit, penilaianRisiko, baselinePrioritas };
+}
 
 const uid = (prefix = 'F') => `${prefix}${Math.random().toString(36).slice(2, 9)}`;
 
@@ -144,20 +286,71 @@ function resolveLaporanSeed(now: Date): Record<string, LaporanEntry[]> {
   return laporan;
 }
 
+/** 4.3 Objek Pemeriksaan — satu entri demo-representatif per Jenis Pengawasan induk aktif
+ * (Plane B.1 Pra-Audit "Objek Pengawasan", digabung ke B.12 4.3). */
+function buildObjekPemeriksaanSeed(jenisPengawasan: JenisPengawasan[]): ObjekPemeriksaan[] {
+  const siklusList: ObjekPemeriksaan['siklus'][] = ['Tahunan', 'Semesteran', 'Triwulanan', 'Ad-hoc'];
+  return jenisPengawasan
+    .filter((j) => !j.induk && j.aktif)
+    .map((j, idx) => ({
+      id: `OP-${String(idx + 1).padStart(3, '0')}`,
+      jpId: j.id,
+      nama: `Objek Pemeriksaan ${j.nama}`,
+      bidang: 'Umum & Operasional',
+      siklus: siklusList[idx % siklusList.length],
+      dasarHukum: 'Peraturan Kapolri tentang Pengawasan dan Pemeriksaan di Lingkungan Polri',
+      aktif: true,
+    }));
+}
+
+/** 4.4 Tab Template — satu template demo per dokumen berjenis "Data" (Plane B.1 Pra-Audit
+ * "Template Dokumen", digabung sebagai tab di dalam 4.4 Katalog). */
+function buildTemplateSeed(katalog: KatalogDokumen[]): TemplateDokumen[] {
+  return katalog
+    .filter((d) => d.jenis === 'Data')
+    .slice(0, 12)
+    .map((d, idx) => ({
+      id: `TPL-${String(idx + 1).padStart(3, '0')}`,
+      dokId: d.id,
+      nama: `Template ${d.nama}`,
+      fields: [
+        { nama: 'Nama Satker', tipe: 'Teks' as const },
+        { nama: 'Periode', tipe: 'Tanggal' as const },
+        { nama: 'Nilai/Realisasi', tipe: 'Angka' as const },
+      ],
+      contohBakuUrl: `contoh-baku_${d.id}.xlsx`,
+      versi: 1,
+      aktif: true,
+    }));
+}
+
 function buildSeedState(): AuditUniverseState {
   const now = startOfToday();
   const { permintaan, berkas, selesai } = resolvePermintaanSeed(PERMINTAAN_SEED, now);
+  const orgUnits = ORG_UNITS_SEED.map((o) => ({ ...o }));
+  const jenisPengawasan = JENIS_PENGAWASAN_SEED.map((j) => ({ ...j }));
+  const katalog = KATALOG_DOKUMEN_SEED.map((d) => ({ ...d }));
+  const { objekAudit, penilaianRisiko, baselinePrioritas } = buildObjekAuditAndRisikoSeed(orgUnits, jenisPengawasan, now);
   return {
     seedVersion: SEED_VERSION,
-    orgUnits: ORG_UNITS_SEED.map((o) => ({ ...o })),
+    orgUnits,
     tipologi: TIPOLOGI_SEED.map((t) => ({ ...t })),
-    jenisPengawasan: JENIS_PENGAWASAN_SEED.map((j) => ({ ...j })),
+    jenisPengawasan,
     bidjemen: BIDJEMEN_SEED.map((b) => ({ ...b })),
-    katalog: KATALOG_DOKUMEN_SEED.map((d) => ({ ...d })),
+    katalog,
     permintaan,
     berkas,
     selesai,
     laporan: resolveLaporanSeed(now),
+    mappingRules: buildMappingSeed(jenisPengawasan, katalog),
+    aturanValidasi: buildAturanValidasiSeed(katalog),
+    objekAudit,
+    penilaianRisiko,
+    baselinePrioritas,
+    objekPemeriksaan: buildObjekPemeriksaanSeed(jenisPengawasan),
+    templateDokumen: buildTemplateSeed(katalog),
+    slots: [],
+    claims: {},
   };
 }
 
@@ -500,24 +693,35 @@ export function isOrgInUse(org: OrgUnit): boolean {
   return !!(org.tip || org.perm) || getOrgKids(org.id).length > 0;
 }
 
-export function createOrgUnit(input: Omit<OrgUnit, 'id' | 'aktif'>): OrgUnit {
-  const org: OrgUnit = { ...input, id: nextOrgNumericId(), aktif: true };
+function pushOrgHistory(org: OrgUnit, aksi: string, oleh: string): OrgUnit {
+  const entry: MasterDataHistoryEntry = { waktu: nowStamp(), oleh, aksi };
+  return { ...org, history: [...(org.history ?? []), entry] };
+}
+
+export function createOrgUnit(input: Omit<OrgUnit, 'id' | 'aktif' | 'history'>, oleh = 'Admin Itwasum'): OrgUnit {
+  let org: OrgUnit = { ...input, id: nextOrgNumericId(), aktif: true };
+  org = pushOrgHistory(org, 'Membuat entri organisasi baru', oleh);
   setState({ ...state, orgUnits: [...state.orgUnits, org] });
   return org;
 }
 
-export function updateOrgUnit(id: string, patch: Partial<OrgUnit>): void {
-  setState({ ...state, orgUnits: state.orgUnits.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
+export function updateOrgUnit(id: string, patch: Partial<OrgUnit>, oleh = 'Admin Itwasum'): void {
+  setState({
+    ...state,
+    orgUnits: state.orgUnits.map((o) => (o.id === id ? pushOrgHistory({ ...o, ...patch }, 'Mengubah data organisasi', oleh) : o)),
+  });
 }
 
 /** Menonaktifkan Polda/Satker Mabes ikut menonaktifkan seluruh unit turunannya (cascade). */
-export function setOrgActive(id: string, aktif: boolean, alasan = ''): void {
+export function setOrgActive(id: string, aktif: boolean, alasan = '', oleh = 'Admin Itwasum'): void {
   const target = getOrgById(id);
   if (!target) return;
   const affectedIds = new Set([id, ...getOrgDescendants(id).map((o) => o.id)]);
   setState({
     ...state,
-    orgUnits: state.orgUnits.map((o) => (affectedIds.has(o.id) ? { ...o, aktif, alasan: aktif ? '' : alasan } : o)),
+    orgUnits: state.orgUnits.map((o) =>
+      affectedIds.has(o.id) ? pushOrgHistory({ ...o, aktif, alasan: aktif ? '' : alasan }, aktif ? 'Mengaktifkan kembali' : `Menonaktifkan (${alasan || 'tanpa alasan'})`, oleh) : o
+    ),
   });
 }
 
@@ -550,9 +754,16 @@ export function deleteTipologi(id: string): { ok: boolean; reason?: string } {
   return { ok: true };
 }
 
-/** Menetapkan/mengosongkan tipologi Satker (4.2 tab "Tipologi Satker"). */
-export function assignTipologiToOrg(orgId: string, tipId: string | null): void {
-  updateOrgUnit(orgId, { tip: tipId });
+/** Menetapkan/mengosongkan tipologi Satker (4.2 tab "Tipologi Satker") — mengubah tipologi
+ * mensyaratkan persetujuan berupa nomor & tanggal SK (Plan p1-b12-nav-master, tabel 4.2). */
+export function assignTipologiToOrg(orgId: string, tipId: string | null, sk: { nomor: string; tanggal: string }, oleh = 'Admin Itwasum'): { ok: boolean; reason?: string } {
+  if (tipId !== null && !sk.nomor.trim()) return { ok: false, reason: 'Nomor SK persetujuan wajib diisi untuk menetapkan/mengubah tipologi.' };
+  updateOrgUnit(
+    orgId,
+    { tip: tipId, tipSkNomor: tipId ? sk.nomor.trim() : '', tipSkTanggal: tipId ? sk.tanggal : '', tipDisetujuiOleh: tipId ? oleh : '' },
+    oleh
+  );
+  return { ok: true };
 }
 
 export function createJenisPengawasan(input: Omit<JenisPengawasan, 'id' | 'aktif' | 'dipakai'>): JenisPengawasan {
@@ -623,6 +834,55 @@ export function deleteKatalogDokumen(id: string): { ok: boolean; reason?: string
 }
 
 /* =====================================================================================
+ * MUTATIONS — 4.3 Objek Pemeriksaan, 4.4 Tab Template
+ * ===================================================================================== */
+
+export function createObjekPemeriksaan(input: Omit<ObjekPemeriksaan, 'id' | 'aktif'>): ObjekPemeriksaan {
+  const seq = state.objekPemeriksaan.length + 1;
+  const op: ObjekPemeriksaan = { ...input, id: `OP-${String(seq).padStart(3, '0')}`, aktif: true };
+  setState({ ...state, objekPemeriksaan: [...state.objekPemeriksaan, op] });
+  return op;
+}
+
+export function updateObjekPemeriksaan(id: string, patch: Partial<ObjekPemeriksaan>): void {
+  setState({ ...state, objekPemeriksaan: state.objekPemeriksaan.map((o) => (o.id === id ? { ...o, ...patch } : o)) });
+}
+
+export function setObjekPemeriksaanActive(id: string, aktif: boolean): void {
+  setState({ ...state, objekPemeriksaan: state.objekPemeriksaan.map((o) => (o.id === id ? { ...o, aktif } : o)) });
+}
+
+export function deleteObjekPemeriksaan(id: string): void {
+  setState({ ...state, objekPemeriksaan: state.objekPemeriksaan.filter((o) => o.id !== id) });
+}
+
+export function getObjekPemeriksaanByJp(jpId: string): ObjekPemeriksaan[] {
+  return state.objekPemeriksaan.filter((o) => o.jpId === jpId);
+}
+
+export function createTemplateDokumen(input: Omit<TemplateDokumen, 'id' | 'versi' | 'aktif'>): TemplateDokumen {
+  const seq = state.templateDokumen.length + 1;
+  const t: TemplateDokumen = { ...input, id: `TPL-${String(seq).padStart(3, '0')}`, versi: 1, aktif: true };
+  setState({ ...state, templateDokumen: [...state.templateDokumen, t] });
+  return t;
+}
+
+export function updateTemplateDokumen(id: string, patch: Partial<TemplateDokumen>): void {
+  setState({
+    ...state,
+    templateDokumen: state.templateDokumen.map((t) => (t.id === id ? { ...t, ...patch, versi: patch.versi === undefined ? t.versi + 1 : patch.versi } : t)),
+  });
+}
+
+export function setTemplateDokumenActive(id: string, aktif: boolean): void {
+  setState({ ...state, templateDokumen: state.templateDokumen.map((t) => (t.id === id ? { ...t, aktif } : t)) });
+}
+
+export function getTemplateByDok(dokId: string): TemplateDokumen | undefined {
+  return state.templateDokumen.find((t) => t.dokId === dokId);
+}
+
+/* =====================================================================================
  * MUTATIONS — Permintaan Pengumpulan Data (5.1)
  * ===================================================================================== */
 
@@ -682,15 +942,140 @@ export function updatePermintaanDraft(id: string, patch: Partial<CreatePermintaa
   });
 }
 
+/** 5.3 Publish — mengambil snapshot Mapping (5.1) yang berlaku untuk jenis pengawasan &
+ * tipologi tiap Satker sasaran, lalu membuat satu Slot Dokumen (6.1) per dokumen wajib
+ * (Plan p1-b12-collection, BR "Publish takes a snapshot..."). Hanya berjalan untuk permintaan
+ * yang baru dikirim setelah fitur ini ada — data seed lama tetap memakai unggah bebas. */
+function generateSlotsForPermintaan(r: Permintaan): DokumenSlot[] {
+  const today = startOfToday().toISOString().slice(0, 10);
+  const out: DokumenSlot[] = [];
+  let seq = state.slots.length;
+  r.sasaran.forEach((orgId) => {
+    const org = getOrgById(orgId);
+    const wajibDocs = dokumenWajibUntuk(r.jpId, org?.tip);
+    wajibDocs.forEach((dok) => {
+      seq += 1;
+      out.push({
+        id: `SLOT-${String(seq).padStart(4, '0')}`,
+        reqId: r.id,
+        orgId,
+        dokId: dok.id,
+        pic: '',
+        tenggatInternal: null,
+        dikecualikan: false,
+        alasanKecualikan: '',
+        dibuat: today,
+      });
+    });
+  });
+  return out;
+}
+
 export function sendPermintaan(id: string, oleh: string): void {
+  const target = getPermintaanById(id);
+  if (!target || target.status !== 'Draft') return;
+  const newSlots = generateSlotsForPermintaan(target);
   setState({
     ...state,
     permintaan: state.permintaan.map((r) => {
-      if (r.id !== id || r.status !== 'Draft') return r;
+      if (r.id !== id) return r;
       const updated: Permintaan = { ...r, status: 'Terkirim', dikirim: startOfToday().toISOString().slice(0, 10) };
-      return addLog(updated, `Mengirim permintaan ke ${r.sasaran.length} Satker`, oleh);
+      return addLog(updated, `Mengirim permintaan ke ${r.sasaran.length} Satker${newSlots.length ? ` (${newSlots.length} slot dokumen dipublikasikan dari Mapping 5.1)` : ''}`, oleh);
     }),
+    slots: [...state.slots, ...newSlots],
   });
+}
+
+/* =====================================================================================
+ * SELECTORS/MUTATIONS — 6.1 Slot Dokumen
+ * ===================================================================================== */
+
+export function getSlotsFor(reqId: string, orgId: string): DokumenSlot[] {
+  return state.slots.filter((s) => s.reqId === reqId && s.orgId === orgId);
+}
+
+/** Status turunan (Belum Diunggah/Diunggah/Diajukan/Perlu Perbaikan/Diterima) dari
+ * `BerkasSatker` terkait, kecuali "Dikecualikan" yang murni keputusan manual. */
+export function slotStatus(slot: DokumenSlot): DokumenSlotStatus {
+  if (slot.dikecualikan) return 'Dikecualikan';
+  const berkas = getBerkas(slot.reqId, slot.orgId).find((f) => f.dokId === slot.dokId);
+  if (!berkas) return 'Belum Diunggah';
+  if (berkas.status === 'draft') return 'Diunggah';
+  if (berkas.status === 'wait') return 'Diajukan';
+  if (berkas.status === 'fix') return 'Perlu Perbaikan';
+  return 'Diterima';
+}
+
+export function assignSlotPic(slotId: string, pic: string, tenggatInternal: string | null): void {
+  setState({ ...state, slots: state.slots.map((s) => (s.id === slotId ? { ...s, pic, tenggatInternal } : s)) });
+}
+
+export function excludeSlot(slotId: string, alasan: string): { ok: boolean; reason?: string } {
+  if (!alasan.trim()) return { ok: false, reason: 'Alasan pengecualian wajib diisi.' };
+  setState({ ...state, slots: state.slots.map((s) => (s.id === slotId ? { ...s, dikecualikan: true, alasanKecualikan: alasan.trim() } : s)) });
+  return { ok: true };
+}
+
+export function unexcludeSlot(slotId: string): void {
+  setState({ ...state, slots: state.slots.map((s) => (s.id === slotId ? { ...s, dikecualikan: false, alasanKecualikan: '' } : s)) });
+}
+
+/** Validasi otomatis (5.2) sebelum unggahan slot dikirim — dipakai Portal Satker 6.1. */
+export function validateBerkasAgainstAturan(dokId: string, file: { nama: string; sizeBytes: number }): { ok: boolean; reason?: string } {
+  const aturan = getAturanValidasiByDok(dokId);
+  if (!aturan) return { ok: true };
+  const ext = file.nama.split('.').pop()?.toLowerCase() ?? '';
+  if (aturan.formatDiizinkan.length && !aturan.formatDiizinkan.includes(ext)) {
+    return { ok: false, reason: `Format .${ext} tidak diizinkan untuk dokumen ini. Format yang diperbolehkan: ${aturan.formatDiizinkan.join(', ').toUpperCase()}.` };
+  }
+  const maxBytes = aturan.ukuranMaksMb * 1024 * 1024;
+  if (file.sizeBytes > maxBytes) {
+    return { ok: false, reason: `Ukuran berkas melebihi batas maksimum ${aturan.ukuranMaksMb} MB untuk dokumen ini.` };
+  }
+  return { ok: true };
+}
+
+/* =====================================================================================
+ * F7 — Klaim (priority ordering & claim lock), Pemisahan Tugas, Pembatalan Keputusan
+ * ===================================================================================== */
+
+export function claimQueueItem(fileId: string, oleh: string): { ok: boolean; reason?: string } {
+  const existing = state.claims[fileId];
+  if (existing && existing.oleh !== oleh) return { ok: false, reason: `Item ini sudah diklaim oleh ${existing.oleh}.` };
+  setState({ ...state, claims: { ...state.claims, [fileId]: { oleh, waktu: nowStamp() } } });
+  return { ok: true };
+}
+
+export function releaseClaim(fileId: string): void {
+  const next = { ...state.claims };
+  delete next[fileId];
+  setState({ ...state, claims: next });
+}
+
+export function getClaim(fileId: string): ClaimEntry | undefined {
+  return state.claims[fileId];
+}
+
+/** F7 — membatalkan keputusan verifikasi (Terima/Minta Perbaikan) yang sudah diambil,
+ * mengembalikan berkas/laporan ke "Menunggu Verifikasi" beserta jejak log (BR "structured
+ * decisions, and a history tab where a decision can be annulled"). */
+export function annulBerkasKeputusan(reqId: string, orgId: string, fileId: string, oleh: string): void {
+  const berkasForReq = { ...(state.berkas[reqId] ?? {}) };
+  const files = berkasForReq[orgId] ?? [];
+  let fileNama = '';
+  berkasForReq[orgId] = files.map((f) => {
+    if (f.id !== fileId) return f;
+    fileNama = f.nama;
+    return { ...f, status: 'wait' as const, catatan: '', verifikatorOleh: '', tglVerifikasi: null };
+  });
+  const permintaan = state.permintaan.map((r) => (r.id === reqId ? addLog(r, `Membatalkan keputusan verifikasi atas berkas ${fileNama}`, oleh, orgId) : r));
+  setState({ ...state, berkas: { ...state.berkas, [reqId]: berkasForReq }, permintaan });
+}
+
+export function annulLaporanKeputusan(orgId: string, laporanId: string): void {
+  const list = state.laporan[orgId] ?? [];
+  const next = list.map((l) => (l.id === laporanId ? { ...l, status: 'wait' as const, catatan: '', verifikatorOleh: '', tglVerifikasi: null } : l));
+  setState({ ...state, laporan: { ...state.laporan, [orgId]: next } });
 }
 
 export function duplicatePermintaan(id: string, oleh: string): Permintaan | undefined {
@@ -991,4 +1376,153 @@ export function verifyLaporan(orgId: string, laporanId: string, decision: 'ok' |
   const list = state.laporan[orgId] ?? [];
   const next = list.map((l) => (l.id === laporanId ? { ...l, status: decision, catatan: decision === 'fix' ? catatan : '', verifikatorOleh, tglVerifikasi: startOfToday().toISOString().slice(0, 10) } : l));
   setState({ ...state, laporan: { ...state.laporan, [orgId]: next } });
+}
+
+/* =====================================================================================
+ * MUTATIONS/SELECTORS — 5.1 Mapping, 5.2 Aturan Validasi
+ * ===================================================================================== */
+
+export function createMappingRule(input: Omit<MappingRule, 'id' | 'versi'>): MappingRule {
+  const seq = state.mappingRules.length + 1;
+  const rule: MappingRule = { ...input, id: `MAP-${String(seq).padStart(3, '0')}`, versi: 1 };
+  setState({ ...state, mappingRules: [...state.mappingRules, rule] });
+  return rule;
+}
+
+export function updateMappingRule(id: string, patch: Partial<MappingRule>): void {
+  setState({
+    ...state,
+    mappingRules: state.mappingRules.map((m) => (m.id === id ? { ...m, ...patch, versi: m.versi + 1 } : m)),
+  });
+}
+
+export function setMappingRuleActive(id: string, aktif: boolean): void {
+  setState({ ...state, mappingRules: state.mappingRules.map((m) => (m.id === id ? { ...m, aktif } : m)) });
+}
+
+export function deleteMappingRule(id: string): void {
+  setState({ ...state, mappingRules: state.mappingRules.filter((m) => m.id !== id) });
+}
+
+/** Dokumen katalog yang wajib dikumpulkan untuk Jenis Pengawasan + Tipologi tertentu (5.1). */
+export function dokumenWajibUntuk(jpId: string, tipId: string | null | undefined): KatalogDokumen[] {
+  const ids = new Set<string>();
+  state.mappingRules
+    .filter((m) => m.aktif && m.jpId === jpId && (m.tipologiIds.length === 0 || (tipId && m.tipologiIds.includes(tipId))))
+    .forEach((m) => m.dokumenIds.forEach((d) => ids.add(d)));
+  return state.katalog.filter((d) => ids.has(d.id));
+}
+
+export function updateAturanValidasi(id: string, patch: Partial<AturanValidasi>): void {
+  setState({ ...state, aturanValidasi: state.aturanValidasi.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
+}
+
+export function getAturanValidasiByDok(dokId: string): AturanValidasi | undefined {
+  return state.aturanValidasi.find((a) => a.dokId === dokId);
+}
+
+/* =====================================================================================
+ * MUTATIONS/SELECTORS — F3 Objek Audit, 8.1/8.2 Risiko, F9 Prioritas
+ * ===================================================================================== */
+
+export function getObjekAuditById(id: string): ObjekAudit | undefined {
+  return state.objekAudit.find((o) => o.id === id);
+}
+
+export function getObjekAuditByOrg(orgId: string, tahunAnggaran?: string): ObjekAudit[] {
+  return state.objekAudit.filter((o) => o.orgId === orgId && (!tahunAnggaran || o.tahunAnggaran === tahunAnggaran));
+}
+
+export function getPenilaianByObjek(objekAuditId: string): PenilaianRisiko | undefined {
+  return state.penilaianRisiko.find((p) => p.objekAuditId === objekAuditId);
+}
+
+export function setObjekAuditStatus(id: string, status: ObjekAuditStatus): void {
+  setState({ ...state, objekAudit: state.objekAudit.map((o) => (o.id === id ? { ...o, status } : o)) });
+}
+
+export function upsertPenilaianRisiko(
+  objekAuditId: string,
+  faktor: Record<RisikoFaktorKey, number>,
+  catatan: string,
+  oleh: string
+): PenilaianRisiko {
+  const totalMax = RISIKO_FAKTOR_LIST.length * 5;
+  const skor = Math.round((Object.values(faktor).reduce((a, b) => a + b, 0) / totalMax) * 25);
+  const level = skorToLevel(skor);
+  const existing = getPenilaianByObjek(objekAuditId);
+  const today = startOfToday().toISOString().slice(0, 10);
+  const obj = getObjekAuditById(objekAuditId);
+  const next: PenilaianRisiko = existing
+    ? { ...existing, faktor, skor, level, catatan, status: 'Draft', dinilaiOleh: oleh, tglDinilai: today, direviewOleh: '', tglReview: null, catatanReview: '' }
+    : {
+        id: `RSK-${objekAuditId}`,
+        objekAuditId,
+        orgId: obj?.orgId ?? '',
+        tahunAnggaran: obj?.tahunAnggaran ?? String(new Date().getFullYear()),
+        faktor,
+        skor,
+        level,
+        catatan,
+        status: 'Draft',
+        dinilaiOleh: oleh,
+        tglDinilai: today,
+        direviewOleh: '',
+        tglReview: null,
+        catatanReview: '',
+      };
+  const penilaianRisiko = existing ? state.penilaianRisiko.map((p) => (p.objekAuditId === objekAuditId ? next : p)) : [...state.penilaianRisiko, next];
+  setState({ ...state, penilaianRisiko, objekAudit: state.objekAudit.map((o) => (o.id === objekAuditId ? { ...o, status: 'Dinilai' } : o)) });
+  return next;
+}
+
+/** 8.1 -> mengajukan hasil penilaian risiko untuk direview (Draft -> Diajukan). */
+export function ajukanPenilaianRisiko(objekAuditId: string): void {
+  setState({
+    ...state,
+    penilaianRisiko: state.penilaianRisiko.map((p) => (p.objekAuditId === objekAuditId && p.status === 'Draft' ? { ...p, status: 'Diajukan' } : p)),
+  });
+}
+
+/** 8.2 Review & Persetujuan — Koordinator Pengendali menyetujui atau mengembalikan penilaian. */
+export function reviewPenilaianRisiko(objekAuditId: string, decision: 'Disetujui' | 'Dikembalikan', catatanReview: string, oleh: string): void {
+  const today = startOfToday().toISOString().slice(0, 10);
+  setState({
+    ...state,
+    penilaianRisiko: state.penilaianRisiko.map((p) =>
+      p.objekAuditId === objekAuditId && p.status === 'Diajukan'
+        ? { ...p, status: decision, direviewOleh: oleh, tglReview: today, catatanReview: decision === 'Dikembalikan' ? catatanReview : '' }
+        : p
+    ),
+  });
+}
+
+/** F9 — mengunci baseline prioritas PKPT tahun berikutnya dari seluruh penilaian "Disetujui" saat ini. */
+export function lockBaselinePrioritas(tahunAnggaranPkpt: string, ambangMasukPct: number, oleh: string): BaselinePrioritas {
+  const approved = state.penilaianRisiko.filter((p) => p.status === 'Disetujui').sort((a, b) => b.skor - a.skor);
+  const cutoff = Math.max(1, Math.round(approved.length * (ambangMasukPct / 100)));
+  const versi = (state.baselinePrioritas.filter((b) => b.tahunAnggaran === tahunAnggaranPkpt).sort((a, b) => b.versi - a.versi)[0]?.versi ?? 0) + 1;
+  const baseline: BaselinePrioritas = {
+    id: `BASE-${tahunAnggaranPkpt}-${String(versi).padStart(2, '0')}`,
+    versi,
+    tahunAnggaran: tahunAnggaranPkpt,
+    lockedAt: startOfToday().toISOString().slice(0, 10),
+    lockedOleh: oleh,
+    items: approved.map((p, idx) => ({
+      objekAuditId: p.objekAuditId,
+      rank: idx + 1,
+      skor: p.skor,
+      masuk: idx < cutoff,
+      alasan: idx < cutoff ? 'Termasuk kapasitas OH PKPT tahun berikutnya.' : 'Ditunda — menunggu kapasitas OH tersedia.',
+    })),
+  };
+  setState({ ...state, baselinePrioritas: [...state.baselinePrioritas, baseline] });
+  return baseline;
+}
+
+/** Baseline terkunci terbaru untuk suatu TA PKPT — dikonsumsi B.13 secara read-only (F9 ->
+ * B.13, "Move" decision: B.13 tidak lagi memiliki skoring risiko sendiri). */
+export function getLatestBaseline(tahunAnggaranPkpt?: string): BaselinePrioritas | undefined {
+  const list = tahunAnggaranPkpt ? state.baselinePrioritas.filter((b) => b.tahunAnggaran === tahunAnggaranPkpt) : state.baselinePrioritas;
+  return [...list].sort((a, b) => (a.lockedAt < b.lockedAt ? 1 : -1) || b.versi - a.versi)[0];
 }

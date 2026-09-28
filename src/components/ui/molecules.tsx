@@ -231,11 +231,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, descriptio
 
 /* ============================== Search ============================== */
 
-export const Search: React.FC<{ value: string; onChange: (v: string) => void; placeholder?: string; className?: string }> = ({
+export const Search: React.FC<{ value: string; onChange: (v: string) => void; placeholder?: string; className?: string; listId?: string }> = ({
   value,
   onChange,
   placeholder = 'Cari...',
   className,
+  listId,
 }) => (
   <Input
     value={value}
@@ -243,6 +244,7 @@ export const Search: React.FC<{ value: string; onChange: (v: string) => void; pl
     placeholder={placeholder}
     leftIcon={<SearchIcon className="w-4 h-4" />}
     className={cn('rounded-[16px]', className)}
+    list={listId}
   />
 );
 
@@ -268,7 +270,7 @@ export type FilterField = FilterFieldSelect | FilterFieldDate;
 
 export const FilterPanel: React.FC<{
   fields: FilterField[];
-  search?: { value: string; onChange: (v: string) => void; placeholder?: string };
+  search?: { value: string; onChange: (v: string) => void; placeholder?: string; listId?: string };
   headerActions?: React.ReactNode;
   onApply?: () => void;
   applyLabel?: string;
@@ -276,7 +278,7 @@ export const FilterPanel: React.FC<{
 }> = ({ fields, search, headerActions, onApply, applyLabel = 'Tampilkan Hasil', className }) => (
   <Card className={cn('space-y-3', className)}>
     {headerActions && <div className="flex justify-end">{headerActions}</div>}
-    {search && <Search value={search.value} onChange={search.onChange} placeholder={search.placeholder} />}
+    {search && <Search value={search.value} onChange={search.onChange} placeholder={search.placeholder} listId={search.listId} />}
     <div className={cn('grid gap-3', fields.length > 0 && 'sm:grid-cols-2 lg:grid-cols-4')}>
       {fields.map((f) => (
         <div key={f.key}>

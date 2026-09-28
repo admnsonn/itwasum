@@ -80,9 +80,19 @@ export interface AiFindingsTableProps {
   variant: 'executive' | 'domain';
   data: EProfilTemuanAi[];
   className?: string;
+  /** SF-RE-005/OK-009/SDM-007/SP-007/GK-009 — link ke Daftar Temuan AI lengkap per domain. */
+  onLihatSemua?: () => void;
 }
 
-export const AiFindingsTable: React.FC<AiFindingsTableProps> = ({ variant, data, className }) => {
+/** "Referensi" dirender sebagai hyperlink (Plan p2-b1) — di demo ini mengarah ke dokumen sumber
+ * pada tab "Sumber Data Analisis" satker yang sama, bukan URL eksternal nyata. */
+const ReferensiLink: React.FC<{ referensi: string }> = ({ referensi }) => (
+  <a href="#" onClick={(e) => e.preventDefault()} className="text-[var(--sd-primary)] hover:underline font-semibold">
+    {referensi}
+  </a>
+);
+
+export const AiFindingsTable: React.FC<AiFindingsTableProps> = ({ variant, data, className, onLihatSemua }) => {
   const columns: TableColumn<EProfilTemuanAi>[] =
     variant === 'executive'
       ? [
@@ -92,7 +102,7 @@ export const AiFindingsTable: React.FC<AiFindingsTableProps> = ({ variant, data,
           { key: 'dampak', header: 'DAMPAK', render: (r) => <span className="text-slate-600">{r.dampak}</span> },
           { key: 'risiko', header: 'RISIKO', render: (r) => <RiskPriorityBadge level={r.risiko} /> },
           { key: 'aiConfidence', header: 'AI CONFIDENCE', render: (r) => <span className="font-bold text-slate-700">{r.aiConfidence}%</span> },
-          { key: 'referensi', header: 'REFERENSI', render: (r) => <span className="text-slate-500">{r.referensi}</span> },
+          { key: 'referensi', header: 'REFERENSI', render: (r) => <ReferensiLink referensi={r.referensi} /> },
         ]
       : [
           { key: 'namaTemuan', header: 'TEMUAN AI', render: (r) => <span className="font-bold text-slate-800">{r.namaTemuan}</span> },
@@ -100,10 +110,73 @@ export const AiFindingsTable: React.FC<AiFindingsTableProps> = ({ variant, data,
           { key: 'dampak', header: 'DAMPAK', render: (r) => <span className="text-slate-600">{r.dampak}</span> },
           { key: 'risiko', header: 'RISIKO', render: (r) => <RiskPriorityBadge level={r.risiko} /> },
           { key: 'aiConfidence', header: 'AI CONFIDENCE', render: (r) => <span className="font-bold text-slate-700">{r.aiConfidence}%</span> },
-          { key: 'referensi', header: 'REFERENSI', render: (r) => <span className="text-slate-500">{r.referensi}</span> },
+          { key: 'referensi', header: 'REFERENSI', render: (r) => <ReferensiLink referensi={r.referensi} /> },
         ];
 
-  return <Table columns={columns} data={data} rowKey={(r) => r.id} className={className} emptyLabel="Belum ada temuan AI." />;
+  return (
+    <div>
+      <Table columns={columns} data={data} rowKey={(r) => r.id} className={className} emptyLabel="Belum ada temuan AI." />
+      {onLihatSemua && (
+        <div className="mt-2 text-right">
+          <button onClick={onLihatSemua} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat Semua Temuan AI &rarr;</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ============================== DaftarTemuanAiScreen ============================== */
+
+export interface DaftarTemuanAiScreenProps {
+  domainLabel: string;
+  data: EProfilTemuanAi[];
+  onBack: () => void;
+  className?: string;
+}
+
+/** SF-RE-005/OK-009/SDM-007/SP-007/GK-009 — Daftar Temuan AI penuh per domain, dengan
+ * search + filter tingkat risiko + sort + pagination (Plan p2-b1). */
+export const DaftarTemuanAiScreen: React.FC<DaftarTemuanAiScreenProps> = ({ domainLabel, data, onBack, className }) => {
+  const [search, setSearch] = useState('');
+  const [risikoFilter, setRisikoFilter] = useState<'' | EProfilTemuanAi['risiko']>('');
+  const [sortBy, setSortBy] = useState<'rank' | 'aiConfidence'>('rank');
+
+  const filtered = data
+    .filter((d) => !risikoFilter || d.risiko === risikoFilter)
+    .filter((d) => !search || d.namaTemuan.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (sortBy === 'rank' ? a.rank - b.rank : b.aiConfidence - a.aiConfidence));
+
+  const { pageItems, page, totalPages, setPage } = usePagination(filtered, 10);
+
+  const columns: TableColumn<EProfilTemuanAi>[] = [
+    { key: 'rank', header: '#', render: (r) => <span className="font-black text-slate-400">{r.rank}</span> },
+    { key: 'namaTemuan', header: 'TEMUAN AI', render: (r) => <span className="font-bold text-slate-800">{r.namaTemuan}</span> },
+    { key: 'dampak', header: 'DAMPAK', render: (r) => <span className="text-slate-600">{r.dampak}</span> },
+    { key: 'risiko', header: 'RISIKO', render: (r) => <RiskPriorityBadge level={r.risiko} /> },
+    { key: 'aiConfidence', header: 'AI CONFIDENCE', render: (r) => <span className="font-bold text-slate-700">{r.aiConfidence}%</span> },
+    { key: 'referensi', header: 'REFERENSI', render: (r) => <ReferensiLink referensi={r.referensi} /> },
+  ];
+
+  return (
+    <div className={className}>
+      <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline mb-3">&larr; Kembali ke {domainLabel}</button>
+      <div className="flex flex-wrap items-end gap-3 mb-3">
+        <div className="flex-1 min-w-48"><Search value={search} onChange={setSearch} placeholder="Cari nama temuan..." /></div>
+        <select value={risikoFilter} onChange={(e) => setRisikoFilter(e.target.value as typeof risikoFilter)} className="h-10 rounded-[10px] border border-[var(--sd-outline-variant)] bg-white px-3 text-sm">
+          <option value="">Semua Risiko</option>
+          <option value="TINGGI">Tinggi</option>
+          <option value="SEDANG">Sedang</option>
+          <option value="RENDAH">Rendah</option>
+        </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="h-10 rounded-[10px] border border-[var(--sd-outline-variant)] bg-white px-3 text-sm">
+          <option value="rank">Urutkan: Peringkat</option>
+          <option value="aiConfidence">Urutkan: AI Confidence</option>
+        </select>
+      </div>
+      <Table columns={columns} data={pageItems} rowKey={(r) => r.id} emptyLabel="Temuan AI tidak ditemukan." />
+      <Pagination currentPage={page} totalItems={filtered.length} pageSize={10} onPageChange={setPage} className="mt-2" />
+    </div>
+  );
 };
 
 /* ============================== AuditRecommendationSection ============================== */

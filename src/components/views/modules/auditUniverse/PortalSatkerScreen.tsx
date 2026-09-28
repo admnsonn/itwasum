@@ -20,6 +20,12 @@ import {
   getBerkas,
   isSelesai,
   uploadBerkas,
+  getSlotsFor,
+  slotStatus,
+  assignSlotPic,
+  excludeSlot,
+  unexcludeSlot,
+  validateBerkasAgainstAturan,
   removeDraftBerkas,
   replaceBerkas,
   resubmitBerkas,
@@ -238,6 +244,84 @@ const PermintaanMasukList: React.FC<{ orgId: string; onSelect: (r: Permintaan) =
 
 const BERKAS_BADGE_COLOR: Record<BerkasSatker['status'], BadgeColor> = { draft: 'neutral', wait: 'info', ok: 'success', fix: 'warning' };
 
+const DOKUMEN_SLOT_STATUS_COLOR: Record<string, BadgeColor> = {
+  'Belum Diunggah': 'neutral',
+  Diunggah: 'info',
+  Diajukan: 'warning',
+  'Perlu Perbaikan': 'danger',
+  Diterima: 'success',
+  Dikecualikan: 'neutral',
+};
+
+/** 6.1 Slot Dokumen — snapshot Mapping (5.1) yang dipublikasikan saat permintaan dikirim (5.3),
+ * satu slot = satu dokumen wajib. Admin Satker (PIC) menetapkan penugasan & tenggat internal,
+ * atau mengecualikan slot dengan alasan (Plan p1-b12-collection). */
+const SlotDokumenCard: React.FC<{ slots: ReturnType<typeof getSlotsFor> }> = ({ slots }) => {
+  useAuditUniverseStore();
+  const [editing, setEditing] = useState<(typeof slots)[number] | null>(null);
+  const [pic, setPic] = useState('');
+  const [tenggat, setTenggat] = useState('');
+  const [excludeTarget, setExcludeTarget] = useState<(typeof slots)[number] | null>(null);
+  const [alasan, setAlasan] = useState('');
+
+  return (
+    <Card className="space-y-2">
+      <div className="text-xs font-bold text-slate-700">Slot Dokumen Wajib ({slots.length}) — dari Mapping 5.1</div>
+      <ul className="space-y-1.5">
+        {slots.map((s) => (
+          <li key={s.id} className="flex items-center justify-between gap-3 rounded-[10px] border border-slate-100 p-2.5">
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-800 truncate">{getDokById(s.dokId)?.nama ?? s.dokId}</div>
+              <div className="text-[11px] text-slate-400">
+                PIC: {s.pic || <span className="italic">belum ditugaskan</span>}
+                {s.tenggatInternal ? ` · Tenggat internal ${formatIsoDate(s.tenggatInternal)}` : ''}
+                {s.dikecualikan && s.alasanKecualikan ? ` · ${s.alasanKecualikan}` : ''}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge color={DOKUMEN_SLOT_STATUS_COLOR[slotStatus(s)]}>{slotStatus(s)}</Badge>
+              <button onClick={() => { setEditing(s); setPic(s.pic); setTenggat(s.tenggatInternal ?? ''); }} className="text-[11px] font-bold text-[var(--sd-primary)] hover:underline">
+                Tugaskan
+              </button>
+              {s.dikecualikan ? (
+                <button onClick={() => unexcludeSlot(s.id)} className="text-[11px] font-bold text-slate-500 hover:underline">Batalkan</button>
+              ) : (
+                <button onClick={() => { setExcludeTarget(s); setAlasan(''); }} className="text-[11px] font-bold text-rose-500 hover:underline">Kecualikan</button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {editing && (
+        <Modal isOpen onClose={() => setEditing(null)} title={`Tugaskan PIC — ${getDokById(editing.dokId)?.nama ?? editing.dokId}`}
+          footer={<><Button variant="outline" onClick={() => setEditing(null)}>Batal</Button><Button onClick={() => { assignSlotPic(editing.id, pic, tenggat || null); setEditing(null); }}>Simpan</Button></>}
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">Nama PIC</label>
+              <input value={pic} onChange={(e) => setPic(e.target.value)} className="w-full h-10 rounded-[10px] border border-[var(--sd-outline-variant)] px-3 text-sm" placeholder="Mis. Bripka Andi Wijaya" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">Tenggat Internal</label>
+              <input type="date" value={tenggat} onChange={(e) => setTenggat(e.target.value)} className="w-full h-10 rounded-[10px] border border-[var(--sd-outline-variant)] px-3 text-sm" />
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {excludeTarget && (
+        <Modal isOpen onClose={() => setExcludeTarget(null)} title={`Kecualikan Slot — ${getDokById(excludeTarget.dokId)?.nama ?? excludeTarget.dokId}`}
+          description="Slot yang dikecualikan tidak perlu diunggah, tetapi wajib disertai alasan."
+          footer={<><Button variant="outline" onClick={() => setExcludeTarget(null)}>Batal</Button><Button variant="danger" disabled={!alasan.trim()} onClick={() => { excludeSlot(excludeTarget.id, alasan); setExcludeTarget(null); }}>Kecualikan</Button></>}
+        >
+          <Textarea rows={2} value={alasan} onChange={(e) => setAlasan(e.target.value)} placeholder="Jelaskan alasan pengecualian..." />
+        </Modal>
+      )}
+    </Card>
+  );
+};
+
 const PermintaanMasukDetail: React.FC<{ req: Permintaan; orgId: string; currentUser: CurrentUserProfile; onBack: () => void }> = ({ req, orgId, currentUser, onBack }) => {
   useAuditUniverseStore();
   const files = getBerkas(req.id, orgId);
@@ -255,15 +339,24 @@ const PermintaanMasukDetail: React.FC<{ req: Permintaan; orgId: string; currentU
   const dokOptions = state.katalog.filter((d) => d.aktif && d.cara === 'Upload');
   const candidates = reuseCandidates(orgId, req.id);
 
+  const slots = getSlotsFor(req.id, orgId);
+
   const handleFiles = (fileList: File[]) => {
     const okExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip'];
     const bad: string[] = [];
     const good: { nama: string; sizeBytes: number; dokId: string }[] = [];
+    const targetDokId = dokId || LAINNYA_DOC_ID;
     fileList.forEach((f) => {
       const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
       if (!okExt.includes(ext)) return bad.push(`${f.name} (format tidak didukung)`);
       if (f.size > 25 * 1048576) return bad.push(`${f.name} (lebih dari 25 MB)`);
-      good.push({ nama: f.name, sizeBytes: f.size, dokId: dokId || LAINNYA_DOC_ID });
+      // 5.2 Aturan Validasi — validasi otomatis sebelum berkas diterima ke draft (BR "Auto-
+      // validation runs before submit"), berlaku jika slot dokumen ini punya aturan khusus.
+      if (targetDokId !== LAINNYA_DOC_ID) {
+        const check = validateBerkasAgainstAturan(targetDokId, { nama: f.name, sizeBytes: f.size });
+        if (!check.ok) return bad.push(`${f.name} (${check.reason})`);
+      }
+      good.push({ nama: f.name, sizeBytes: f.size, dokId: targetDokId });
     });
     setUploadError(bad.length ? bad.join('; ') : '');
     if (good.length) uploadBerkas(req.id, orgId, good, oleh);
@@ -284,6 +377,8 @@ const PermintaanMasukDetail: React.FC<{ req: Permintaan; orgId: string; currentU
         <p className="text-xs text-slate-500">Periode pengumpulan {formatIsoDate(req.mulai)} – {formatIsoDate(req.selesai)}</p>
         {req.pesan && <p className="text-xs text-slate-600 whitespace-pre-line border-t border-slate-100 pt-2">{req.pesan}</p>}
       </Card>
+
+      {slots.length > 0 && <SlotDokumenCard slots={slots} />}
 
       {req.status === 'Terkirim' && !selesai && (
         <Card className="space-y-3">

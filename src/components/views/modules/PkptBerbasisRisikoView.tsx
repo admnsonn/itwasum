@@ -7,19 +7,19 @@
  * tabel peringkat + ambang, form kegiatan PKPT, progress bar kapasitas OH + alert.
  */
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, ListOrdered } from 'lucide-react';
+import { AlertTriangle, Lock, Trophy } from 'lucide-react';
 import type { CurrentUserProfile, PoldaSatker } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
 import { ModuleScreenShell } from './ModuleScreenShell';
 import { PKPT_2026, TOTAL_KAPASITAS_OH_TAHUNAN, type PkptEntry } from '../../../data/modules/lanjutan/perencanaan';
 import { PKPT_RISK_FACTORS } from '../../../data/modules/lanjutan/constants';
+import { getLatestBaseline, getObjekAuditById, getOrgById, formatIsoDate } from '../../../data/auditUniverse';
 import {
   Badge,
   Card,
-  ForbiddenState,
+  EmptyState,
   ProgressBar,
-  Select,
   StatCard,
   Table,
   Typography,
@@ -27,13 +27,6 @@ import {
   type TableColumn,
 } from '../../ui';
 
-/** Tim audit (pengawas/ketua tim/auditor) hanya dapat MELIHAT peringkat prioritas — konfigurasi
- * ambang skor tinggi adalah kewenangan Pimpinan/Koordinator/Super Admin (Plan bagian 6: tab admin-
- * only menampilkan ForbiddenState, bukan menyembunyikan modulnya). */
-function canConfigureB13(currentUser?: CurrentUserProfile): boolean {
-  if (!currentUser) return true;
-  return !['pengawas_tim', 'ketua_tim', 'auditor'].includes(currentUser.peran);
-}
 
 const JENIS_COLOR: Record<string, BadgeColor> = {
   'Berbasis Risiko': 'primary',
@@ -52,10 +45,14 @@ export const PkptBerbasisRisikoView: React.FC<PkptBerbasisRisikoViewProps> = ({ 
   const moduleDef = getModuleById('b13')!;
   const spec = getModuleSpec('b13')!;
   const activeScreen = subPath || getDefaultScreenSlug('b13') || spec.screens[0].slug;
-  const canConfigureAmbang = canConfigureB13(currentUser);
+
+  // B.13 tidak lagi memiliki skoring risiko sendiri — "Move" decision (Plan "Align itwasum with
+  // Plane BA/SA", todo p1-b12-risk): peringkat & ambang prioritas dikonsumsi secara referensi dari
+  // baseline yang dikunci pada B.12 F9 (Prioritas & Usulan PKPT).
+  const baseline = getLatestBaseline();
+  const ambangTinggi = 3.5;
 
   const [selectedEntry, setSelectedEntry] = useState<PkptEntry>(PKPT_2026[0]);
-  const [ambangTinggi, setAmbangTinggi] = useState(3.5);
 
   const totalUsulanOh = useMemo(() => PKPT_2026.filter((p) => p.disahkan).reduce((s, p) => s + p.usulanTimOh, 0), []);
   const persenKapasitas = Math.round((totalUsulanOh / TOTAL_KAPASITAS_OH_TAHUNAN) * 100);
@@ -75,6 +72,10 @@ export const PkptBerbasisRisikoView: React.FC<PkptBerbasisRisikoViewProps> = ({ 
     <ModuleScreenShell moduleDef={moduleDef} groupLabel={MODULE_GROUPS[moduleDef.group].label} spec={spec} activeScreen={activeScreen} onScreenChange={onSubPathChange}>
       {activeScreen === 'skoring-risiko' && (
         <div className="grid lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-3 p-3 rounded-[10px] bg-blue-50 border border-blue-200 text-xs text-[#0B2B5C] flex items-center gap-2.5">
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>Penilaian 6 faktor risiko kini dikelola pada <strong>B.12 Audit Universe → Risiko &amp; Perencanaan → Register Risiko (8.1)</strong>. Tampilan di bawah bersifat referensi/read-only.</span>
+          </div>
           <Card className="lg:col-span-2 space-y-3">
             <Typography variant="label-bold" className="text-slate-700">Form 6 Faktor Risiko — {selectedEntry.namaAuditi}</Typography>
             <div className="space-y-2.5">
@@ -113,25 +114,40 @@ export const PkptBerbasisRisikoView: React.FC<PkptBerbasisRisikoViewProps> = ({ 
 
       {activeScreen === 'peringkat-prioritas' && (
         <div className="space-y-4">
+          {baseline ? (
+            <div className="p-3 rounded-[10px] bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
+              <Trophy className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Peringkat di bawah mengacu pada baseline B.12 F9 <strong>{baseline.id}</strong> (v{baseline.versi}), terkunci {formatIsoDate(baseline.lockedAt)} oleh {baseline.lockedOleh} —{' '}
+                {baseline.items.filter((i) => i.masuk).length} dari {baseline.items.length} Objek Audit termasuk usulan PKPT {baseline.tahunAnggaran}. Kandidat berikut adalah rincian kegiatan (waktu/anggaran/OH); ambang &amp; peringkat risiko dikonfigurasi di B.12, tidak lagi di B.13.
+              </span>
+            </div>
+          ) : (
+            <EmptyState title="Belum ada baseline B.12 F9 yang terkunci" description="Kunci baseline pada B.12 Audit Universe → Risiko & Perencanaan → Prioritas & Usulan PKPT untuk mengisi peringkat referensi di sini." icon={<AlertTriangle className="w-6 h-6 text-amber-400" />} />
+          )}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="Total Kandidat PKPT" value={PKPT_2026.length} />
             <StatCard label="Disahkan" value={PKPT_2026.filter((p) => p.disahkan).length} />
-            <StatCard label="Di Atas Ambang Tinggi" value={PKPT_2026.filter((p) => p.skorTertimbang >= ambangTinggi).length} />
-            {canConfigureAmbang ? (
-              <Card className="flex items-center gap-2">
-                <ListOrdered className="w-4 h-4 text-slate-400 shrink-0" />
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold uppercase text-slate-400">Ambang Skor Tinggi</label>
-                  <input type="number" step="0.1" min={1} max={5} value={ambangTinggi} onChange={(e) => setAmbangTinggi(Number(e.target.value))} className="w-full text-sm font-bold outline-none" />
-                </div>
-              </Card>
-            ) : (
-              <Card className="flex items-center justify-center p-2">
-                <ForbiddenState title="Konfigurasi Terkunci" description="Hanya Pimpinan/Koordinator/Super Admin." className="py-1" />
-              </Card>
-            )}
+            <StatCard label="Di Atas Ambang Tinggi (referensi 3,5)" value={PKPT_2026.filter((p) => p.skorTertimbang >= ambangTinggi).length} />
+            <StatCard label="Objek Audit dalam Baseline Terkunci" value={baseline ? baseline.items.filter((i) => i.masuk).length : '—'} />
           </div>
+          {baseline && (
+            <Card>
+              <div className="text-xs font-bold text-slate-700 mb-2">Objek Audit pada Baseline Terkunci</div>
+              <Table
+                columns={[
+                  { key: 'rank', header: '#', render: (i) => <span className="font-mono text-slate-400">{i.rank}</span> },
+                  { key: 'org', header: 'Objek Audit', render: (i) => getOrgById(getObjekAuditById(i.objekAuditId)?.orgId)?.nama ?? i.objekAuditId },
+                  { key: 'skor', header: 'Skor Risiko', render: (i) => <span className="font-bold">{i.skor}</span> },
+                  { key: 'status', header: 'Status', render: (i) => <Badge color={i.masuk ? 'success' : 'neutral'}>{i.masuk ? 'Termasuk' : 'Ditunda'}</Badge> },
+                ]}
+                data={baseline.items.slice(0, 10)}
+                rowKey={(i) => i.objekAuditId}
+              />
+            </Card>
+          )}
           <Card>
+            <div className="text-xs font-bold text-slate-700 mb-2">Kandidat Kegiatan PKPT (Draf)</div>
             <Table columns={columns} data={PKPT_2026} rowKey={(r) => r.id} />
           </Card>
         </div>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CurrentUserProfile } from '../../types';
 import { 
   PREDEFINED_ROLES_ACCOUNTS, 
@@ -12,22 +12,29 @@ import {
   Eye, 
   EyeOff,
   ArrowRight, 
-  CheckCircle2, 
   AlertCircle,
-  Building2, 
-  KeyRound,
-  FileCheck2,
-  BadgeCheck,
-  Fingerprint
 } from 'lucide-react';
 import { logBukaOverview } from '../../utils/auditLogger';
+import {
+  getLockStatus,
+  recordFailedAttempt,
+  resetAttempts,
+  startOtp,
+  pushNotification,
+} from '../../data/auth/sessionSecurity';
+import { OtpStep } from './auth/OtpStep';
+import { ForgotPasswordFlow } from './auth/ForgotPasswordFlow';
 
 interface LoginViewProps {
-  onLoginSuccess: (user: CurrentUserProfile) => void;
+  onLoginSuccess: (user: CurrentUserProfile, rememberIdentifier?: string) => void;
   onCancel?: () => void;
   currentUser?: CurrentUserProfile;
   targetAccountConfig?: PredefinedAccountConfig;
 }
+
+/** B.11: satu pesan generik untuk seluruh kegagalan login (BR "One generic error message is
+ * shown for any failed login") — tidak membedakan email salah vs kata sandi salah. */
+const GENERIC_LOGIN_ERROR = 'Email/username atau kata sandi tidak sesuai, atau akun tidak ditemukan.';
 
 export const LoginView: React.FC<LoginViewProps> = ({
   onLoginSuccess,
@@ -46,6 +53,21 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [step, setStep] = useState<'credentials' | 'otp' | 'forgot'>('credentials');
+  const [lockedMessage, setLockedMessage] = useState<string | null>(null);
+  const [pendingProfile, setPendingProfile] = useState<CurrentUserProfile | null>(null);
+
+  // BR B.11: mengunci input & tombol submit selama akun terkunci, dengan hitung mundur.
+  useEffect(() => {
+    if (!email.trim()) return setLockedMessage(null);
+    const status = getLockStatus(email.trim());
+    if (status.locked) {
+      const mins = Math.ceil(status.remainingMs / 60000);
+      setLockedMessage(`Akun terkunci sementara akibat 5 kali gagal login. Coba lagi dalam ~${mins} menit.`);
+    } else {
+      setLockedMessage(null);
+    }
+  }, [email]);
 
   const levelOptions = [
     { id: 'L0', label: 'Nasional / Mabes' },
@@ -76,39 +98,49 @@ export const LoginView: React.FC<LoginViewProps> = ({
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
 
-    if (!trimmedEmail) {
-      setErrorMessage('Alamat email kedinasan wajib diisi.');
+    if (!trimmedEmail || !trimmedPassword || !selectedRoleConfig) {
+      setErrorMessage(GENERIC_LOGIN_ERROR);
       return;
     }
 
-    if (!trimmedPassword) {
-      setErrorMessage('Kata sandi wajib diisi.');
-      return;
-    }
-
-    if (!selectedRoleConfig) {
-      setErrorMessage('Pilih role akun terlebih dahulu.');
+    const lockStatus = getLockStatus(trimmedEmail);
+    if (lockStatus.locked) {
+      setErrorMessage(GENERIC_LOGIN_ERROR);
       return;
     }
 
     const expectedPassword = selectedRoleConfig.password || 'Itwasum@2025';
-    if (trimmedEmail !== selectedRoleConfig.email.toLowerCase()) {
-      setErrorMessage('Email tidak sesuai dengan role akun yang dipilih.');
+    const credentialsOk = trimmedEmail === selectedRoleConfig.email.toLowerCase() && trimmedPassword === expectedPassword;
+
+    if (!credentialsOk) {
+      const result = recordFailedAttempt(trimmedEmail);
+      setErrorMessage(result.locked ? GENERIC_LOGIN_ERROR : `${GENERIC_LOGIN_ERROR} (${result.attemptsLeft} percobaan tersisa)`);
+      if (result.locked) {
+        const status = getLockStatus(trimmedEmail);
+        const mins = Math.ceil(status.remainingMs / 60000);
+        setLockedMessage(`Akun terkunci sementara akibat 5 kali gagal login. Coba lagi dalam ~${mins} menit.`);
+      }
       return;
     }
 
-    if (trimmedPassword !== expectedPassword) {
-      setErrorMessage('Kata sandi tidak sesuai.');
-      return;
-    }
-
+    resetAttempts(trimmedEmail);
     setIsLoading(true);
     setTimeout(() => {
       const userProfile = buildUserProfileFromConfig(selectedRoleConfig);
-      logBukaOverview(userProfile, selectedRoleConfig.titikWilayahNama);
       setIsLoading(false);
-      onLoginSuccess(userProfile);
+      setPendingProfile(userProfile);
+      startOtp(trimmedEmail);
+      setStep('otp');
     }, 450);
+  };
+
+  const handleOtpVerified = () => {
+    if (!pendingProfile || !selectedRoleConfig) return;
+    logBukaOverview(pendingProfile, selectedRoleConfig.titikWilayahNama);
+    pushNotification('Verifikasi 2FA Berhasil', `${pendingProfile.nama} berhasil menyelesaikan verifikasi OTP.`);
+    // BR: "Remember Me keeps only the identifier and never skips 2FA" — hanya identifier yang
+    // disimpan untuk mempercepat pengisian form login berikutnya, OTP tetap selalu wajib.
+    onLoginSuccess(pendingProfile, rememberMe ? email.trim() : undefined);
   };
 
   return (
@@ -146,7 +178,24 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">Masuk ke portal</h1>
               <p className="text-sm text-slate-500 mt-2 leading-relaxed">Gunakan akun kedinasan Anda untuk melanjutkan ke ruang kerja pengawasan.</p>
             </div>
-            {targetAccountConfig && <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-950 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>Silakan konfirmasi kredensial untuk masuk sebagai <strong>{targetAccountConfig.peranLabel}</strong>.</p></div>}
+            {targetAccountConfig && step === 'credentials' && <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-950 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>Silakan konfirmasi kredensial untuk masuk sebagai <strong>{targetAccountConfig.peranLabel}</strong>.</p></div>}
+
+            {step === 'otp' && pendingProfile && (
+              <OtpStep
+                identifier={email.trim()}
+                userName={pendingProfile.nama}
+                onVerified={handleOtpVerified}
+                onBackToLogin={() => { setStep('credentials'); setPendingProfile(null); }}
+              />
+            )}
+
+            {step === 'forgot' && (
+              <ForgotPasswordFlow onDone={() => setStep('credentials')} onBack={() => setStep('credentials')} />
+            )}
+
+            {step === 'credentials' && (
+              <>
+            {lockedMessage && <div role="alert" className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>{lockedMessage}</p></div>}
             {errorMessage && <div role="alert" className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-start gap-2.5"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><p>{errorMessage}</p></div>}
             <form onSubmit={handleLoginSubmit} className="space-y-5">
               <div className="space-y-3">
@@ -218,10 +267,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
               <div className="space-y-2"><label htmlFor="login-email" className="text-xs font-bold text-slate-700 block">Email kedinasan</label><div className="relative"><Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input id="login-email" type="email" required disabled={!selectedRoleConfig} value={email} onChange={(e) => { setEmail(e.target.value); setErrorMessage(null); }} placeholder="Pilih role terlebih dahulu" className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100" /></div></div>
               <div className="space-y-2"><label htmlFor="login-password" className="text-xs font-bold text-slate-700 block">Kata sandi</label><div className="relative"><Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input id="login-password" type={showPassword ? 'text' : 'password'} required disabled={!selectedRoleConfig} value={password} onChange={(e) => { setPassword(e.target.value); setErrorMessage(null); }} placeholder="Pilih role terlebih dahulu" className="w-full pl-10 pr-11 py-3 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100" /><button type="button" disabled={!selectedRoleConfig} onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div></div>
-              <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-slate-300 text-[#0B4A8A]" />Ingat perangkat ini</label>
-              <button type="submit" disabled={isLoading} className="w-full min-h-11 rounded-lg bg-[#0B2B5C] hover:bg-[#0B4A8A] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">{isLoading ? 'Memverifikasi...' : <>Masuk <ArrowRight className="w-4 h-4" /></>}</button>
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-slate-300 text-[#0B4A8A]" />Ingat perangkat ini</label>
+                <button type="button" onClick={() => setStep('forgot')} className="text-xs font-bold text-[#0B4A8A] hover:underline">Lupa kata sandi?</button>
+              </div>
+              <button type="submit" disabled={isLoading || !!lockedMessage} className="w-full min-h-11 rounded-lg bg-[#0B2B5C] hover:bg-[#0B4A8A] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">{isLoading ? 'Memverifikasi...' : <>Masuk <ArrowRight className="w-4 h-4" /></>}</button>
             </form>
             <p className="pt-4 mt-6 border-t border-slate-100 text-[11px] text-slate-500">Akses dilindungi dan dicatat dalam jejak audit sistem.</p>
+              </>
+            )}
           </div>
         </section>
       </main>

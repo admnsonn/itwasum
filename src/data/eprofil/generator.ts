@@ -14,6 +14,7 @@ import type {
   EProfilAnomaliAset,
   EProfilDetail,
   EProfilFokusPraAudit,
+  EProfilOrgNode,
   EProfilRekomendasi,
   EProfilSumberDataItem,
   EProfilTemuanAi,
@@ -26,7 +27,22 @@ export interface EProfilAnchor {
   rincianTemuan?: PoldaSatker['rincianTemuan'];
   eProfilLegacy?: PoldaSatker['eProfil'];
   rbsScoreAnchor?: number; // 0-100, dari analisisLanjutan.rbsScore atau SatkerMabesItem.skorRisiko
+  /** Filter Jenis Audit pada header Detail (Plan p2-b1) — mengganti seed sehingga AI Summary
+   * & penekanan pemeriksaan benar-benar berbeda per jenis audit, bukan sekadar label statis. */
+  jenisAudit?: 'reguler' | 'khusus' | 'tematik';
 }
+
+const JENIS_AUDIT_LABEL: Record<NonNullable<EProfilAnchor['jenisAudit']>, string> = {
+  reguler: 'audit reguler',
+  khusus: 'audit khusus',
+  tematik: 'audit tematik',
+};
+
+const JENIS_AUDIT_PENEKANAN: Record<NonNullable<EProfilAnchor['jenisAudit']>, string> = {
+  reguler: 'Ikuti siklus pemeriksaan rutin sesuai PKPT dan bandingkan dengan baseline periode sebelumnya.',
+  khusus: 'Fokuskan pemeriksaan pada indikasi penyimpangan spesifik yang melatarbelakangi audit khusus ini.',
+  tematik: 'Selaraskan lingkup pemeriksaan dengan tema nasional yang sedang berjalan lintas satker.',
+};
 
 const DOMAIN_LABELS: Record<EProfilTemuanDomainKey, string> = {
   operasional: 'Operasional/Kinerja',
@@ -127,11 +143,12 @@ function buildSumberData(rng: ReturnType<typeof createSeededRng>, domainKey: EPr
 const cache = new Map<string, EProfilDetail>();
 
 export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
-  const cacheKey = anchor.id;
+  const jenisAudit = anchor.jenisAudit ?? 'reguler';
+  const cacheKey = `${anchor.id}::${jenisAudit}`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const rng = createSeededRng(`eprofil-${anchor.id}`);
+  const rng = createSeededRng(`eprofil-${anchor.id}-${jenisAudit}`);
   const rbsAnchor = anchor.rbsScoreAnchor ?? rng.int(40, 95);
   const confidence = rng.int(78, 97);
 
@@ -170,8 +187,9 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
   const detail: EProfilDetail = {
     satkerId: anchor.id,
     aiSummary: {
-      deskripsi: `Analisis AI menunjukkan ${anchor.nama} berada pada profil risiko ${rbsAnchor >= 80 ? 'rendah' : rbsAnchor >= 60 ? 'sedang' : 'tinggi'} dengan kesiapan data pra-audit ${persenSiap}%. Fokus pengawasan diarahkan pada domain dengan deviasi tertinggi terhadap baseline nasional.`,
+      deskripsi: `Analisis AI untuk ${JENIS_AUDIT_LABEL[jenisAudit]} menunjukkan ${anchor.nama} berada pada profil risiko ${rbsAnchor >= 80 ? 'rendah' : rbsAnchor >= 60 ? 'sedang' : 'tinggi'} dengan kesiapan data pra-audit ${persenSiap}%. Fokus pengawasan diarahkan pada domain dengan deviasi tertinggi terhadap baseline nasional.`,
       penekanan: [
+        JENIS_AUDIT_PENEKANAN[jenisAudit],
         'Prioritaskan verifikasi domain dengan skor risiko tertinggi pada radar di bawah.',
         'Gunakan 5 Temuan Teratas AI sebagai dasar penyusunan program kerja pemeriksaan (KKA).',
       ],
@@ -252,6 +270,14 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
         kondisiAset: rng.pick(['Baik', 'Rusak Ringan', 'Rusak Berat']),
         infoAnomaliAi: rng.pick(['Status pencatatan tidak sesuai kondisi fisik terakhir', 'Tidak ditemukan pada opname fisik terbaru', 'Nilai buku tidak sesuai standar penyusutan']),
       })),
+      totalUnitBmn: rng.int(1200, 8500),
+      nilaiBmnRp: `Rp ${rng.round(15, 180, 1)} Miliar`,
+      kondisiDonut: [
+        { kondisi: 'Baik', jumlah: rng.int(60, 85) },
+        { kondisi: 'Rusak Ringan', jumlah: rng.int(8, 25) },
+        { kondisi: 'Rusak Berat', jumlah: rng.int(2, 12) },
+      ],
+      inventoryTrend: ['Tw I', 'Tw II', 'Tw III', 'Tw IV'].map((periode) => ({ periode, value: rng.int(1100, 8800) })),
     },
     garkeu: (() => {
       const paguRp = anchor.eProfilLegacy?.garkeuDipa ?? `Rp ${rng.round(0.3, 2, 2)} Triliun`;
@@ -268,10 +294,51 @@ export function getEProfilDetail(anchor: EProfilAnchor): EProfilDetail {
         siklusPembayaranHariRataRata: rng.int(3, 21),
         pajakDipungutRp: `Rp ${rng.round(0.5, 12, 1)} Miliar`,
         arusKasBersihRp: `Rp ${rng.round(0.1, 5, 1)} Miliar`,
+        dipaPnbpTable: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'].map((periode) => ({
+          periode,
+          dipaRp: `Rp ${rng.round(10, 220, 1)} Juta`,
+          pnbpRp: `Rp ${rng.round(1, 40, 1)} Juta`,
+          status: rng.pick(['Tercapai', 'Mendekati Target', 'Belum Tercapai']),
+        })),
+        siklusStatusBreakdown: ['Tepat Waktu (≤7 hari)', 'Terlambat (8-14 hari)', 'Sangat Terlambat (>14 hari)'].map((label) => ({ label, value: rng.int(10, 80) })),
+        arusKasTrend: ['Tw I', 'Tw II', 'Tw III', 'Tw IV'].map((periode) => ({ periode, masuk: rng.round(1, 8, 1), keluar: rng.round(0.8, 7, 1) })),
+        taxComplianceKpis: [
+          { label: 'Kepatuhan Setor Pajak', value: `${rng.int(85, 100)}%`, status: rng.bool(0.8) ? 'success' : 'warning' },
+          { label: 'Keterlambatan Setor', value: `${rng.int(0, 8)} kejadian`, status: rng.bool(0.7) ? 'success' : 'danger' },
+          { label: 'Rekonsiliasi Pajak', value: rng.pick(['Sesuai', 'Selisih Minor']), status: rng.bool(0.75) ? 'success' : 'warning' },
+        ],
       };
     })(),
+    strukturOrganisasi: buildStrukturOrganisasi(rng, anchor.nama),
   };
 
   cache.set(cacheKey, detail);
   return detail;
+}
+
+function buildStrukturOrganisasi(rng: ReturnType<typeof createSeededRng>, namaSatker: string): EProfilOrgNode {
+  const kabidNames = ['Bidang Operasional', 'Bidang SDM', 'Bidang Sarpras & Logistik', 'Bidang Perencanaan & Keuangan', 'Bidang Hukum & Pengawasan'];
+  return {
+    id: 'pimpinan',
+    jabatan: 'Kepala Satuan',
+    nama: rng.pick(['Irjen. Pol. Drs. Ahmad Syahroni', 'Brigjen. Pol. Dedy Prasetyo', 'Kombes. Pol. Rina Wahyuni']),
+    pangkat: rng.pick(['Irjen. Pol.', 'Brigjen. Pol.', 'Kombes. Pol.']),
+    children: [
+      {
+        id: 'wakil',
+        jabatan: 'Wakil Kepala Satuan',
+        nama: rng.pick(['Brigjen. Pol. Sutrisno Adi', 'Kombes. Pol. Maya Kusuma']),
+        pangkat: 'Kombes. Pol.',
+        children: kabidNames.map((jabatan, i) => ({
+          id: `kabid-${i}`,
+          jabatan,
+          nama: rng.pick(['AKBP Hendra Gunawan', 'AKBP Sri Wulandari', 'AKBP Bambang Setiawan', 'AKBP Fitri Ramadhani']),
+          pangkat: 'AKBP',
+          children: [
+            { id: `kabid-${i}-1`, jabatan: 'Kepala Sub Bidang', nama: rng.pick(['Kompol Yusuf Hidayat', 'Kompol Dian Permata']), pangkat: 'Kompol', children: [] },
+          ],
+        })),
+      },
+    ],
+  };
 }

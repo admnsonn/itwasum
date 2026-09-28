@@ -29,6 +29,7 @@ import { EarlyWarningView } from './modules/EarlyWarningView';
 import { SuratUsulanView } from './modules/SuratUsulanView';
 import { EOfficeView } from './modules/EOfficeView';
 import { LogAktivitasView } from './modules/LogAktivitasView';
+import { SesiKeamananView } from './modules/SesiKeamananView';
 // `AdminOverviewView` (Data Master Terpadu, tab logs lama) tidak lagi dirujuk di sini:
 // b10 kini memakai `LogAktivitasView` bespoke; AdminOverviewView tetap dipakai PengaturanSistemView (b9).
 
@@ -85,6 +86,8 @@ export const ModuleRouteView: React.FC<ModuleRouteViewProps> = ({
       return <SpipSatkerView currentUser={currentUser} poldaList={poldaList} subPath={subPath} onSubPathChange={handleSubPathChange} />;
     case 'b10':
       return <LogAktivitasView currentUser={currentUser} subPath={subPath} onSubPathChange={handleSubPathChange} />;
+    case 'b11':
+      return <SesiKeamananView currentUser={currentUser} />;
     case 'b12':
       return <AuditUniverseView currentUser={currentUser} poldaList={poldaList} subPath={subPath} onSubPathChange={handleSubPathChange} />;
     case 'b13':

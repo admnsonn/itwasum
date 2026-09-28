@@ -213,8 +213,14 @@ export interface AuditorData {
   sertifikasi: string[];
   bebanAktif: number; // e.g. 2 penugasan
   kapasitasMaksimal: number; // e.g. 4
-  status: 'Tersedia' | 'Sedang Tugas' | 'Cuti';
+  /** Status personel B.6 (Plan p4-b6): "Tersedia" setara "Aktif" pada FSD (dipertahankan agar
+   * kompatibel dengan seluruh kode lama yang sudah memakai label ini), + 3 status baru. */
+  status: 'Tersedia' | 'Sedang Tugas' | 'Cuti' | 'Sakit' | 'Mutasi' | 'Tidak Aktif';
   satkerTugasAktif?: string;
+  /** NRP hanya dapat diubah untuk personel organik (data induk SSDM); auditor eksternal
+   * (`klasifikasi === 'Auditor Eksternal'`) tidak memiliki data induk SSDM untuk disinkronkan. */
+  isOrganik?: boolean;
+  riwayatPenugasan?: { id: string; judul: string; peran: string; noSprin: string; tanggal: string; lhaUrl?: string }[];
   totalAuditSelesai: number;
   ratingKinerja: number;
   // Perluasan replika B.6 Daftar Auditor (Plan bagian 5d) — dilengkapi generator deterministik

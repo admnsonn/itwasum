@@ -16,6 +16,7 @@ import { ModuleScreenShell } from './ModuleScreenShell';
 import { SPIP_SATKER_DATA, type SpipSatkerEntry, type SpipKkScore } from '../../../data/modules/lanjutan/spipTlhp';
 import { SPIP_ASSESSOR_ROLES, SPIP_ASSESSMENT_MECHANISMS, SPIP_KK_DESKRIPSI, SPIP_SESI_EDIT_MENIT } from '../../../data/modules/lanjutan/constants';
 import { Badge, Card, ProgressBar, Select, Table, Typography, type BadgeColor, type TableColumn } from '../../ui';
+import { GoogleDriveScreen } from './GoogleDriveScreen';
 
 const LEVEL_COLOR: Record<number, BadgeColor> = { 0: 'danger', 1: 'danger', 2: 'warning', 3: 'info', 4: 'primary', 5: 'success' };
 
@@ -129,6 +130,8 @@ export const SpipSatkerView: React.FC<SpipSatkerViewProps> = ({ subPath, onSubPa
           </Card>
         </div>
       )}
+
+      {activeScreen === 'google-drive' && <GoogleDriveScreen satkerId={selected.poldaId} satkerNama={selected.namaSatker} />}
     </ModuleScreenShell>
   );
 };

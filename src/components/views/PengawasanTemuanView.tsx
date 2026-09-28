@@ -18,6 +18,7 @@ import {
 import { PoldaSatker, CurrentUserProfile } from '../../types';
 import { PoldaLogo } from '../PoldaLogo';
 import { getRoleScopedPoldas } from '../../utils/roleScope';
+import { TemuanSumberScreen } from './temuan/TemuanSumberScreen';
 
 interface PengawasanTemuanViewProps {
   poldaList: PoldaSatker[];
@@ -47,6 +48,12 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTemuanModal, setSelectedTemuanModal] = useState<any | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  // B.2/B.3 (Plan p3-b2b3): drill-down Satker dipertahankan lintas tab bpk<->irsus, terpisah
+  // dari filter dropdown 'polri' (legacy, tidak dipetakan ke modul manapun — dipertahankan tanpa
+  // diubah). Memilih Satker selalu membuka tab BPK terlebih dahulu.
+  const [selectedLedgerSatkerId, setSelectedLedgerSatkerId] = useState<string | null>(
+    currentUser?.peran === 'pengawas_tim' || currentUser?.peran === 'auditee' ? 'polda-riau' : null
+  );
 
   const scopedPoldaList = useMemo(
     () => getRoleScopedPoldas(poldaList, currentUser),
@@ -154,7 +161,7 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
           <button
             key={tab.id}
             id={`subtab-${tab.id}`}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'polri' | 'bpk' | 'irsus' | 'penugasan')}
             className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-2 ${
               activeTab === tab.id
                 ? 'bg-[#0B2B5C] text-white shadow-xs'
@@ -166,11 +173,24 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
         ))}
       </div>
 
-      {activeTab !== 'penugasan' ? (
+      {(activeTab === 'bpk' || activeTab === 'irsus') && (
+        <TemuanSumberScreen
+          sumber={activeTab === 'bpk' ? 'BPK RI' : 'Irsus'}
+          poldaList={scopedPoldaList}
+          selectedPoldaId={selectedLedgerSatkerId}
+          onSelectPolda={(id) => {
+            setSelectedLedgerSatkerId(id);
+            if (id) setActiveTab('bpk');
+          }}
+        />
+      )}
+
+      {activeTab === 'polri' ? (
         <>
           {/* Screen label: implementasi FSD Detail Temuan (SF-TB-011/SF-TI-011) + Tindak Lanjut
-              (SF-TB-009/SF-TI-009) pada satu layar. Screen Ringkasan AI/Statistik dan Analisis
-              Distribusi/Akar Masalah dicatat sebagai gap pada docs/audit-kesesuaian-ba-sa.md. */}
+              (SF-TB-009/SF-TI-009) pada satu layar. Layar 'polri' ini adalah sisa struktur lama
+              sebelum B.2/B.3 dipisah — tidak dipetakan ke modul manapun pada moduleRegistry
+              (lihat App.tsx `legacyTab`), dipertahankan tanpa diubah di luar cakupan p3-b2b3. */}
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 -mb-1">
             Layar: Detail Temuan &amp; Tindak Lanjut
           </p>
@@ -330,7 +350,7 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
             </div>
           </div>
         </>
-      ) : (
+      ) : activeTab === 'penugasan' ? (
         /* PENUGASAN AUDIT SUBTAB */
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -372,7 +392,7 @@ export const PengawasanTemuanView: React.FC<PengawasanTemuanViewProps> = ({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Modal Tindak Lanjut Temuan */}
       {selectedTemuanModal && (

@@ -60,6 +60,11 @@ interface PermintaanDataScreenProps {
   currentUser: CurrentUserProfile;
   detailPath?: string;
   onNavigateDetail: (reqId?: string) => void;
+  /** 6.2 Permintaan Tambahan Audit dipisah dari 5.3 Permintaan Berkala pada nav B.12, tapi
+   * memakai layar & data model yang sama (Plan "Align itwasum with Plane BA/SA", p1-b12-collection).
+   * Permintaan "Tambahan Audit" hanya dibuat dari Kertas Kerja Audit Digital (B.15), jadi tombol
+   * "Buat Permintaan" disembunyikan pada mode ini. */
+  tipeFilter?: Permintaan['tipe'];
 }
 
 const STATUS_COLOR: Record<ReturnType<typeof reqStatusTurunan>, BadgeColor> = {
@@ -69,17 +74,17 @@ const STATUS_COLOR: Record<ReturnType<typeof reqStatusTurunan>, BadgeColor> = {
   Ditutup: 'neutral',
 };
 
-export const PermintaanDataScreen: React.FC<PermintaanDataScreenProps> = ({ currentUser, detailPath, onNavigateDetail }) => {
+export const PermintaanDataScreen: React.FC<PermintaanDataScreenProps> = ({ currentUser, detailPath, onNavigateDetail, tipeFilter }) => {
   const reqId = detailPath;
   if (reqId) {
     return <PermintaanDetail reqId={reqId} currentUser={currentUser} onBack={() => onNavigateDetail(undefined)} />;
   }
-  return <PermintaanList currentUser={currentUser} onOpenDetail={onNavigateDetail} />;
+  return <PermintaanList currentUser={currentUser} onOpenDetail={onNavigateDetail} tipeFilter={tipeFilter} />;
 };
 
-const PermintaanList: React.FC<{ currentUser: CurrentUserProfile; onOpenDetail: (id: string) => void }> = ({ currentUser, onOpenDetail }) => {
+const PermintaanList: React.FC<{ currentUser: CurrentUserProfile; onOpenDetail: (id: string) => void; tipeFilter?: Permintaan['tipe'] }> = ({ currentUser, onOpenDetail, tipeFilter }) => {
   const state = useAuditUniverseStore();
-  const canManage = canManagePermintaan(currentUser);
+  const canManage = canManagePermintaan(currentUser) && tipeFilter !== 'Tambahan Audit';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [formModal, setFormModal] = useState<{ mode: 'create' | 'edit'; req?: Permintaan } | null>(null);
@@ -87,11 +92,12 @@ const PermintaanList: React.FC<{ currentUser: CurrentUserProfile; onOpenDetail: 
 
   const filtered = useMemo(() => {
     return state.permintaan.filter((r) => {
+      if (tipeFilter && r.tipe !== tipeFilter) return false;
       if (statusFilter && reqStatusTurunan(r) !== statusFilter) return false;
       if (search && !r.judul.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [state.permintaan, statusFilter, search]);
+  }, [state.permintaan, statusFilter, search, tipeFilter]);
 
   const { page, pageSize, setPage, setPageSize, pageItems } = usePagination(filtered, 10);
 
