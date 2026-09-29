@@ -290,7 +290,11 @@ export function pushNotification(judul: string, detail: string): void {
   try {
     const raw = localStorage.getItem(NOTIF_KEY);
     const list: LoginNotification[] = raw ? JSON.parse(raw) : [];
-    const next = [{ id: `notif-${Date.now()}`, waktu: new Date().toISOString(), judul, detail }, ...list].slice(0, 30);
+    // `Date.now()` saja dapat berkolisi jika dua notifikasi didorong pada milidetik yang sama
+    // (mis. dua `pushNotification` sinkron berurutan) — React memerlukan `key` unik per item
+    // (bug nyata tertangkap smoke test Playwright, Plan "Align itwasum with Figma", todo
+    // `verify`), jadi tambahkan suffix acak.
+    const next = [{ id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, waktu: new Date().toISOString(), judul, detail }, ...list].slice(0, 30);
     localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
   } catch {
     // storage unavailable

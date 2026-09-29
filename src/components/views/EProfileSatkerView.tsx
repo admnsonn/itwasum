@@ -46,7 +46,7 @@ import {
   Select,
   Typography,
 } from '../ui/atoms';
-import { EmptyState, Search, SegmentedControl, TabNavigation, TabDef, Pagination, usePagination, type TableColumn, Table } from '../ui/molecules';
+import { EmptyState, InfoTooltip, Search, SegmentedControl, TabNavigation, TabDef, Pagination, usePagination, type TableColumn, Table } from '../ui/molecules';
 import { AiFindingsTable, AnalysisDataSources, AuditRecommendationSection, DaftarTemuanAiScreen, RingkasanAnalisisAi } from '../ui/eprofilMolecules';
 import { DonutChart, HorizontalMetricChart, HorizontalMetricItem, SatkerRiskRadar, TrendLineChart, RiskMatrix, type RiskMatrixItem } from '../ui/charts';
 import { anchorFromPolda, anchorFromSatkerMabes, EProfilAnchor, EProfilDetail, EProfilTemuanDomainKey, getEProfilDetail } from '../../data/eprofil';
@@ -494,11 +494,12 @@ const DOMAIN_TAB_LABEL: Record<EProfilTemuanDomainKey, string> = {
 
 /* ============================== Kartu generik & Metric (dipertahankan dari versi lama) ============================== */
 
-const SectionCard: React.FC<{ title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }> = ({ title, icon: Icon, children }) => (
+const SectionCard: React.FC<{ title: string; icon: React.ComponentType<{ className?: string }>; tooltip?: string; children: React.ReactNode }> = ({ title, icon: Icon, tooltip, children }) => (
   <Card>
     <Typography variant="label-bold" className="uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-1.5">
       <Icon className="w-3.5 h-3.5" />
       {title}
+      {tooltip && <InfoTooltip text={tooltip} />}
     </Typography>
     {children}
   </Card>
@@ -518,7 +519,7 @@ const RingkasanEksekutifTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDeta
   <div className="space-y-4">
     <RingkasanAnalisisAi {...detail.aiSummary} canView={canView} />
 
-    <SectionCard title="Kualitas & Kesiapan Data" icon={ClipboardList}>
+    <SectionCard title="Kualitas & Kesiapan Data" icon={ClipboardList} tooltip="Persentase data per domain (Operasional/Kinerja, SDM, Sarpras, Garkeu) yang sudah lengkap dan siap dianalisis AI. Domain di bawah ambang akan ditandai 'Data Belum Lengkap'.">
       <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-5">
         <CircularProgress value={detail.kualitasData.persenSiap} color="var(--sd-primary)" trackColor="#E2E8F0" caption={detail.kualitasData.status} displayValue={`${detail.kualitasData.persenSiap}%`} />
         <div className="space-y-2.5">
@@ -529,7 +530,7 @@ const RingkasanEksekutifTab: React.FC<{ polda?: PoldaSatker; detail: EProfilDeta
       </div>
     </SectionCard>
 
-    <SectionCard title="Skor Risiko Satker / Satwil" icon={Target}>
+    <SectionCard title="Skor Risiko Satker / Satwil" icon={Target} tooltip="Radar skor risiko 0-100 per domain, dihitung AI dari deviasi terhadap baseline nasional. Semakin jauh dari pusat, semakin tinggi risiko domain tersebut.">
       <SatkerRiskRadar axes={detail.skorRisiko.dimensions} focusItems={detail.skorRisiko.fokusPraAudit} subtitle="Fokus Pra-Audit" />
     </SectionCard>
 
@@ -658,7 +659,7 @@ const SdmTab: React.FC<{ detail: EProfilDetail; canView: boolean; onLihatSemua: 
   <div className="space-y-4">
     <RingkasanAnalisisAi {...detail.aiSummary} canView={canView} />
 
-    <SectionCard title="Profil & Komposisi Personel" icon={Users}>
+    <SectionCard title="Profil & Komposisi Personel" icon={Users} tooltip="Komposisi personel berdasarkan jabatan dan golongan pangkat, disandingkan dengan struktur ideal Satker sejenis.">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {detail.sdm.komposisi.map((k) => (
           <Metric key={k.label} label={k.label} value={k.value.toLocaleString('id-ID')} />
@@ -730,7 +731,7 @@ const SarprasTab: React.FC<{ detail: EProfilDetail; canView: boolean; onLihatSem
         <TrendLineChart data={detail.sarpras.inventoryTrend} xKey="periode" series={[{ dataKey: 'value', label: 'Jumlah Unit', color: 'var(--sd-primary)' }]} />
       </SectionCard>
 
-      <SectionCard title="Status Kendaraan Dinas" icon={Truck}>
+      <SectionCard title="Status Kendaraan Dinas" icon={Truck} tooltip="Persentase kendaraan dinas per status kelaikan operasional (Layak/Perlu Perbaikan/Rusak Berat).">
         <HorizontalMetricChart items={kendaraanItems} />
       </SectionCard>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CurrentUserProfile } from '../../types';
 import { 
   PREDEFINED_ROLES_ACCOUNTS, 
@@ -6,14 +6,16 @@ import {
   PredefinedAccountConfig 
 } from '../../data/rolesData';
 import { 
-  Shield, 
   Lock, 
   Mail,
   Eye, 
   EyeOff,
   ArrowRight, 
   AlertCircle,
+  ChevronDown,
+  UserCircle2,
 } from 'lucide-react';
+import loginHero from '../../assets/images/login-hero.jpg';
 import { logBukaOverview } from '../../utils/auditLogger';
 import {
   getLockStatus,
@@ -42,20 +44,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
   currentUser,
   targetAccountConfig
 }) => {
-  // Default to targetAccountConfig or L0 Pimpinan Tertinggi
+  // Default ke targetAccountConfig (mis. saat "Ganti Peran") bila ada.
   const defaultAccount = targetAccountConfig || null;
   const [email, setEmail] = useState<string>(defaultAccount?.email || '');
   const [password, setPassword] = useState<string>(defaultAccount?.password || '');
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [selectedRoleConfig, setSelectedRoleConfig] = useState<PredefinedAccountConfig | null>(defaultAccount);
-  const [selectedLevel, setSelectedLevel] = useState<string>(defaultAccount?.level || '');
-  const [selectedWilayahId, setSelectedWilayahId] = useState<string>(defaultAccount?.titikWilayahId || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [step, setStep] = useState<'credentials' | 'otp' | 'forgot'>('credentials');
   const [lockedMessage, setLockedMessage] = useState<string | null>(null);
   const [pendingProfile, setPendingProfile] = useState<CurrentUserProfile | null>(null);
+  const [pendingRoleConfig, setPendingRoleConfig] = useState<PredefinedAccountConfig | null>(null);
+  const [showAkunDemo, setShowAkunDemo] = useState<boolean>(!!defaultAccount);
 
   // BR B.11: mengunci input & tombol submit selama akun terkunci, dengan hitung mundur.
   useEffect(() => {
@@ -69,23 +70,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   }, [email]);
 
-  const levelOptions = [
-    { id: 'L0', label: 'Nasional / Mabes' },
-    { id: 'L1', label: 'Inspektorat Wilayah' },
-    { id: 'L2', label: 'Polda' },
-    { id: 'L3', label: 'Polres' }
-  ];
-  const wilayahOptions = useMemo(() => {
-    const wilayah = PREDEFINED_ROLES_ACCOUNTS.filter(account => account.level === selectedLevel)
-      .map(account => ({ id: account.titikWilayahId, nama: account.titikWilayahNama }));
-    return Array.from(new Map(wilayah.map(item => [item.id, item])).values());
-  }, [selectedLevel]);
-  const roleOptions = useMemo(() => PREDEFINED_ROLES_ACCOUNTS.filter(account => (
-    account.level === selectedLevel && account.titikWilayahId === selectedWilayahId
-  )), [selectedLevel, selectedWilayahId]);
-
-  const handleSelectPredefinedAccount = (account: PredefinedAccountConfig) => {
-    setSelectedRoleConfig(account);
+  /** Login Figma: email + kata sandi biasa, tanpa pemilih level/wilayah/peran — dicocokkan
+   * langsung terhadap `PREDEFINED_ROLES_ACCOUNTS` lewat email. Daftar "Akun Demo" di bawah
+   * form hanya membantu mengisi otomatis untuk keperluan demo. */
+  const handleSelectAkunDemo = (account: PredefinedAccountConfig) => {
     setEmail(account.email);
     setPassword(account.password || 'Itwasum@2025');
     setErrorMessage(null);
@@ -98,7 +86,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
 
-    if (!trimmedEmail || !trimmedPassword || !selectedRoleConfig) {
+    if (!trimmedEmail || !trimmedPassword) {
       setErrorMessage(GENERIC_LOGIN_ERROR);
       return;
     }
@@ -109,8 +97,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
       return;
     }
 
-    const expectedPassword = selectedRoleConfig.password || 'Itwasum@2025';
-    const credentialsOk = trimmedEmail === selectedRoleConfig.email.toLowerCase() && trimmedPassword === expectedPassword;
+    const matchedAccount = PREDEFINED_ROLES_ACCOUNTS.find((account) => account.email.toLowerCase() === trimmedEmail);
+    const expectedPassword = matchedAccount?.password || 'Itwasum@2025';
+    const credentialsOk = !!matchedAccount && trimmedPassword === expectedPassword;
 
     if (!credentialsOk) {
       const result = recordFailedAttempt(trimmedEmail);
@@ -126,17 +115,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
     resetAttempts(trimmedEmail);
     setIsLoading(true);
     setTimeout(() => {
-      const userProfile = buildUserProfileFromConfig(selectedRoleConfig);
+      const userProfile = buildUserProfileFromConfig(matchedAccount);
       setIsLoading(false);
       setPendingProfile(userProfile);
+      setPendingRoleConfig(matchedAccount);
       startOtp(trimmedEmail);
       setStep('otp');
     }, 450);
   };
 
   const handleOtpVerified = () => {
-    if (!pendingProfile || !selectedRoleConfig) return;
-    logBukaOverview(pendingProfile, selectedRoleConfig.titikWilayahNama);
+    if (!pendingProfile || !pendingRoleConfig) return;
+    logBukaOverview(pendingProfile, pendingRoleConfig.titikWilayahNama);
     pushNotification('Verifikasi 2FA Berhasil', `${pendingProfile.nama} berhasil menyelesaikan verifikasi OTP.`);
     // BR: "Remember Me keeps only the identifier and never skips 2FA" — hanya identifier yang
     // disimpan untuk mempercepat pengisian form login berikutnya, OTP tetap selalu wajib.
@@ -145,39 +135,29 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   return (
     <div className="min-h-screen bg-white text-slate-900 flex selection:bg-[#d9a441] selection:text-slate-950">
-      <main className="w-full min-h-screen grid grid-cols-1 lg:grid-cols-[minmax(0,46%)_minmax(0,54%)]">
-        <aside className="hidden lg:flex min-h-screen bg-[#0B2B5C] text-white relative overflow-hidden px-10 xl:px-16 py-12 flex-col justify-between">
-          <div className="absolute -right-24 top-24 w-80 h-80 rounded-full border border-white/10" />
-          <div className="absolute -left-32 bottom-20 w-96 h-96 rounded-full border border-white/10" />
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-11 h-11 flex items-center justify-center shrink-0">
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
-                alt="Logo Itwasum POLRI"
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <div>
-              <p className="text-lg font-bold tracking-tight">Satu Data Itwasum</p>
-              <p className="text-xs text-blue-200 mt-0.5">Portal pengawasan dan audit internal</p>
-            </div>
-          </div>
-          <div className="relative z-10 max-w-md">
-            <div className="w-10 h-1 bg-amber-400 mb-5" />
-            <h2 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-tight">Satu Data Itwasum Polri</h2>
-            <p className="text-sm text-blue-100/80 mt-4 leading-relaxed">Gunakan akun kedinasan Anda untuk melanjutkan ke ruang kerja pengawasan.</p>
-          </div>
-          <p className="relative z-10 text-[11px] text-blue-200/70">Inspektorat Pengawasan Umum Kepolisian Negara Republik Indonesia</p>
+      <main className="w-full min-h-screen lg:flex">
+        {/* Panel kiri — foto hero dari Figma (frame 461:1923), sudah memuat overlay copy.
+            Lebar mengikuti rasio foto (294:416) supaya panel penuh tanpa object-cover
+            yang men-zoom gedung dan memotong logo serta caption. */}
+        <aside
+          className="hidden lg:block h-screen shrink-0 overflow-hidden"
+          style={{ width: 'min(46vw, calc(100vh * 294 / 416))' }}
+        >
+          <img
+            src={loginHero}
+            alt="Satu Data Pengawasan Intern"
+            className="h-full w-full object-cover object-center"
+          />
         </aside>
 
-        <section className="min-h-screen flex items-center justify-center bg-[#f8f9fc] px-4 sm:px-8 lg:px-12 py-8 sm:py-12">
-          <div className="w-full max-w-[440px] bg-white border border-slate-200 rounded-xl p-6 sm:p-9 shadow-sm">
-            <div className="mb-7">
-              <p className="text-[11px] font-bold tracking-[0.12em] uppercase text-[#0B4A8A] mb-2">Akses pegawai</p>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">Masuk ke portal</h1>
-              <p className="text-sm text-slate-500 mt-2 leading-relaxed">Gunakan akun kedinasan Anda untuk melanjutkan ke ruang kerja pengawasan.</p>
-            </div>
+        <section className="min-h-screen flex flex-1 items-center justify-center bg-white px-5 sm:px-10 lg:px-16 py-10">
+          <div className="w-full max-w-[400px]">
+            {step === 'credentials' && (
+              <div className="mb-7">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">Selamat Datang</h1>
+                <p className="text-sm text-slate-500 mt-2 leading-relaxed">Silakan masuk menggunakan kredensial anda.</p>
+              </div>
+            )}
             {targetAccountConfig && step === 'credentials' && <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-950 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>Silakan konfirmasi kredensial untuk masuk sebagai <strong>{targetAccountConfig.peranLabel}</strong>.</p></div>}
 
             {step === 'otp' && pendingProfile && (
@@ -195,85 +175,79 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
             {step === 'credentials' && (
               <>
-            {lockedMessage && <div role="alert" className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>{lockedMessage}</p></div>}
-            {errorMessage && <div role="alert" className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-start gap-2.5"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><p>{errorMessage}</p></div>}
-            <form onSubmit={handleLoginSubmit} className="space-y-5">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <label htmlFor="login-level" className="text-xs font-bold text-slate-700 block">Tingkat akses</label>
-                  <select
-                    id="login-level"
-                    required
-                    value={selectedLevel}
-                    onChange={(event) => {
-                      setSelectedLevel(event.target.value);
-                      setSelectedWilayahId('');
-                      setSelectedRoleConfig(null);
-                      setEmail('');
-                      setPassword('');
-                      setErrorMessage(null);
-                    }}
-                    className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
-                  >
-                    <option value="" disabled>Pilih tingkat akses</option>
-                    {levelOptions.map((level) => <option key={level.id} value={level.id}>{level.label}</option>)}
-                  </select>
-                </div>
+                {lockedMessage && <div role="alert" className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs flex items-start gap-2.5"><Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" /><p>{lockedMessage}</p></div>}
+                {errorMessage && <div role="alert" className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-start gap-2.5"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><p>{errorMessage}</p></div>}
+                <form onSubmit={handleLoginSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label htmlFor="login-email" className="text-xs font-bold text-slate-700 block">Email</label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        id="login-email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); setErrorMessage(null); }}
+                        placeholder="admin@gmail.com"
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="login-password" className="text-xs font-bold text-slate-700 block">Kata Sandi</label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        id="login-password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => { setPassword(e.target.value); setErrorMessage(null); }}
+                        placeholder="••••••"
+                        className="w-full pl-10 pr-11 py-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-700" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer min-w-0"><input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-slate-300 text-[#0B4A8A] shrink-0" /><span>Ingat perangkat ini selama 30 hari</span></label>
+                    <button type="button" onClick={() => setStep('forgot')} className="text-xs font-bold text-[#0B4A8A] hover:underline shrink-0">Lupa Kata Sandi?</button>
+                  </div>
+                  <button type="submit" disabled={isLoading || !!lockedMessage} className="w-full min-h-11 rounded-lg bg-[#0B2B5C] hover:bg-[#0B4A8A] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">{isLoading ? 'Memverifikasi...' : <>Masuk <ArrowRight className="w-4 h-4" /></>}</button>
+                </form>
 
-                <div className="space-y-2">
-                  <label htmlFor="login-wilayah" className="text-xs font-bold text-slate-700 block">Yurisdiksi wilayah</label>
-                  <select
-                    id="login-wilayah"
-                    required
-                    disabled={!selectedLevel}
-                    value={selectedWilayahId}
-                    onChange={(event) => {
-                      setSelectedWilayahId(event.target.value);
-                      setSelectedRoleConfig(null);
-                      setEmail('');
-                      setPassword('');
-                      setErrorMessage(null);
-                    }}
-                    className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
+                {/* "Akun Demo" — daftar akun contoh yang dapat mengisi otomatis email & kata
+                    sandi (demo/dev only; tidak ada pada Figma tapi dibutuhkan karena aplikasi
+                    ini mensimulasikan 8 peran resmi tanpa backend otentikasi nyata). */}
+                <div className="mt-5 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAkunDemo((v) => !v)}
+                    className="w-full flex items-center justify-between text-xs font-bold text-slate-500 hover:text-slate-800"
                   >
-                    <option value="" disabled>Pilih yurisdiksi wilayah</option>
-                    {wilayahOptions.map((wilayah) => <option key={wilayah.id} value={wilayah.id}>{wilayah.nama}</option>)}
-                  </select>
+                    <span className="flex items-center gap-1.5"><UserCircle2 className="w-3.5 h-3.5" />Akun Demo (khusus lingkungan uji coba)</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAkunDemo ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showAkunDemo && (
+                    <ul className="mt-2.5 space-y-1 max-h-48 overflow-y-auto">
+                      {PREDEFINED_ROLES_ACCOUNTS.map((account) => (
+                        <li key={account.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectAkunDemo(account)}
+                            className="w-full text-left px-2.5 py-1.5 rounded-[8px] hover:bg-slate-50 flex items-center justify-between gap-2 group"
+                          >
+                            <span className="text-[11px] font-bold text-slate-700 truncate">{account.peranLabel}</span>
+                            <span className="text-[10px] text-slate-400 truncate group-hover:text-[#0B4A8A]">{account.email}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="login-role" className="text-xs font-bold text-slate-700 block">Peran akun</label>
-                <select
-                  id="login-role"
-                  required
-                  disabled={!selectedWilayahId}
-                  value={selectedRoleConfig?.id || ''}
-                  onChange={(event) => {
-                    const selectedAccount = roleOptions.find((account) => account.id === event.target.value);
-                    if (selectedAccount) {
-                      handleSelectPredefinedAccount(selectedAccount);
-                    }
-                  }}
-                  className="w-full min-h-11 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100"
-                >
-                  <option value="" disabled>Pilih peran akun</option>
-                  {roleOptions.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.peranLabel}
-                    </option>
-                  ))}
-                </select>
-                </div>
-              </div>
-              <div className="space-y-2"><label htmlFor="login-email" className="text-xs font-bold text-slate-700 block">Email kedinasan</label><div className="relative"><Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input id="login-email" type="email" required disabled={!selectedRoleConfig} value={email} onChange={(e) => { setEmail(e.target.value); setErrorMessage(null); }} placeholder="Pilih role terlebih dahulu" className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100" /></div></div>
-              <div className="space-y-2"><label htmlFor="login-password" className="text-xs font-bold text-slate-700 block">Kata sandi</label><div className="relative"><Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" /><input id="login-password" type={showPassword ? 'text' : 'password'} required disabled={!selectedRoleConfig} value={password} onChange={(e) => { setPassword(e.target.value); setErrorMessage(null); }} placeholder="Pilih role terlebih dahulu" className="w-full pl-10 pr-11 py-3 bg-white border border-slate-300 rounded-lg text-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed focus:outline-none focus:border-[#0B4A8A] focus:ring-2 focus:ring-blue-100" /><button type="button" disabled={!selectedRoleConfig} onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></div></div>
-              <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer"><input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded border-slate-300 text-[#0B4A8A]" />Ingat perangkat ini</label>
-                <button type="button" onClick={() => setStep('forgot')} className="text-xs font-bold text-[#0B4A8A] hover:underline">Lupa kata sandi?</button>
-              </div>
-              <button type="submit" disabled={isLoading || !!lockedMessage} className="w-full min-h-11 rounded-lg bg-[#0B2B5C] hover:bg-[#0B4A8A] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60">{isLoading ? 'Memverifikasi...' : <>Masuk <ArrowRight className="w-4 h-4" /></>}</button>
-            </form>
-            <p className="pt-4 mt-6 border-t border-slate-100 text-[11px] text-slate-500">Akses dilindungi dan dicatat dalam jejak audit sistem.</p>
+                <p className="pt-4 mt-4 border-t border-slate-100 text-[11px] text-slate-500">Akses dilindungi dan dicatat dalam jejak audit sistem.</p>
               </>
             )}
           </div>

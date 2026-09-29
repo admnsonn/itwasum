@@ -8,7 +8,7 @@
  * satkernya sendiri; Super Admin/Admin Polda dapat memilih Satker untuk pratinjau.
  */
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CheckCircle2, Clock, FileWarning, History, Recycle, Send, ShieldCheck, Trash2, Undo2, Upload, Wrench } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, Clock, Download, FileWarning, History, Recycle, Send, ShieldCheck, Trash2, Undo2, Upload, Wrench } from 'lucide-react';
 import type { CurrentUserProfile } from '../../../../types';
 import {
   useAuditUniverseStore,
@@ -51,11 +51,12 @@ import {
   LAINNYA_DOC_ID,
   BERKAS_STATUS_LABEL,
   JENJANG_SASARAN,
+  getTemplateByDok,
 } from '../../../../data/auditUniverse';
 import type { Permintaan, LaporanSlotDef, BerkasSatker, LaporanEntry, BerkasVersion, ReuseCandidate } from '../../../../data/auditUniverse';
 import { currentUserOrgId, displayNameForLog } from '../../../../data/auditUniverse/roleMapping';
 import { IND_IKU_DEFS } from '../../../../data/auditUniverse/seeds/laporan';
-import { Badge, Button, Card, Checkbox, EmptyState, Modal, Search, Select, SegmentedControl, StatCard, Table, Textarea, Timeline, UploadDropzone, type BadgeColor, type TableColumn } from '../../../ui';
+import { Badge, Button, Card, Checkbox, EmptyState, Modal, Search, Select, SegmentedControl, StatCard, Table, Textarea, Timeline, Typography, UploadDropzone, type BadgeColor, type TableColumn } from '../../../ui';
 import { SimulasiItwasumModal } from './SimulasiItwasumModal';
 
 interface PortalSatkerScreenProps {
@@ -66,7 +67,7 @@ interface PortalSatkerScreenProps {
 
 type PortalTab = 'dashboard' | 'masuk' | 'spip' | 'iku';
 
-export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentUser }) => {
+export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentUser, detailPath, onNavigateDetail }) => {
   const state = useAuditUniverseStore();
   const canPickOrg = currentUser.peran === 'super_admin';
   const fixedOrgId = currentUserOrgId(currentUser);
@@ -77,6 +78,11 @@ export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentU
   const [tab, setTab] = useState<PortalTab>('dashboard');
   const [selectedReq, setSelectedReq] = useState<Permintaan | null>(null);
   const [showSimulasi, setShowSimulasi] = useState(false);
+  // Drill-in dari Dashboard (Figma "Status Per Bidang"/"Daftar Dokumen Terbaru") — dibedakan
+  // dari `tab` lokal supaya dapat di-deep-link lewat subPath B.12 (Plan "Align itwasum with
+  // Figma", todo `portal-dashboards`).
+  const bidangDetailId = detailPath?.startsWith('per-bidang/') ? detailPath.slice('per-bidang/'.length) : null;
+  const showUnduhBantu = detailPath === 'unduh-bantu';
 
   const org = orgId ? getOrgById(orgId) : undefined;
 
@@ -110,28 +116,45 @@ export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentU
             </Button>
           )}
         </div>
-        <SegmentedControl
-          options={[
-            { value: 'dashboard', label: 'Dashboard' },
-            { value: 'masuk', label: 'Permintaan Masuk' },
-            { value: 'spip', label: 'Laporan SPIP' },
-            { value: 'iku', label: 'Laporan IKU' },
-          ]}
-          value={tab}
-          onChange={(v) => { setTab(v as PortalTab); setSelectedReq(null); }}
-        />
+        {!bidangDetailId && !showUnduhBantu && (
+          <SegmentedControl
+            options={[
+              { value: 'dashboard', label: 'Dashboard' },
+              { value: 'masuk', label: 'Permintaan Masuk' },
+              { value: 'spip', label: 'Laporan SPIP' },
+              { value: 'iku', label: 'Laporan IKU' },
+            ]}
+            value={tab}
+            onChange={(v) => { setTab(v as PortalTab); setSelectedReq(null); }}
+          />
+        )}
       </div>
 
-      {tab === 'dashboard' && <DashboardTab orgId={orgId} onOpenPermintaan={() => setTab('masuk')} />}
-      {tab === 'masuk' && (
-        selectedReq ? (
-          <PermintaanMasukDetail req={selectedReq} orgId={orgId} currentUser={currentUser} onBack={() => setSelectedReq(null)} />
-        ) : (
-          <PermintaanMasukList orgId={orgId} onSelect={setSelectedReq} />
-        )
+      {bidangDetailId ? (
+        <DetailDokumenPerBidangScreen bidjemenId={bidangDetailId} orgId={orgId} onBack={() => onNavigateDetail(undefined)} />
+      ) : showUnduhBantu ? (
+        <UnduhBahanBantuAuditScreen onBack={() => onNavigateDetail(undefined)} />
+      ) : (
+        <>
+          {tab === 'dashboard' && (
+            <DashboardTab
+              orgId={orgId}
+              onOpenPermintaan={() => setTab('masuk')}
+              onOpenBidang={(bjId) => onNavigateDetail(`per-bidang/${bjId}`)}
+              onOpenUnduhBantu={() => onNavigateDetail('unduh-bantu')}
+            />
+          )}
+          {tab === 'masuk' && (
+            selectedReq ? (
+              <PermintaanMasukDetail req={selectedReq} orgId={orgId} currentUser={currentUser} onBack={() => setSelectedReq(null)} />
+            ) : (
+              <PermintaanMasukList orgId={orgId} onSelect={setSelectedReq} />
+            )
+          )}
+          {tab === 'spip' && <LaporanTab jenis="SPIP" slots={SPIP_SLOTS} orgId={orgId} currentUser={currentUser} />}
+          {tab === 'iku' && <LaporanTab jenis="IKU" slots={IKU_SLOTS} orgId={orgId} currentUser={currentUser} />}
+        </>
       )}
-      {tab === 'spip' && <LaporanTab jenis="SPIP" slots={SPIP_SLOTS} orgId={orgId} currentUser={currentUser} />}
-      {tab === 'iku' && <LaporanTab jenis="IKU" slots={IKU_SLOTS} orgId={orgId} currentUser={currentUser} />}
 
       {showSimulasi && <SimulasiItwasumModal orgId={orgId} currentUser={currentUser} onClose={() => setShowSimulasi(false)} />}
     </div>
@@ -139,9 +162,16 @@ export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentU
 };
 
 /* ============================================================================================ *
- * 6.0 Dashboard
+ * 6.0 Dashboard — Figma "Dashboard Portal Satker": Status Per Bidang + Daftar Dokumen Terbaru
+ * (Plan "Align itwasum with Figma", todo `portal-dashboards`), lalu Tenggat/Aktivitas Plane
+ * di bawahnya.
  * ============================================================================================ */
-const DashboardTab: React.FC<{ orgId: string; onOpenPermintaan: () => void }> = ({ orgId, onOpenPermintaan }) => {
+const DashboardTab: React.FC<{
+  orgId: string;
+  onOpenPermintaan: () => void;
+  onOpenBidang: (bidjemenId: string) => void;
+  onOpenUnduhBantu: () => void;
+}> = ({ orgId, onOpenPermintaan, onOpenBidang, onOpenUnduhBantu }) => {
   const state = useAuditUniverseStore();
   const reqs = state.permintaan.filter((r) => r.sasaran.includes(orgId) && r.status !== 'Draft');
   const aktif = reqs.filter((r) => reqStatusTurunan(r) === 'Berjalan' && !isSelesai(r.id, orgId));
@@ -156,6 +186,29 @@ const DashboardTab: React.FC<{ orgId: string; onOpenPermintaan: () => void }> = 
   const deadlines = deadlinesForOrg(orgId);
   const feed = feedForOrg(orgId);
 
+  // Slot dokumen aktif lintas seluruh penugasan berjalan untuk Satker ini — dasar "Status Per
+  // Bidang" (dikelompokkan lewat KatalogDokumen.bidjemenId) dan "Daftar Dokumen Terbaru".
+  const activeSlots = useMemo(
+    () => aktif.flatMap((r) => getSlotsFor(r.id, orgId).map((s) => ({ slot: s, req: r }))),
+    [aktif, orgId]
+  );
+
+  const perBidang = useMemo(() => {
+    return state.bidjemen
+      .filter((b) => b.aktif)
+      .map((b) => {
+        const rows = activeSlots.filter(({ slot }) => getDokById(slot.dokId)?.bidjemenId === b.id);
+        const selesai = rows.filter(({ slot }) => slotStatus(slot) === 'Diterima' || slot.dikecualikan).length;
+        return { bidjemen: b, total: rows.length, selesai };
+      })
+      .filter((row) => row.total > 0);
+  }, [state.bidjemen, activeSlots]);
+
+  const dokumenTerbaru = useMemo(
+    () => [...activeSlots].sort((a, b) => (a.slot.dibuat < b.slot.dibuat ? 1 : -1)).slice(0, 8),
+    [activeSlots]
+  );
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -164,6 +217,53 @@ const DashboardTab: React.FC<{ orgId: string; onOpenPermintaan: () => void }> = 
         <StatCard label="Diterima" value={nOk} />
         <StatCard label="Perlu Perbaikan" value={nFix} />
       </div>
+
+      {perBidang.length > 0 && (
+        <Card className="space-y-2.5">
+          <Typography variant="label-bold" className="uppercase tracking-wide text-slate-500">Status Per Bidang</Typography>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {perBidang.map(({ bidjemen: b, total, selesai }) => (
+              <button
+                key={b.id}
+                onClick={() => onOpenBidang(b.id)}
+                className="text-left p-3 rounded-[10px] border border-slate-100 hover:border-[var(--sd-primary)]/30 hover:bg-slate-50 transition"
+              >
+                <div className="text-xs font-bold text-slate-800">{b.nama}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">{selesai}/{total} dokumen lengkap</div>
+                <div className="h-1.5 rounded-full bg-slate-100 mt-2 overflow-hidden">
+                  <div className="h-full bg-[var(--sd-primary)] rounded-full" style={{ width: `${total ? Math.round((selesai / total) * 100) : 0}%` }} />
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card className="space-y-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <Typography variant="label-bold" className="uppercase tracking-wide text-slate-500">Daftar Dokumen Terbaru</Typography>
+          <button onClick={onOpenUnduhBantu} className="text-[11px] font-bold text-[var(--sd-primary)] hover:underline">Unduh Bahan Bantu Audit</button>
+        </div>
+        {dokumenTerbaru.length === 0 ? (
+          <EmptyState title="Belum ada dokumen yang perlu diunggah" icon={<CheckCircle2 className="w-6 h-6 text-emerald-400" />} />
+        ) : (
+          <ul className="space-y-1.5">
+            {dokumenTerbaru.map(({ slot, req }) => (
+              <li key={slot.id} className="flex items-center justify-between gap-3 rounded-[10px] border border-slate-100 p-2.5">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-800 truncate">{getDokById(slot.dokId)?.nama ?? slot.dokId}</div>
+                  <div className="text-[11px] text-slate-400">
+                    {req.judul} · PIC Internal: {slot.pic || <span className="italic">belum ditugaskan</span>}
+                    {slot.tenggatInternal ? ` · Deadline Internal ${formatIsoDate(slot.tenggatInternal)}` : ''}
+                  </div>
+                </div>
+                <Badge color={DOKUMEN_SLOT_STATUS_COLOR[slotStatus(slot)]}>{slotStatus(slot)}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <div className="grid lg:grid-cols-2 gap-4">
         <Card>
           <div className="flex items-center justify-between mb-2">
@@ -206,6 +306,122 @@ const DashboardTab: React.FC<{ orgId: string; onOpenPermintaan: () => void }> = 
           )}
         </Card>
       </div>
+    </div>
+  );
+};
+
+/** Figma "Detail Dokumen per Bidang" — drill-in dari "Status Per Bidang" pada Dashboard Portal
+ * Satker: seluruh slot dokumen lintas penugasan berjalan untuk satu Bidjemen, dengan filter
+ * status dan aksi "Unggah Massal" (Plan "Align itwasum with Figma", todo `portal-dashboards`). */
+const DetailDokumenPerBidangScreen: React.FC<{ bidjemenId: string; orgId: string; onBack: () => void }> = ({ bidjemenId, orgId, onBack }) => {
+  const state = useAuditUniverseStore();
+  const bidjemen = state.bidjemen.find((b) => b.id === bidjemenId);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [massalOpen, setMassalOpen] = useState(false);
+
+  const rows = useMemo(() => {
+    return state.permintaan
+      .filter((r) => r.sasaran.includes(orgId) && reqStatusTurunan(r) === 'Berjalan')
+      .flatMap((r) => getSlotsFor(r.id, orgId).map((slot) => ({ slot, req: r })))
+      .filter(({ slot }) => getDokById(slot.dokId)?.bidjemenId === bidjemenId);
+  }, [state.permintaan, orgId, bidjemenId]);
+
+  const filtered = statusFilter ? rows.filter(({ slot }) => slotStatus(slot) === statusFilter) : rows;
+  const statusOptions = Array.from(new Set(rows.map(({ slot }) => slotStatus(slot))));
+
+  const columns: TableColumn<(typeof filtered)[number]>[] = [
+    { key: 'dok', header: 'Dokumen', render: ({ slot }) => <span className="font-bold text-slate-800">{getDokById(slot.dokId)?.nama ?? slot.dokId}</span> },
+    { key: 'penugasan', header: 'Penugasan', render: ({ req }) => <span className="text-xs text-slate-500">{req.judul}</span> },
+    { key: 'pic', header: 'PIC Internal', render: ({ slot }) => slot.pic || <span className="italic text-slate-400">Belum ditugaskan</span> },
+    { key: 'tenggat', header: 'Deadline Internal', render: ({ slot }) => (slot.tenggatInternal ? formatIsoDate(slot.tenggatInternal) : '–') },
+    { key: 'status', header: 'Status', render: ({ slot }) => <Badge color={DOKUMEN_SLOT_STATUS_COLOR[slotStatus(slot)]}>{slotStatus(slot)}</Badge> },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">← Kembali ke Dashboard</button>
+      <Card className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-extrabold text-slate-900">Detail Dokumen — {bidjemen?.nama ?? bidjemenId}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{filtered.length} dari {rows.length} dokumen ditampilkan</p>
+        </div>
+        <div className="flex items-end gap-2">
+          <Select
+            options={statusOptions.map((s) => ({ value: s, label: s }))}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder="Semua Status"
+            className="w-48"
+          />
+          <Button variant="outline" onClick={() => setMassalOpen(true)}>
+            <Upload className="w-3.5 h-3.5" /> Unggah Massal
+          </Button>
+        </div>
+      </Card>
+      {filtered.length === 0 ? (
+        <EmptyState title="Tidak ada dokumen yang cocok" icon={<FileWarning className="w-6 h-6 text-slate-300" />} />
+      ) : (
+        <Card><Table columns={columns} data={filtered} rowKey={({ slot }) => slot.id} /></Card>
+      )}
+
+      {massalOpen && (
+        <Modal
+          isOpen
+          onClose={() => setMassalOpen(false)}
+          title="Unggah Massal Dokumen"
+          description="Unggah beberapa berkas sekaligus; sistem akan mencocokkan nama berkas dengan dokumen pada daftar di atas secara otomatis."
+          footer={<Button onClick={() => setMassalOpen(false)}>Tutup</Button>}
+        >
+          <UploadDropzone onFiles={() => setMassalOpen(false)} multiple maxSizeMB={25} hint="PDF, Word, Excel, JPG/PNG, atau ZIP · maks 25 MB · boleh lebih dari satu" />
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+/** Figma "Unduh Bahan Bantu Audit" — daftar Template Dokumen &amp; contoh baku katalog yang
+ * dapat diunduh Satker sebagai panduan pengisian, dipisah dari alur unggah (Plan "Align
+ * itwasum with Figma", todo `portal-dashboards`). */
+const UnduhBahanBantuAuditScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const state = useAuditUniverseStore();
+  const [toast, setToast] = useState('');
+  const dataDocs = state.katalog.filter((d) => d.jenis === 'Data' && d.aktif);
+
+  const simulateDownload = (label: string) => {
+    setToast(label);
+    setTimeout(() => setToast(''), 2500);
+  };
+
+  return (
+    <div className="space-y-3">
+      <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">← Kembali ke Dashboard</button>
+      <Card>
+        <h3 className="text-sm font-extrabold text-slate-900">Unduh Bahan Bantu Audit</h3>
+        <p className="text-xs text-slate-500 mt-0.5">Template dan contoh baku dokumen dari Master Katalog Pra-Audit untuk membantu pengisian berkas.</p>
+      </Card>
+      {toast && <div className="p-2.5 rounded-[10px] bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold">{toast}</div>}
+      {dataDocs.length === 0 ? (
+        <EmptyState title="Belum ada template yang tersedia" />
+      ) : (
+        <ul className="space-y-1.5">
+          {dataDocs.map((d) => {
+            const tpl = getTemplateByDok(d.id);
+            return (
+              <li key={d.id} className="flex items-center justify-between gap-3 rounded-[10px] border border-slate-100 p-2.5">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-800 truncate">{d.nama}</div>
+                  <div className="text-[11px] text-slate-400">{tpl ? `${tpl.nama} · v${tpl.versi}` : 'Belum ada template baku'}</div>
+                </div>
+                {tpl && (
+                  <button onClick={() => simulateDownload(`Mengunduh ${tpl.contohBakuUrl} (simulasi)...`)} className="text-slate-400 hover:text-slate-600 shrink-0" title="Unduh Contoh Baku">
+                    <Download className="w-4 h-4" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 };

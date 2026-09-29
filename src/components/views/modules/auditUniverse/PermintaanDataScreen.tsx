@@ -104,26 +104,26 @@ const PermintaanList: React.FC<{ currentUser: CurrentUserProfile; onOpenDetail: 
   const columns: TableColumn<Permintaan>[] = [
     {
       key: 'judul',
-      header: 'Judul Permintaan',
+      header: tipeFilter === 'Tambahan Audit' ? 'Kode & Judul' : 'Kode & Jenis',
       render: (r) => (
         <div>
           <button onClick={() => onOpenDetail(r.id)} className="font-bold text-slate-800 hover:text-[var(--sd-primary)] hover:underline text-left block">
             {r.judul}
           </button>
-          <span className="text-[11px] text-slate-400 font-mono">{r.id}{r.tipe === 'Tambahan Audit' ? ' · Tambahan Audit' : ''}</span>
+          <span className="text-[11px] text-slate-400 font-mono">{r.id}</span>
         </div>
       ),
     },
-    { key: 'sasaran', header: 'Sasaran', render: (r) => `${r.sasaran.length} Satker/unit` },
+    { key: 'jadwal', header: 'Jadwal', render: (r) => <span className="text-xs">{formatIsoDate(r.mulai)} – {formatIsoDate(r.selesai)}</span> },
+    { key: 'sasaran', header: 'Target Satker', render: (r) => `${r.sasaran.length} Satker/unit` },
     {
       key: 'progres',
-      header: 'Progres',
+      header: 'Selesai / Terbit / Draf',
       render: (r) => {
         const p = progress(r);
         return <ProgressBar value={p.total ? Math.round((p.done / p.total) * 100) : 0} showValue label={`${p.done}/${p.total} selesai`} />;
       },
     },
-    { key: 'tenggat', header: 'Tenggat', render: (r) => formatIsoDate(r.selesai) },
     { key: 'status', header: 'Status', render: (r) => <Badge color={STATUS_COLOR[reqStatusTurunan(r)]}>{reqStatusTurunan(r)}</Badge> },
     {
       key: 'aksi',
@@ -160,7 +160,7 @@ const PermintaanList: React.FC<{ currentUser: CurrentUserProfile; onOpenDetail: 
         headerActions={
           canManage ? (
             <Button onClick={() => setFormModal({ mode: 'create' })}>
-              <Plus className="w-4 h-4" /> Buat Permintaan
+              <Plus className="w-4 h-4" /> Buat Penugasan Audit
             </Button>
           ) : undefined
         }
@@ -257,7 +257,7 @@ const PermintaanFormModal: React.FC<{ mode: 'create' | 'edit'; req?: Permintaan;
     <Modal
       isOpen
       onClose={onClose}
-      title={mode === 'create' ? 'Buat Permintaan Pengumpulan Data' : `Ubah Permintaan (Draft) — ${req?.judul}`}
+      title={mode === 'create' ? 'Buat Penugasan Audit' : `Ubah Penugasan (Draft) — ${req?.judul}`}
       widthClassName="max-w-3xl"
       footer={
         <>

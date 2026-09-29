@@ -158,6 +158,26 @@ export default function App() {
     }
   }, [activeNav, hashRoute.subPath, navigateModule]);
 
+  // B.12 restrukturisasi Figma (Plan "Align itwasum with Figma", todo `b12-rest`): "Data Master
+  // Terpadu" dipecah jadi 4 halaman Sidebar tersendiri, dan "Permintaan Pengumpulan Data"
+  // (5.3) diganti nama jadi "Penugasan Audit" — tautan lama dialihkan otomatis.
+  useEffect(() => {
+    if (activeNav !== 'b12' || !hashRoute.subPath) return;
+    const [screen, ...rest] = hashRoute.subPath.split('/');
+    if (screen === 'data-master') {
+      const sub = rest[0] || 'organisasi';
+      const target: Record<string, string> = {
+        organisasi: 'organisasi',
+        tipologi: 'master-tipologi',
+        'jenis-pengawasan': 'master-jenis-pengawasan',
+        katalog: 'master-katalog',
+      };
+      navigateModule('b12', target[sub] ?? 'organisasi');
+    } else if (screen === 'permintaan-data') {
+      navigateModule('b12', rest.length ? `penugasan-audit/${rest.join('/')}` : 'penugasan-audit');
+    }
+  }, [activeNav, hashRoute.subPath, navigateModule]);
+
   const handleSelectPolda = (poldaId: string | null) => {
     setSelectedPoldaId(poldaId);
     if (activeNav !== 'beranda') {
@@ -217,57 +237,56 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f6f8] text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
-      
-      {/* Top Header Command Bar */}
+    <div className={`min-h-screen bg-[#f4f6f8] text-slate-800 font-['Plus_Jakarta_Sans',sans-serif] ${isMapFullscreen ? 'h-screen overflow-hidden' : 'flex'}`}>
+
+      {/* Left Sidebar (Dynamic & Role-Tailored) — penuh tinggi, di luar kolom konten (Figma) */}
       {!isMapFullscreen && (
-        <Header
-          urgentItems={PERLU_PERHATIAN_ITEMS}
-          onSelectPolda={handleSelectPolda}
-          allPolda={POLDA_DATA}
+        <Sidebar
+          activeNav={activeNav}
+          activeSubPath={hashRoute.subPath}
+          onNavigate={(moduleId, subPath) => {
+            navigateModule(moduleId, subPath);
+            if (moduleId === 'pengawasan') {
+              setTargetModulePoldaFilter(undefined);
+            }
+          }}
           onOpenLogoutModal={() => setShowLogoutModal(true)}
+          mobileOpen={mobileSidebarOpen}
+          setMobileOpen={setMobileSidebarOpen}
+          urgentCount={PERLU_PERHATIAN_ITEMS.length}
           currentUser={currentUser}
-          onRequestLogoutAndLoginRole={handleLogoutAndSwitchToRole}
         />
       )}
 
-      {/* Mobile Top Bar to trigger Sidebar drawer */}
-      {!isMapFullscreen && (
-        <div className="lg:hidden bg-[#0B2B5C] text-white px-4 py-2 flex items-center justify-between">
-          <button
-            id="mobile-menu-toggle-btn"
-            onClick={() => setMobileSidebarOpen(true)}
-            className="min-h-[44px] px-3 py-2 rounded-xl bg-[#143E78] text-white font-bold text-xs flex items-center gap-2"
-          >
-            <Menu className="w-5 h-5 text-blue-200" />
-            <span>Menu Navigasi</span>
-          </button>
-
-          <span className="text-xs font-bold text-blue-100 truncate max-w-[200px]">
-            {activeModuleDef?.label || 'Menu Navigasi'}
-          </span>
-        </div>
-      )}
-
-      {/* Main Workspace Layout */}
-      <div className={`flex-1 flex w-full mx-auto ${isMapFullscreen ? 'max-w-none h-screen overflow-hidden' : 'max-w-[1920px]'}`}>
-        
-        {/* Left Sidebar (Dynamic & Role-Tailored) */}
+      {/* Kolom konten: header ringkas + main + footer (Figma: header hanya lonceng + chip user) */}
+      <div className={`flex-1 min-w-0 flex flex-col ${isMapFullscreen ? 'h-screen overflow-hidden' : ''}`}>
         {!isMapFullscreen && (
-          <Sidebar
-            activeNav={activeNav}
-            onSelectNav={(nav) => {
-              setActiveNav(nav);
-              if (nav === 'pengawasan') {
-                setTargetModulePoldaFilter(undefined);
-              }
-            }}
+          <Header
+            urgentItems={PERLU_PERHATIAN_ITEMS}
+            onSelectPolda={handleSelectPolda}
+            allPolda={POLDA_DATA}
             onOpenLogoutModal={() => setShowLogoutModal(true)}
-            mobileOpen={mobileSidebarOpen}
-            setMobileOpen={setMobileSidebarOpen}
-            urgentCount={PERLU_PERHATIAN_ITEMS.length}
             currentUser={currentUser}
+            onRequestLogoutAndLoginRole={handleLogoutAndSwitchToRole}
           />
+        )}
+
+        {/* Mobile Top Bar to trigger Sidebar drawer */}
+        {!isMapFullscreen && (
+          <div className="lg:hidden bg-[#0B2B5C] text-white px-4 py-2 flex items-center justify-between">
+            <button
+              id="mobile-menu-toggle-btn"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="min-h-[44px] px-3 py-2 rounded-xl bg-[#143E78] text-white font-bold text-xs flex items-center gap-2"
+            >
+              <Menu className="w-5 h-5 text-blue-200" />
+              <span>Menu Navigasi</span>
+            </button>
+
+            <span className="text-xs font-bold text-blue-100 truncate max-w-[200px]">
+              {activeModuleDef?.label || 'Menu Navigasi'}
+            </span>
+          </div>
         )}
 
         {/* Dynamic Content View Container. `key={activeNav}` membuat ErrorBoundary reset otomatis
@@ -361,10 +380,9 @@ export default function App() {
           </ErrorBoundary>
         </main>
 
+        {/* Standard Footer with AES-256 Security Indicator */}
+        {!isMapFullscreen && <Footer />}
       </div>
-
-      {/* Standard Footer with AES-256 Security Indicator */}
-      {!isMapFullscreen && <Footer />}
 
       {/* Logout Confirmation Modal */}
       <ModalConfirm

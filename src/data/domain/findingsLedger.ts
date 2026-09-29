@@ -39,7 +39,11 @@ export interface FindingLedgerEntry {
   jenisAudit: JenisAuditLedger;
   dokumenTerkait: string[];
   riwayatTindakLanjut: { tgl: string; status: TindakLanjutStatus; catatan: string }[];
+  /** Satwil/sub-unit pelapor di bawah Polda ini (Figma "Monitoring Satker / Satwil"). */
+  subSatker: string;
 }
+
+const SUB_SATKER_TEMPLATES = ['Polres Metro Wilayah I', 'Polres Metro Wilayah II', 'Polrestabes', 'Dit Lantas', 'Dit Samapta', 'Dit Reskrimum'];
 
 const KATEGORI_LIST: TemuanKategori[] = ['Keuangan', 'Operasional', 'SDM', 'Logistik & Sarpras'];
 const TINGKAT_LIST: FindingLedgerEntry['tingkat'][] = ['Kritis', 'Sedang', 'Ringan'];
@@ -95,6 +99,7 @@ function buildEntriesForSumber(poldaId: string, poldaNama: string, sumber: Temua
       aiConfidence: rng.int(74, 98),
       jenisAudit: rng.pick(JENIS_AUDIT_LIST),
       dokumenTerkait: [`BAP_${poldaId}_${i}.pdf`, `LHP_${sumber === 'BPK RI' ? 'BPK' : 'Irsus'}_${poldaId}.pdf`],
+      subSatker: rng.pick(SUB_SATKER_TEMPLATES),
       riwayatTindakLanjut:
         status === 'Belum Ditindaklanjuti'
           ? []
@@ -132,4 +137,30 @@ export function similarFindings(entry: FindingLedgerEntry, limit = 3): FindingLe
   return getFindingsLedger()
     .filter((f) => f.id !== entry.id && f.poldaId === entry.poldaId && f.kategori === entry.kategori)
     .slice(0, limit);
+}
+
+export interface MonitoringSatwilRow {
+  subSatker: string;
+  jumlahTemuan: number;
+  selesai: number;
+  dalamProses: number;
+  persenPenyelesaian: number;
+  status: 'Sangat Baik' | 'Baik' | 'Menunggu' | 'Kritis';
+}
+
+/** Figma "Monitoring Satker / Satwil" — rollup penyelesaian temuan per sub-unit di bawah
+ * satu Polda (bukan lintas-Polda), dipetakan dari `subSatker`. */
+export function monitoringBySubSatker(poldaId: string, sumber: TemuanSumberLedger): MonitoringSatwilRow[] {
+  const entries = findingsForSatker(poldaId, sumber);
+  const groups = new Map<string, FindingLedgerEntry[]>();
+  entries.forEach((e) => {
+    groups.set(e.subSatker, [...(groups.get(e.subSatker) ?? []), e]);
+  });
+  return Array.from(groups.entries()).map(([subSatker, items]) => {
+    const selesai = items.filter((i) => i.status === 'Selesai').length;
+    const dalamProses = items.filter((i) => i.status === 'Dalam Proses').length;
+    const persen = items.length ? Math.round((selesai / items.length) * 100) : 0;
+    const status: MonitoringSatwilRow['status'] = persen >= 80 ? 'Sangat Baik' : persen >= 60 ? 'Baik' : persen >= 30 ? 'Menunggu' : 'Kritis';
+    return { subSatker, jumlahTemuan: items.length, selesai, dalamProses, persenPenyelesaian: persen, status };
+  });
 }

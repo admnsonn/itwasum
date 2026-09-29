@@ -146,7 +146,10 @@ const STATUS_BADGE = (aktif: boolean): { color: BadgeColor; label: string } =>
 /* ============================================================================================ *
  * 4.1 Struktur Organisasi & Unit Kerja
  * ============================================================================================ */
-const OrganisasiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+/** Diekspor terpisah untuk halaman Sidebar Plane-only "Struktur Organisasi & Unit Kerja"
+ * (`b12/organisasi`, grup tambahan "Audit Universe & Risiko" — tidak ada frame Figma
+ * eksplisit) — lihat catatan di `TipologiScreen`. */
+export const OrganisasiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
   const [search, setSearch] = useState('');
   const [jenjangFilter, setJenjangFilter] = useState('');
@@ -523,7 +526,10 @@ const OrgFormModal: React.FC<{ mode: 'create' | 'edit' | 'view'; org?: OrgUnit; 
 /* ============================================================================================ *
  * 4.2 Tipologi & Status Satker
  * ============================================================================================ */
-const TipologiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+/** Diekspor terpisah agar dapat dipakai langsung sebagai halaman Sidebar Figma "Master
+ * Tipologi Satker" (`b12/master-tipologi`), lepas dari tab internal Data Master Terpadu lama
+ * (Plan "Align itwasum with Figma", todo `portal-masters`). */
+export const TipologiScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const [tab, setTab] = useState<'daftar' | 'satker'>('daftar');
   return (
     <div className="space-y-3">
@@ -853,7 +859,9 @@ const TipologiSatkerTable: React.FC<{ readOnly: boolean; notify: (m: string) => 
 /* ============================================================================================ *
  * 4.3 Jenis Pengawasan & Bidjemen
  * ============================================================================================ */
-const JenisPengawasanScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+/** Diekspor terpisah untuk halaman Sidebar Figma "Master Jenis Pengawasan"
+ * (`b12/master-jenis-pengawasan`) — lihat catatan di `TipologiScreen`. */
+export const JenisPengawasanScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const [tab, setTab] = useState<'jenis' | 'objek' | 'bidjemen'>('jenis');
   return (
     <div className="space-y-3">
@@ -1341,7 +1349,9 @@ const KatalogScreen: React.FC<{ readOnly: boolean; notify: (m: string) => void }
 
 /** 4.4 tab Template — skema field & contoh baku per dokumen berjenis "Data" (Plane B.1
  * Pra-Audit "Template", digabung sebagai tab di dalam 4.4 Katalog per keputusan plan). */
-const TemplateTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+/** Diekspor terpisah untuk halaman Sidebar Figma "Master Template Dokumen"
+ * (`b12/master-template`) — lihat catatan di `TipologiScreen`. */
+export const TemplateTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
   const [editing, setEditing] = useState<TemplateDokumen | null>(null);
   const dataDocs = state.katalog.filter((d) => d.jenis === 'Data');
@@ -1435,7 +1445,9 @@ const TemplateEditor: React.FC<{ template: TemplateDokumen }> = ({ template }) =
   );
 };
 
-const KatalogDaftarTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
+/** Diekspor terpisah untuk halaman Sidebar Figma "Master Katalog Pra-Audit"
+ * (`b12/master-katalog`) — lihat catatan di `TipologiScreen`. */
+export const KatalogDaftarTable: React.FC<{ readOnly: boolean; notify: (m: string) => void }> = ({ readOnly, notify }) => {
   const state = useAuditUniverseStore();
   const [search, setSearch] = useState('');
   const [kategoriFilter, setKategoriFilter] = useState('');

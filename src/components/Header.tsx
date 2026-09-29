@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Bell, CheckCircle2, ChevronDown, User, LogOut, Search, X, Check, ExternalLink, RefreshCw, Users, Key, Lock, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Bell, CheckCircle2, ChevronDown, User, LogOut, Search, X, Check, ExternalLink, RefreshCw, Users, Key, Lock, ShieldAlert, ArrowRight } from 'lucide-react';
 import { PerluPerhatianItem, PoldaSatker, CurrentUserProfile } from '../types';
 import { PoldaLogo } from './PoldaLogo';
 import { PREDEFINED_ROLES_ACCOUNTS, PredefinedAccountConfig } from '../data/rolesData';
@@ -60,48 +60,15 @@ export const Header: React.FC<HeaderProps> = ({
     : [];
 
   return (
-    <header id="main-header" className="sticky top-0 z-40 bg-[#0B2B5C] text-white">
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
-        
-        {/* Brand & Identity Lockup */}
-        <div className="flex items-center gap-3 min-w-fit">
-          <div className="w-9 h-9 flex items-center justify-center shrink-0">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/commons/7/71/Inspektorat_Pengawasan_Umum_POLRI.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" 
-              alt="Logo Itwasum POLRI" 
-              className="w-full h-full object-contain"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                const target = e.currentTarget;
-                target.style.display = 'none';
-                if (target.nextElementSibling) {
-                  (target.nextElementSibling as HTMLElement).style.display = 'flex';
-                }
-              }}
-            />
-            <div className="w-full h-full items-center justify-center text-amber-400" style={{ display: 'none' }}>
-              <Shield className="w-5 h-5 stroke-[2.2]" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base sm:text-lg tracking-tight text-white leading-tight">
-                SATU DATA ITWASUM
-              </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#143E78] text-blue-200 border border-blue-600/40">
-                PRESISI
-              </span>
-            </div>
-            <p className="text-[11px] text-blue-200/80 font-medium">
-              Sistem Informasi Pengawasan Terpadu • Mabes Polri
-            </p>
-          </div>
-        </div>
+    <header id="main-header" className="sticky top-0 z-40 bg-white text-slate-800 border-b border-slate-200">
+      <div className="px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
 
-        {/* Global Quick Search */}
-        <div className="hidden lg:block relative flex-1 max-w-md mx-4">
+        {/* Global Quick Search — dipertahankan sebagai fitur pencarian cepat internal, hanya
+            direstyling agar cocok pada header putih (Figma tidak menampilkan search di header,
+            tapi menghapus fitur ini akan menghilangkan navigasi cepat lintas Satker). */}
+        <div className="hidden lg:block relative flex-1 max-w-sm">
           <div className="relative">
-            <Search className="w-4 h-4 text-blue-300 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               ref={searchInputRef}
               id="global-search-input"
@@ -113,20 +80,20 @@ export const Header: React.FC<HeaderProps> = ({
                 setShowSearchDropdown(true);
               }}
               onFocus={() => setShowSearchDropdown(true)}
-              className="w-full pl-10 pr-16 py-2 bg-[#071F42] border border-[#1B437B] rounded-xl text-xs text-white placeholder-blue-300/60 focus:outline-none focus:ring-1.5 focus:ring-amber-400 focus:border-amber-400 transition"
+              className="w-full pl-10 pr-16 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1.5 focus:ring-[var(--sd-primary)]/30 focus:border-[var(--sd-primary)] transition"
             />
             
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
               {searchQuery ? (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="p-1 text-blue-300 hover:text-white rounded"
+                  className="p-1 text-slate-400 hover:text-slate-700 rounded"
                   aria-label="Hapus pencarian"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <kbd className="hidden xl:inline-block px-1.5 py-0.5 text-[10px] font-mono text-blue-300/70 bg-blue-900/50 rounded border border-blue-700/50">
+                <kbd className="hidden xl:inline-block px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-100 rounded border border-slate-200">
                   ⌘K
                 </kbd>
               )}
@@ -183,14 +150,8 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right Action Bar */}
-        <div className="flex items-center gap-2.5">
-          
-          {/* Live System Indicator */}
-          <div className="hidden xl:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#071F42] border border-[#173D73] text-[11px] text-blue-200">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Mabes Polri Presisi</span>
-          </div>
+        {/* Right Action Bar — Figma: hanya lonceng notifikasi + chip pengguna */}
+        <div className="flex items-center gap-2.5 ml-auto">
 
           {/* Urgent Notification Bell */}
           <div className="relative">
@@ -200,12 +161,12 @@ export const Header: React.FC<HeaderProps> = ({
                 setShowNotifications(!showNotifications);
                 setShowUserMenu(false);
               }}
-              className="relative p-2 rounded-xl bg-[#071F42] hover:bg-[#0E2E5E] border border-[#1A4278] text-blue-200 hover:text-white transition flex items-center justify-center cursor-pointer"
+              className="relative p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 transition flex items-center justify-center cursor-pointer"
               aria-label="Pemberitahuan"
             >
               <Bell className="w-4.5 h-4.5" />
               {urgentItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center border-2 border-[#0B2B5C]">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center border-2 border-white">
                   {urgentItems.length}
                 </span>
               )}
@@ -278,9 +239,9 @@ export const Header: React.FC<HeaderProps> = ({
                 setShowUserMenu(!showUserMenu);
                 setShowNotifications(false);
               }}
-              className="flex items-center gap-2.5 p-1 sm:pl-1.5 sm:pr-3 py-1 rounded-xl bg-[#071F42] hover:bg-[#0E2E5E] border border-[#1A4278] transition text-left cursor-pointer"
+              className="flex items-center gap-2.5 p-1 sm:pl-1.5 sm:pr-3 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition text-left cursor-pointer"
             >
-              <div className="relative w-8 h-8 rounded-lg overflow-hidden shadow-xs shrink-0 bg-slate-800 flex items-center justify-center text-white font-black text-xs">
+              <div className="relative w-8 h-8 rounded-lg overflow-hidden shadow-xs shrink-0 bg-[var(--sd-primary)] flex items-center justify-center text-white font-black text-xs">
                 {currentUser?.avatarUrl ? (
                   <img
                     src={currentUser.avatarUrl}
@@ -294,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               <div className="hidden sm:block">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white leading-tight">
+                  <span className="text-xs font-bold text-slate-800 leading-tight">
                     {currentUser ? currentUser.nama.split(',')[0] : 'Kombes Pol. Bambang'}
                   </span>
                   {currentUser && (
@@ -303,11 +264,11 @@ export const Header: React.FC<HeaderProps> = ({
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] text-blue-200/80 font-medium truncate max-w-[150px]">
+                <div className="text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
                   {currentUser ? currentUser.sebutanPimpinan : 'Auditor Utama Itwasum'}
                 </div>
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-blue-300 hidden sm:block" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
             </button>
 
             {/* User Menu Dropdown with Quick Role Switcher */}

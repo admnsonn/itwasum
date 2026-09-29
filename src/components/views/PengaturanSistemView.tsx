@@ -22,6 +22,7 @@ import {
   KeyRound,
   Save,
   RotateCcw,
+  History,
 } from 'lucide-react';
 import { CurrentUserProfile, UserAccount } from '../../types';
 import { USER_ACCOUNTS } from '../../data/mockData';
@@ -64,6 +65,10 @@ type B9Tab = 'pengguna' | 'kontrol-akses' | 'riwayat-hak-akses' | 'parameter';
 export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ currentUser, subPath, onSubPathChange }) => {
   const navigate = onSubPathChange ?? (() => {});
   const [subPathParent] = (subPath || '').split('/');
+  // Figma: setiap tujuan sidebar ("Tata Kelola Pengguna" / "Kontrol Akses") adalah halaman
+  // tersendiri, tanpa tab bar internal. "Riwayat Perubahan Hak Akses" dibuka dari tombol pada
+  // header Kontrol Akses (bukan tab terpisah), "Pengaturan Parameter" dari item Pengaturan yang
+  // dipinkan di bawah sidebar (Plan "Align itwasum with Figma", todo profil-auditor-users).
   const activeTab: B9Tab = (['kontrol-akses', 'riwayat-hak-akses', 'parameter'].includes(subPathParent) ? subPathParent : 'pengguna') as B9Tab;
 
   const [userList, setUserList] = useState<UserAccount[]>(USER_ACCOUNTS);
@@ -96,22 +101,13 @@ export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ curr
         </div>
       )}
 
-      <TabNavigation
-        tabs={[
-          { id: 'pengguna', label: 'Tata Kelola Pengguna' },
-          { id: 'kontrol-akses', label: 'Otorisasi Akses' },
-          { id: 'riwayat-hak-akses', label: 'Riwayat Perubahan Hak Akses' },
-          { id: 'parameter', label: 'Pengaturan Parameter' },
-        ]}
-        activeTab={activeTab}
-        onTabChange={(id) => navigate(id === 'pengguna' ? undefined : id)}
-      />
-
       {activeTab === 'pengguna' && (
         <TataKelolaPenggunaTab currentUser={currentUser} userList={userList} setUserList={setUserList} notify={notify} />
       )}
-      {activeTab === 'kontrol-akses' && <OtorisasiAksesTab currentUser={currentUser} notify={notify} />}
-      {activeTab === 'riwayat-hak-akses' && <RiwayatPerubahanHakAksesTab />}
+      {activeTab === 'kontrol-akses' && (
+        <OtorisasiAksesTab currentUser={currentUser} notify={notify} onOpenRiwayat={() => navigate('riwayat-hak-akses')} />
+      )}
+      {activeTab === 'riwayat-hak-akses' && <RiwayatPerubahanHakAksesTab onBack={() => navigate('kontrol-akses')} />}
       {activeTab === 'parameter' && <PengaturanParameterTab />}
     </div>
   );
@@ -120,7 +116,7 @@ export const PengaturanSistemView: React.FC<PengaturanSistemViewProps> = ({ curr
 /* ============================================================================================ *
  * Tab: Riwayat Perubahan Hak Akses (Plan "Align itwasum with Plane BA/SA", todo p6-b8b9)
  * ============================================================================================ */
-const RiwayatPerubahanHakAksesTab: React.FC = () => {
+const RiwayatPerubahanHakAksesTab: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [search, setSearch] = useState('');
   const [detailTarget, setDetailTarget] = useState<ReturnType<typeof getAuditLogs>[number] | null>(null);
   const logs = getAuditLogs().filter((l) => l.kejadian === 'Ubah hak akses user');
@@ -129,6 +125,7 @@ const RiwayatPerubahanHakAksesTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">&larr; Kembali ke Kontrol Akses</button>
       <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <Typography variant="headline-md">Riwayat Perubahan Hak Akses</Typography>
@@ -556,7 +553,7 @@ const FreezeAkunModal: React.FC<{ isOpen: boolean; onClose: () => void; userList
  * Tab 2: Otorisasi Akses (#/b9/kontrol-akses)
  * ============================================================================================ */
 
-const OtorisasiAksesTab: React.FC<{ currentUser?: CurrentUserProfile; notify: (msg: string) => void }> = ({ currentUser, notify }) => {
+const OtorisasiAksesTab: React.FC<{ currentUser?: CurrentUserProfile; notify: (msg: string) => void; onOpenRiwayat: () => void }> = ({ currentUser, notify, onOpenRiwayat }) => {
   const [customRoles, setCustomRoles] = useState<CustomRoleDef[]>(() => getCustomRoles());
   const [matrix, setMatrix] = useState<AccessMatrixState>(() => getAccessMatrix());
   const [selectedRole, setSelectedRole] = useState<string>('super_admin');
@@ -628,6 +625,7 @@ const OtorisasiAksesTab: React.FC<{ currentUser?: CurrentUserProfile; notify: (m
           <Typography variant="headline-md">Otorisasi Akses</Typography>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={onOpenRiwayat}><History className="w-4 h-4" />Riwayat Perubahan Hak Akses</Button>
           <Button variant="outline" disabled={!dirty} onClick={handleCancel}><RotateCcw className="w-4 h-4" />Batal Perubahan</Button>
           <Button variant="primary" disabled={!dirty} onClick={handleSave}><Save className="w-4 h-4" />Simpan Konfigurasi Matriks</Button>
         </div>

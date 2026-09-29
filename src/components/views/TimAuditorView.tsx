@@ -26,6 +26,9 @@ import {
   Download,
   ShieldAlert,
   Camera,
+  Eye,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { AuditorData, CurrentUserProfile } from '../../types';
 import { AUDITOR_LIST } from '../../data/mockData';
@@ -59,6 +62,21 @@ export const TimAuditorView: React.FC<TimAuditorViewProps> = ({ currentUser, sub
   const ownAuditor = currentUser?.peran === 'auditor' ? auditorList.find((a) => a.nrp === currentUser.nrp) : undefined;
   if (currentUser?.peran === 'auditor') {
     return <AuditorDetailScreen auditor={ownAuditor} onBack={() => {}} selfOnly />;
+  }
+
+  // Rute Figma "Matriks Kompetensi" / "Monitoring Kapasitas" (Plan "Align itwasum with Figma",
+  // sidebarNav.ts) — sebelumnya tab internal, kini deep-link lewat subPath.
+  if (subPath === 'matriks-kompetensi' || subPath === 'monitoring-kapasitas') {
+    return (
+      <AuditorListScreen
+        key={subPath}
+        currentUser={currentUser}
+        auditorList={auditorList}
+        setAuditorList={setAuditorList}
+        onOpenDetail={(id) => navigate(id)}
+        initialTab={subPath === 'matriks-kompetensi' ? 'keahlian' : 'beban'}
+      />
+    );
   }
 
   if (subPath) {
@@ -102,8 +120,9 @@ const AuditorListScreen: React.FC<{
   auditorList: AuditorData[];
   setAuditorList: React.Dispatch<React.SetStateAction<AuditorData[]>>;
   onOpenDetail: (id: string) => void;
-}> = ({ currentUser, auditorList, setAuditorList, onOpenDetail }) => {
-  const [mainTab, setMainTab] = useState<'daftar' | 'beban' | 'keahlian'>('daftar');
+  initialTab?: 'daftar' | 'beban' | 'keahlian';
+}> = ({ currentUser, auditorList, setAuditorList, onOpenDetail, initialTab }) => {
+  const [mainTab, setMainTab] = useState<'daftar' | 'beban' | 'keahlian'>(initialTab ?? 'daftar');
   const [search, setSearch] = useState('');
   const [filterJabatan, setFilterJabatan] = useState('');
   const [filterSatker, setFilterSatker] = useState('');
@@ -112,6 +131,8 @@ const AuditorListScreen: React.FC<{
   // BR B.6 Directory: toggle AND/OR antar filter aktif (Plan p4-b6).
   const [filterMode, setFilterMode] = useState<'AND' | 'OR'>('AND');
   const [showModal, setShowModal] = useState(false);
+  const [editTarget, setEditTarget] = useState<AuditorData | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AuditorData | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const jabatanOptions = useMemo(() => Array.from(new Set(auditorList.map((a) => a.jabatan))).map((v) => ({ value: v, label: v })), [auditorList]);
@@ -228,12 +249,6 @@ const AuditorListScreen: React.FC<{
         </div>
       </Card>
 
-      <TabNavigation
-        tabs={[{ id: 'daftar', label: 'Daftar Auditor' }, { id: 'beban', label: 'Monitoring Kapasitas Beban Kerja' }, { id: 'keahlian', label: 'Master Keahlian' }]}
-        activeTab={mainTab}
-        onTabChange={(id) => setMainTab(id as typeof mainTab)}
-      />
-
       {mainTab === 'daftar' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -309,7 +324,11 @@ const AuditorListScreen: React.FC<{
                         {!isAuditorOrganik(a) && <Badge color="indigo" className="ml-1">Eksternal</Badge>}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => onOpenDetail(a.id)}>Lihat Profil <ChevronRight className="w-3.5 h-3.5" /></Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => onOpenDetail(a.id)} title="Lihat Profil" className="p-1.5 rounded-[6px] text-slate-400 hover:text-[var(--sd-primary)] hover:bg-slate-50"><Eye className="w-4 h-4" /></button>
+                          <button onClick={() => setEditTarget(a)} title="Edit Data Auditor" className="p-1.5 rounded-[6px] text-slate-400 hover:text-[var(--sd-primary)] hover:bg-slate-50"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => setDeleteTarget(a)} title="Hapus" className="p-1.5 rounded-[6px] text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -360,6 +379,44 @@ const AuditorListScreen: React.FC<{
       {mainTab === 'keahlian' && <MasterKeahlianSection />}
 
       <TambahAuditorModal isOpen={showModal} onClose={() => setShowModal(false)} onSave={handleCreate} />
+
+      {editTarget && (
+        <EditAuditorModal
+          auditor={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSave={(patch) => {
+            setAuditorList((prev) => prev.map((a) => (a.id === editTarget.id ? { ...a, ...patch } : a)));
+            setEditTarget(null);
+            setSuccessToast(`Data auditor ${editTarget.nama} berhasil diperbarui.`);
+            setTimeout(() => setSuccessToast(null), 4000);
+          }}
+        />
+      )}
+
+      {deleteTarget && (
+        <Modal
+          isOpen
+          onClose={() => setDeleteTarget(null)}
+          title={`Hapus Data Auditor ${deleteTarget.nama}?`}
+          description="Tindakan ini tidak dapat dibatalkan. Data penugasan & sertifikasi terkait tidak akan terhapus dari riwayat."
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setAuditorList((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+                  setSuccessToast(`Data auditor ${deleteTarget.nama} berhasil dihapus.`);
+                  setDeleteTarget(null);
+                  setTimeout(() => setSuccessToast(null), 4000);
+                }}
+              >
+                Hapus
+              </Button>
+            </>
+          }
+        />
+      )}
     </div>
   );
 };
@@ -482,6 +539,73 @@ const MasterKeahlianSection: React.FC = () => {
 /* ============================================================================================ *
  * Modal "Tambah Data Auditor" — 2 tab (Data Auditor / Keahlian Khusus)
  * ============================================================================================ */
+
+/** Edit Data Auditor — 2 tab (Profil / Keahlian Khusus), mengikuti Figma frames
+ * "Edit Data Auditor - Profil" (3654:25288) & "- Keahlian Khusus" (3654:25980). */
+const EditAuditorModal: React.FC<{ auditor: AuditorData; onClose: () => void; onSave: (patch: Partial<AuditorData>) => void }> = ({ auditor, onClose, onSave }) => {
+  const [tab, setTab] = useState<'profil' | 'keahlian'>('profil');
+  const [nama, setNama] = useState(auditor.nama);
+  const [nrp, setNrp] = useState(auditor.nrp);
+  const [jabatan, setJabatan] = useState(auditor.jabatan);
+  const [satker, setSatker] = useState(auditor.satker || auditor.subdit);
+  const [emailDinas, setEmailDinas] = useState(auditor.emailDinas ?? '');
+  const [noHp, setNoHp] = useState(auditor.noHp ?? '');
+  const [keahlianList, setKeahlianList] = useState<string[]>(auditor.keahlianKhusus ?? []);
+  const [keahlianInput, setKeahlianInput] = useState('');
+  const organik = isAuditorOrganik(auditor);
+
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={`Edit Data Auditor — ${auditor.nama}`}
+      widthClassName="max-w-2xl"
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button variant="primary" onClick={() => onSave({ nama, nrp, jabatan, satker, emailDinas, noHp, keahlianKhusus: keahlianList })}>Simpan Perubahan</Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <SegmentedControl options={[{ value: 'profil', label: 'Data Auditor' }, { value: 'keahlian', label: 'Keahlian Khusus' }]} value={tab} onChange={(v) => setTab(v as typeof tab)} />
+
+        {tab === 'profil' && (
+          <div className="space-y-3">
+            <Input placeholder="Nama Lengkap & Gelar" value={nama} onChange={(e) => setNama(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Input placeholder="NRP/NIP" value={nrp} onChange={(e) => setNrp(e.target.value)} disabled={organik} />
+                {organik && <p className="text-[10px] text-slate-400 mt-1">NRP terkunci — data induk SSDM (personel organik).</p>}
+              </div>
+              <Input placeholder="Jabatan Saat Ini" value={jabatan} onChange={(e) => setJabatan(e.target.value)} />
+            </div>
+            <Input placeholder="Unit Kerja / Satker" value={satker} onChange={(e) => setSatker(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <Input placeholder="Email Dinas" value={emailDinas} onChange={(e) => setEmailDinas(e.target.value)} />
+              <Input placeholder="No. HP / Whatsapp" value={noHp} onChange={(e) => setNoHp(e.target.value)} />
+            </div>
+          </div>
+        )}
+
+        {tab === 'keahlian' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2.5">
+              <Input placeholder="Tambahkan keahlian khusus..." value={keahlianInput} onChange={(e) => setKeahlianInput(e.target.value)} />
+              <Button variant="outline" onClick={() => { if (keahlianInput.trim()) { setKeahlianList((prev) => [...prev, keahlianInput.trim()]); setKeahlianInput(''); } }}>Tambah</Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {keahlianList.map((k, i) => (
+                <Badge key={i} color="primary" icon={<button onClick={() => setKeahlianList((prev) => prev.filter((_, idx) => idx !== i))}><X className="w-3 h-3" /></button>}>{k}</Badge>
+              ))}
+              {keahlianList.length === 0 && <span className="text-xs text-slate-400">Belum ada keahlian ditambahkan.</span>}
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+};
 
 const TambahAuditorModal: React.FC<{ isOpen: boolean; onClose: () => void; onSave: (a: AuditorData) => void }> = ({ isOpen, onClose, onSave }) => {
   const [modalTab, setModalTab] = useState<'data' | 'keahlian'>('data');

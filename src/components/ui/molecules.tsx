@@ -11,13 +11,14 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  HelpCircle,
   Lock,
   Search as SearchIcon,
   Upload,
   X,
 } from 'lucide-react';
 import { cn } from './cn';
-import { Badge, Button, Card, Input, Select, Spinner, type SelectOption } from './atoms';
+import { Badge, Breadcrumbs, Button, Card, Input, Select, Spinner, type BreadcrumbItem, type SelectOption } from './atoms';
 
 /* ============================== Table ============================== */
 
@@ -559,3 +560,143 @@ export const DiffView: React.FC<{ before: { label: string; value: string }[]; af
     </div>
   </div>
 );
+
+/* ============================== PageHeaderCard (Figma pattern) ============================== */
+
+/** Kartu breadcrumb pill di atas judul halaman, mengikuti pola Figma di setiap frame list
+ * ("Temuan Audit Polri > Polda Metro Jaya > ..."), lihat `figma/README.md`. */
+export const BreadcrumbPill: React.FC<{ items: BreadcrumbItem[]; onNavigate?: (item: BreadcrumbItem, index: number) => void; className?: string }> = ({
+  items,
+  onNavigate,
+  className,
+}) => (
+  <Card className={cn('py-2.5', className)}>
+    <Breadcrumbs items={items} onNavigate={onNavigate} />
+  </Card>
+);
+
+export interface PageHeaderCardProps {
+  title: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+  className?: string;
+}
+
+/** Kartu judul halaman (Figma: judul tebal + subjudul abu-abu + aksi utama di kanan), dipakai
+ * konsisten pada semua halaman list/dashboard/detail bergaya Figma. */
+export const PageHeaderCard: React.FC<PageHeaderCardProps> = ({ title, subtitle, actions, className }) => (
+  <Card className={cn('flex flex-col sm:flex-row sm:items-center justify-between gap-3', className)}>
+    <div className="min-w-0">
+      <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight truncate">{title}</h1>
+      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    </div>
+    {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+  </Card>
+);
+
+/* ============================== ListFilterCard (Figma pattern) ============================== */
+
+export interface ListFilterCardProps {
+  search?: { value: string; onChange: (v: string) => void; placeholder?: string };
+  fields?: FilterField[];
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => void;
+  secondaryActions?: React.ReactNode;
+  className?: string;
+}
+
+/** Kartu filter Figma: search + dropdown filter sejajar, tombol biru "Tampilkan Hasil"/"Export"
+ * di ujung kanan. Dipakai di seluruh halaman list Portal Satker, Temuan Audit, IKU, dst. */
+export const ListFilterCard: React.FC<ListFilterCardProps> = ({ search, fields = [], primaryActionLabel, onPrimaryAction, secondaryActions, className }) => (
+  <Card className={cn('flex flex-wrap items-end gap-3', className)}>
+    {search && (
+      <div className="flex-1 min-w-48">
+        <Search value={search.value} onChange={search.onChange} placeholder={search.placeholder} />
+      </div>
+    )}
+    {fields.map((f) => (
+      <div key={f.key} className="min-w-40">
+        <label className="block text-[11px] font-bold text-slate-500 mb-1">{f.label}</label>
+        {f.type === 'select' ? (
+          <Select options={f.options} value={f.value} onChange={f.onChange} placeholder={f.placeholder} />
+        ) : (
+          <Input type="date" value={f.value} onChange={(e) => f.onChange(e.target.value)} />
+        )}
+      </div>
+    ))}
+    {secondaryActions}
+    {primaryActionLabel && onPrimaryAction && <Button onClick={onPrimaryAction}>{primaryActionLabel}</Button>}
+  </Card>
+);
+
+/* ============================== Figma table footer ("Menampilkan x dari y dokumen") ============================== */
+
+export const TableFooterBar: React.FC<{
+  shown: number;
+  total: number;
+  pageSize: number;
+  onPageSizeChange?: (n: number) => void;
+  page: number;
+  totalPages: number;
+  onPageChange: (p: number) => void;
+  className?: string;
+}> = ({ shown, total, pageSize, onPageSizeChange, page, totalPages, onPageChange, className }) => (
+  <div className={cn('flex items-center justify-between gap-3 text-[11px] text-slate-500 pt-2', className)}>
+    <div className="flex items-center gap-2">
+      <span>Menampilkan {shown} dari {total} dokumen</span>
+      {onPageSizeChange && (
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          className="h-7 rounded-[6px] border border-slate-200 bg-white px-1.5 text-[11px] font-bold"
+        >
+          {[5, 10, 20, 50].map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      )}
+    </div>
+    <div className="flex items-center gap-1">
+      <button onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page <= 1} className="w-7 h-7 rounded-[6px] border border-slate-200 bg-white disabled:opacity-40 flex items-center justify-center">
+        <ChevronLeft className="w-3.5 h-3.5" />
+      </button>
+      {Array.from({ length: Math.max(1, totalPages) }, (_, i) => i + 1)
+        .slice(0, 5)
+        .map((p) => (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            className={cn('w-7 h-7 rounded-[6px] text-[11px] font-bold flex items-center justify-center', p === page ? 'bg-[var(--sd-primary)] text-white' : 'border border-slate-200 bg-white text-slate-600')}
+          >
+            {p}
+          </button>
+        ))}
+      <button onClick={() => onPageChange(Math.min(totalPages, page + 1))} disabled={page >= totalPages} className="w-7 h-7 rounded-[6px] border border-slate-200 bg-white disabled:opacity-40 flex items-center justify-center">
+        <ChevronRight className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  </div>
+);
+
+/* ============================== InfoTooltip (Figma "Data Belum Lengkap" pattern) ============================== */
+
+export const InfoTooltip: React.FC<{ text: string; className?: string }> = ({ text, className }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className={cn('relative inline-flex', className)}>
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
+        className="text-slate-400 hover:text-slate-600"
+        aria-label="Info"
+      >
+        <HelpCircle className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <span className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-52 p-2 rounded-[8px] bg-slate-900 text-white text-[11px] leading-relaxed shadow-lg">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+};

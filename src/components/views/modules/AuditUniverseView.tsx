@@ -13,10 +13,11 @@ import type { CurrentUserProfile, PoldaSatker } from '../../../types';
 import { getModuleById, MODULE_GROUPS } from '../../../config/moduleRegistry';
 import { getModuleSpec, getDefaultScreenSlug } from '../../../config/moduleSpecs';
 import { ModuleScreenShell } from './ModuleScreenShell';
-import { MasterDataTab } from '../masterData/MasterDataTab';
+import { MasterDataTab, OrganisasiScreen, TipologiScreen, JenisPengawasanScreen, KatalogDaftarTable, TemplateTable } from '../masterData/MasterDataTab';
 import { canManageMasterData } from '../../../data/auditUniverse/roleMapping';
 import { PermintaanDataScreen } from './auditUniverse/PermintaanDataScreen';
 import { PortalSatkerScreen } from './auditUniverse/PortalSatkerScreen';
+import { DashboardPortalItwasumScreen } from './auditUniverse/DashboardPortalScreen';
 import { VerifikasiBerkasScreen } from './auditUniverse/VerifikasiBerkasScreen';
 import { DashboardAuditUniverseScreen } from './auditUniverse/DashboardScreen';
 import { ObjekAuditScreen } from './auditUniverse/ObjekAuditScreen';
@@ -46,9 +47,10 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ currentUse
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Auditee (PIC Satker) hanya melihat tab Portal Satker — sembunyikan tab lain di ModuleScreenShell
+  // Auditee (PIC Satker) hanya melihat Portal Satker — sembunyikan Screen lain di ModuleScreenShell
   // dengan membatasi spec.screens yang diteruskan.
   const visibleSpec = isAuditeeOnly ? { ...spec, screens: spec.screens.filter((s) => s.slug === 'portal-satker') } : spec;
+  const readOnlyMaster = !canManageMasterData(currentUser);
 
   return (
     <ModuleScreenShell
@@ -57,35 +59,43 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ currentUse
       spec={visibleSpec}
       activeScreen={activeScreen}
       onScreenChange={onSubPathChange}
+      hideTabs
     >
       {toast && (
         <div className="mb-3 p-2.5 rounded-[10px] bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold">{toast}</div>
+      )}
+
+      {/* -- Figma "Portal Satker" (Sidebar grup Figma) -- */}
+      {activeScreen === 'dashboard-portal' && <DashboardPortalItwasumScreen />}
+
+      {activeScreen === 'portal-satker' && (
+        <PortalSatkerScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} />
+      )}
+
+      {activeScreen === 'master-jenis-pengawasan' && <JenisPengawasanScreen readOnly={readOnlyMaster} notify={notify} />}
+
+      {activeScreen === 'master-tipologi' && <TipologiScreen readOnly={readOnlyMaster} notify={notify} />}
+
+      {activeScreen === 'master-katalog' && <KatalogDaftarTable readOnly={readOnlyMaster} notify={notify} />}
+
+      {activeScreen === 'master-template' && <TemplateTable readOnly={readOnlyMaster} notify={notify} />}
+
+      {activeScreen === 'mapping' && <MappingScreen currentUser={currentUser} />}
+
+      {activeScreen === 'penugasan-audit' && (
+        <PermintaanDataScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} tipeFilter="Berkala" />
+      )}
+
+      {/* -- Plane-only, sidebar grup tambahan "Audit Universe & Risiko" -- */}
+      {activeScreen === 'organisasi' && (
+        <OrganisasiScreen readOnly={readOnlyMaster} notify={notify} />
       )}
 
       {activeScreen === 'dashboard' && <DashboardAuditUniverseScreen currentUser={currentUser} />}
 
       {activeScreen === 'objek-audit' && <ObjekAuditScreen detailPath={detailPath} onNavigateDetail={navigateDetail} />}
 
-      {activeScreen === 'data-master' && (
-        <MasterDataTab
-          readOnly={!canManageMasterData(currentUser)}
-          subPath={detailPath}
-          onSubPathChange={navigateDetail}
-          notify={notify}
-        />
-      )}
-
-      {activeScreen === 'mapping' && <MappingScreen currentUser={currentUser} />}
-
       {activeScreen === 'aturan-validasi' && <AturanValidasiScreen currentUser={currentUser} />}
-
-      {activeScreen === 'permintaan-data' && (
-        <PermintaanDataScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} tipeFilter="Berkala" />
-      )}
-
-      {activeScreen === 'portal-satker' && (
-        <PortalSatkerScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} />
-      )}
 
       {activeScreen === 'tambahan-audit' && (
         <PermintaanDataScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} tipeFilter="Tambahan Audit" />
@@ -98,6 +108,16 @@ export const AuditUniverseView: React.FC<AuditUniverseViewProps> = ({ currentUse
       {activeScreen === 'risiko-review' && <RisikoReviewScreen currentUser={currentUser} />}
 
       {activeScreen === 'prioritas-pkpt' && <PrioritasPkptScreen currentUser={currentUser} />}
+
+      {/* -- Rute lama, hanya untuk menampung redirect dari App.tsx (lihat "data-master"/
+       * "permintaan-data" di sana) — tidak lagi punya entri Sidebar. -- */}
+      {activeScreen === 'data-master' && (
+        <MasterDataTab readOnly={readOnlyMaster} subPath={detailPath} onSubPathChange={navigateDetail} notify={notify} />
+      )}
+
+      {activeScreen === 'permintaan-data' && (
+        <PermintaanDataScreen currentUser={currentUser} detailPath={detailPath} onNavigateDetail={navigateDetail} tipeFilter="Berkala" />
+      )}
     </ModuleScreenShell>
   );
 };

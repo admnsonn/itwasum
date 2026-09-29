@@ -2,14 +2,15 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * B.2 Temuan BPK / B.3 Temuan IRSUS — landing bersama (SF-TI-014: pencarian >=3 karakter,
- * filter wilayah, kartu, muat lebih banyak) + 4 tab per Satker: Ringkasan / Analisis / Detail
- * Temuan / Tindak Lanjut (Plan "Align itwasum with Plane BA/SA", todo p3-b2b3). Detail Temuan
- * bersifat read-only (status/editing hanya dilakukan dari tab Tindak Lanjut) sesuai keputusan
- * "strip_contradict".
+ * B.2/B.3 Temuan Audit Polri — landing bersama (SF-TI-014: pencarian >=3 karakter, filter
+ * wilayah, kartu, muat lebih banyak) + satu halaman scroll per Satker dengan toggle BPK/IRSUS
+ * (mengikuti Figma "Temuan Audit Polri" & "Temuan BPK", frame 3082:11634 & 2858:7225 — lihat
+ * `figma/README.md`), Plan "Align itwasum with Figma" todo `temuan`. Tidak ada status editing
+ * (BR: "Removed: status editing") — status tindak lanjut bersifat baca-saja, ditampilkan pada
+ * tabel Monitoring Satker/Satwil dan riwayat pada Detail Temuan.
  */
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CheckCircle2, ChevronRight, Clock, Coins, FileText, RotateCcw, Search as SearchIcon, Sparkles } from 'lucide-react';
+import { AlertTriangle, Building2, ChevronRight, Clock, Coins, FileText, RotateCcw, Search as SearchIcon, Sparkles } from 'lucide-react';
 import type { PoldaSatker } from '../../../types';
 import { PoldaLogo } from '../../PoldaLogo';
 import { useSearchMin } from '../../ui/useSearchMin';
@@ -17,12 +18,15 @@ import { buildExportFilename, simulateExport } from '../../../utils/simulateExpo
 import {
   findingsForSatker,
   similarFindings,
+  monitoringBySubSatker,
   type FindingLedgerEntry,
   type TemuanSumberLedger,
   type TindakLanjutStatus,
+  type MonitoringSatwilRow,
 } from '../../../data/domain/findingsLedger';
 import {
   Badge,
+  BreadcrumbPill,
   Button,
   Card,
   CircularProgress,
@@ -34,7 +38,6 @@ import {
   SegmentedControl,
   StatCard,
   Table,
-  TabNavigation,
   Timeline,
   usePagination,
   type BadgeColor,
@@ -49,13 +52,20 @@ const STATUS_COLOR: Record<TindakLanjutStatus, BadgeColor> = {
   'Lewat Target': 'danger',
 };
 
+const MONITORING_STATUS_COLOR: Record<MonitoringSatwilRow['status'], BadgeColor> = {
+  'Sangat Baik': 'success',
+  Baik: 'info',
+  Menunggu: 'warning',
+  Kritis: 'danger',
+};
+
 const TINGKAT_COLOR: Record<FindingLedgerEntry['tingkat'], BadgeColor> = {
   Kritis: 'danger',
   Sedang: 'warning',
   Ringan: 'neutral',
 };
 
-type SatkerSubTab = 'ringkasan' | 'analisis' | 'detail' | 'tindak-lanjut';
+type LihatSemuaView = 'daftar-temuan' | 'monitoring' | 'rekomendasi' | null;
 
 interface TemuanSumberScreenProps {
   sumber: TemuanSumberLedger;
@@ -65,42 +75,76 @@ interface TemuanSumberScreenProps {
 }
 
 export const TemuanSumberScreen: React.FC<TemuanSumberScreenProps> = ({ sumber, poldaList, selectedPoldaId, onSelectPolda }) => {
-  const [subTab, setSubTab] = useState<SatkerSubTab>('ringkasan');
+  // Figma: "Temuan Audit Polri" adalah SATU item sidebar dengan toggle BPK/IRSUS di dalam
+  // halaman Satker, bukan dua rute terpisah — lihat sidebarNav.ts (hanya B.2 yang terdaftar).
+  const [activeSumber, setActiveSumber] = useState<TemuanSumberLedger>(sumber);
+  const [lihatSemua, setLihatSemua] = useState<LihatSemuaView>(null);
   const selectedPolda = poldaList.find((p) => p.id === selectedPoldaId) ?? null;
 
   if (!selectedPolda) {
-    return <TemuanLandingScreen sumber={sumber} poldaList={poldaList} onSelect={(id) => { onSelectPolda(id); setSubTab('ringkasan'); }} />;
+    return (
+      <TemuanLandingScreen
+        sumber={activeSumber}
+        poldaList={poldaList}
+        onSelect={(id) => {
+          onSelectPolda(id);
+          setLihatSemua(null);
+        }}
+      />
+    );
   }
 
-  const entries = findingsForSatker(selectedPolda.id, sumber);
+  const entries = findingsForSatker(selectedPolda.id, activeSumber);
+  const monitoring = monitoringBySubSatker(selectedPolda.id, activeSumber);
+
+  const breadcrumbItems = [
+    { label: 'Temuan Audit Polri' },
+    { label: selectedPolda.nama },
+    ...(lihatSemua ? [{ label: lihatSemua === 'daftar-temuan' ? 'Daftar Temuan' : lihatSemua === 'monitoring' ? 'Monitoring Satker / Satwil' : 'Rekomendasi Audit' }] : []),
+  ];
 
   return (
     <div className="space-y-3">
-      <button onClick={() => onSelectPolda(null)} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">&larr; Kembali ke Direktori Satker</button>
-      <Card className="flex items-center gap-3">
-        <PoldaLogo poldaId={selectedPolda.id} poldaSingkatan={selectedPolda.singkatan} poldaNama={selectedPolda.nama} size="lg" />
-        <div>
-          <div className="text-[10px] font-bold uppercase text-slate-400">{sumber === 'BPK RI' ? 'Temuan BPK RI' : 'Temuan Inspektorat Khusus (IRSUS)'}</div>
-          <h2 className="text-sm font-black text-slate-900">{selectedPolda.nama}</h2>
-        </div>
-        <Badge color="primary" className="ml-auto">{entries.length} Temuan</Badge>
-      </Card>
-
-      <TabNavigation
-        tabs={[
-          { id: 'ringkasan', label: 'Ringkasan' },
-          { id: 'analisis', label: 'Analisis' },
-          { id: 'detail', label: 'Detail Temuan' },
-          { id: 'tindak-lanjut', label: 'Tindak Lanjut' },
-        ]}
-        activeTab={subTab}
-        onTabChange={(id) => setSubTab(id as SatkerSubTab)}
+      <BreadcrumbPill
+        items={breadcrumbItems}
+        onNavigate={(_item, index) => {
+          if (index === 0) onSelectPolda(null);
+          else if (index === 1) setLihatSemua(null);
+        }}
       />
 
-      {subTab === 'ringkasan' && <RingkasanTab sumber={sumber} entries={entries} />}
-      {subTab === 'analisis' && <AnalisisTab entries={entries} />}
-      {subTab === 'detail' && <DetailTemuanTab sumber={sumber} satkerNama={selectedPolda.nama} entries={entries} />}
-      {subTab === 'tindak-lanjut' && <TindakLanjutTab entries={entries} />}
+      {lihatSemua === 'daftar-temuan' && (
+        <DaftarTemuanFull sumber={activeSumber} satkerNama={selectedPolda.nama} entries={entries} onBack={() => setLihatSemua(null)} />
+      )}
+      {lihatSemua === 'monitoring' && <MonitoringFull rows={monitoring} onBack={() => setLihatSemua(null)} />}
+      {lihatSemua === 'rekomendasi' && <RekomendasiFull entries={entries} onBack={() => setLihatSemua(null)} />}
+
+      {!lihatSemua && (
+        <>
+          <Card className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <PoldaLogo poldaId={selectedPolda.id} poldaSingkatan={selectedPolda.singkatan} poldaNama={selectedPolda.nama} size="lg" />
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold uppercase text-slate-400">Temuan Audit Polri</div>
+              <h2 className="text-sm font-black text-slate-900">{selectedPolda.nama}</h2>
+            </div>
+            <SegmentedControl
+              options={[{ value: 'BPK RI', label: 'Temuan BPK' }, { value: 'Irsus', label: 'Temuan Irsus' }]}
+              value={activeSumber}
+              onChange={(v) => setActiveSumber(v as TemuanSumberLedger)}
+            />
+          </Card>
+
+          <SatkerTemuanBody
+            sumber={activeSumber}
+            satkerNama={selectedPolda.nama}
+            entries={entries}
+            monitoring={monitoring}
+            onLihatSemuaTemuan={() => setLihatSemua('daftar-temuan')}
+            onLihatSemuaMonitoring={() => setLihatSemua('monitoring')}
+            onLihatSemuaRekomendasi={() => setLihatSemua('rekomendasi')}
+          />
+        </>
+      )}
     </div>
   );
 };
@@ -108,7 +152,7 @@ export const TemuanSumberScreen: React.FC<TemuanSumberScreenProps> = ({ sumber, 
 /* ============================================================================================ *
  * Landing — direktori Satker (SF-TI-014)
  * ============================================================================================ */
-const TemuanLandingScreen: React.FC<{ sumber: TemuanSumberLedger; poldaList: PoldaSatker[]; onSelect: (id: string) => void }> = ({ sumber, poldaList, onSelect }) => {
+const TemuanLandingScreen: React.FC<{ sumber: TemuanSumberLedger; poldaList: PoldaSatker[]; onSelect: (id: string) => void }> = ({ poldaList, onSelect }) => {
   const searchCtl = useSearchMin(3, 100);
   const [pulauFilter, setPulauFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(9);
@@ -122,8 +166,22 @@ const TemuanLandingScreen: React.FC<{ sumber: TemuanSumberLedger; poldaList: Pol
   });
   const visible = filtered.slice(0, visibleCount);
 
+  const totalBpk = poldaList.reduce((s, p) => s + findingsForSatker(p.id, 'BPK RI').length, 0);
+  const totalIrsus = poldaList.reduce((s, p) => s + findingsForSatker(p.id, 'Irsus').length, 0);
+
   return (
     <div className="space-y-4">
+      <div className="rounded-[14px] p-5 sm:p-6 text-white shadow-[0_8px_30px_rgba(0,34,101,0.3)]" style={{ background: 'linear-gradient(135deg, var(--sd-primary) 0%, var(--sd-primary-container) 60%, #0c3fa0 100%)' }}>
+        <div className="text-[11px] font-bold tracking-[0.2em] text-white/70 uppercase">Sistem Pengawasan Internal</div>
+        <h1 className="text-2xl sm:text-3xl font-black mt-1">Temuan Audit Polri</h1>
+        <p className="text-sm text-white/80 mt-1 max-w-xl">Mengintegrasikan hasil audit eksternal (BPK) dan audit internal (IRSUS) untuk membantu pimpinan menentukan prioritas pengawasan.</p>
+        <div className="grid grid-cols-3 gap-3 mt-5 max-w-lg">
+          <div className="rounded-[12px] bg-white/10 px-3 py-2.5"><div className="text-lg font-black">{poldaList.length}</div><div className="text-[11px] text-white/70">Total Satker</div></div>
+          <div className="rounded-[12px] bg-white/10 px-3 py-2.5"><div className="text-lg font-black">{totalBpk}</div><div className="text-[11px] text-white/70">Total Temuan BPK</div></div>
+          <div className="rounded-[12px] bg-white/10 px-3 py-2.5"><div className="text-lg font-black">{totalIrsus}</div><div className="text-[11px] text-white/70">Total Temuan Irsus</div></div>
+        </div>
+      </div>
+
       <Card className="flex flex-col gap-2">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="flex-1"><Search value={searchCtl.draft} onChange={searchCtl.setDraft} placeholder="Cari nama Polda (min. 3 karakter)..." /></div>
@@ -138,8 +196,8 @@ const TemuanLandingScreen: React.FC<{ sumber: TemuanSumberLedger; poldaList: Pol
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {visible.map((p) => {
-            const entries = findingsForSatker(p.id, sumber);
-            const belumSelesai = entries.filter((e) => e.status !== 'Selesai').length;
+            const bpk = findingsForSatker(p.id, 'BPK RI').length;
+            const irsus = findingsForSatker(p.id, 'Irsus').length;
             return (
               <Card key={p.id} className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -151,15 +209,15 @@ const TemuanLandingScreen: React.FC<{ sumber: TemuanSumberLedger; poldaList: Pol
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-slate-50 rounded-[10px] px-2.5 py-1.5">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">Total Temuan</div>
-                    <div className="text-xs font-black text-slate-800">{entries.length}</div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase">Temuan BPK</div>
+                    <div className="text-xs font-black text-slate-800">{bpk} Temuan</div>
                   </div>
                   <div className="bg-slate-50 rounded-[10px] px-2.5 py-1.5">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase">Belum Tuntas</div>
-                    <div className="text-xs font-black text-slate-800">{belumSelesai}</div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase">Temuan Irsus</div>
+                    <div className="text-xs font-black text-slate-800">{irsus} Temuan</div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => onSelect(p.id)}>Lihat Temuan <ChevronRight className="w-3.5 h-3.5" /></Button>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => onSelect(p.id)}>Lihat Profil <ChevronRight className="w-3.5 h-3.5" /></Button>
               </Card>
             );
           })}
@@ -173,63 +231,24 @@ const TemuanLandingScreen: React.FC<{ sumber: TemuanSumberLedger; poldaList: Pol
 };
 
 /* ============================================================================================ *
- * Ringkasan (SF-TB/TI-001..005)
+ * Halaman Satker — satu scroll (Ringkasan AI -> KPI -> Analisis -> Rekomendasi -> Daftar
+ * Temuan -> Monitoring Satker/Satwil -> Dokumen Terkait), mengikuti Figma "Temuan BPK".
  * ============================================================================================ */
-const RingkasanTab: React.FC<{ sumber: TemuanSumberLedger; entries: FindingLedgerEntry[] }> = ({ sumber, entries }) => {
+const SatkerTemuanBody: React.FC<{
+  sumber: TemuanSumberLedger;
+  satkerNama: string;
+  entries: FindingLedgerEntry[];
+  monitoring: MonitoringSatwilRow[];
+  onLihatSemuaTemuan: () => void;
+  onLihatSemuaMonitoring: () => void;
+  onLihatSemuaRekomendasi: () => void;
+}> = ({ sumber, satkerNama, entries, monitoring, onLihatSemuaTemuan, onLihatSemuaMonitoring, onLihatSemuaRekomendasi }) => {
+  const [detailTarget, setDetailTarget] = useState<FindingLedgerEntry | null>(null);
   const totalNilai = entries.reduce((s, e) => s + (e.nilaiRupiah ? parseFloat(e.nilaiRupiah.replace(/[^\d.]/g, '')) || 0 : 0), 0);
   const berulang = entries.filter((e) => e.label === 'Berulang').length;
   const trendPct = entries.length ? Math.round((berulang / entries.length) * 100) : 0;
   const confidenceAvg = entries.length ? Math.round(entries.reduce((s, e) => s + e.aiConfidence, 0) / entries.length) : 0;
 
-  return (
-    <div className="space-y-4">
-      <div className="rounded-[14px] p-5 text-white shadow-[0_4px_20px_rgba(0,34,101,0.25)] flex items-start gap-4" style={{ background: 'linear-gradient(135deg, var(--sd-primary) 0%, var(--sd-primary-container) 100%)' }}>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1"><Sparkles className="w-4 h-4" /><span className="text-xs font-bold uppercase tracking-wide">Ringkasan Analisis AI</span></div>
-          <p className="text-sm text-white/90 leading-relaxed">
-            Dari {entries.length} temuan {sumber}, {berulang} ({trendPct}%) merupakan temuan berulang dari periode sebelumnya. Prioritaskan tindak lanjut pada temuan berstatus "Lewat Target" untuk mencegah eskalasi.
-          </p>
-        </div>
-        <CircularProgress value={confidenceAvg} size={80} strokeWidth={6} caption="Confidence" displayValue={`${confidenceAvg}%`} />
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Total Temuan" value={entries.length} />
-        {sumber === 'BPK RI' ? (
-          <StatCard label="Total Nilai Temuan" value={`Rp ${totalNilai.toFixed(0)} Jt`} />
-        ) : (
-          <StatCard label="Tren Berulang" value={`${trendPct}%`} />
-        )}
-        <StatCard label="Temuan Berulang" value={berulang} />
-        <StatCard label="Lewat Target" value={entries.filter((e) => e.status === 'Lewat Target').length} />
-      </div>
-
-      <Card>
-        <div className="text-xs font-bold text-slate-700 mb-2">Rekomendasi Prioritas</div>
-        <ul className="space-y-1.5">
-          {entries.slice(0, 3).map((e) => (
-            <li key={e.id} className="text-xs text-slate-600 flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-              <span><strong>{e.kode}</strong> — {e.rekomendasi}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
-
-      <Card>
-        <div className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Dokumen Terkait</div>
-        <ul className="text-xs text-slate-500 space-y-1">
-          {Array.from(new Set(entries.flatMap((e) => e.dokumenTerkait))).slice(0, 5).map((d) => <li key={d}>{d}</li>)}
-        </ul>
-      </Card>
-    </div>
-  );
-};
-
-/* ============================================================================================ *
- * Analisis (SF-006..008)
- * ============================================================================================ */
-const AnalisisTab: React.FC<{ entries: FindingLedgerEntry[] }> = ({ entries }) => {
   const byKategori = useMemo(() => {
     const map = new Map<string, number>();
     entries.forEach((e) => map.set(e.kategori, (map.get(e.kategori) ?? 0) + 1));
@@ -242,58 +261,131 @@ const AnalisisTab: React.FC<{ entries: FindingLedgerEntry[] }> = ({ entries }) =
     return Array.from(map.entries()).map(([label, value]): HorizontalMetricItem => ({ id: label, label, percent: Math.min(100, value * 20), displayValue: `${value}`, color: '#BA1A1A' }));
   }, [entries]);
 
-  const [selected, setSelected] = useState<FindingLedgerEntry | null>(entries[0] ?? null);
-
   return (
-    <div className="grid lg:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      {/* Ringkasan Analisis AI */}
+      <div className="rounded-[14px] p-5 text-white shadow-[0_4px_20px_rgba(0,34,101,0.25)] flex items-start gap-4" style={{ background: 'linear-gradient(135deg, var(--sd-primary) 0%, var(--sd-primary-container) 100%)' }}>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1"><Sparkles className="w-4 h-4" /><span className="text-xs font-bold uppercase tracking-wide">Ringkasan Analisis AI</span></div>
+          <p className="text-sm text-white/90 leading-relaxed">
+            Dari {entries.length} temuan {sumber === 'BPK RI' ? 'BPK' : 'Irsus'}, {berulang} ({trendPct}%) merupakan temuan berulang dari periode sebelumnya. Prioritaskan tindak lanjut pada temuan berstatus "Lewat Target" untuk mencegah eskalasi.
+          </p>
+        </div>
+        <CircularProgress value={confidenceAvg} size={80} strokeWidth={6} caption="Confidence" displayValue={`${confidenceAvg}%`} />
+      </div>
+
+      {/* KPI */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Total Temuan" value={entries.length} />
+        {sumber === 'BPK RI' ? (
+          <StatCard label="Total Nilai Temuan" value={`Rp ${totalNilai.toFixed(0)} Jt`} />
+        ) : (
+          <StatCard label="Tren Berulang" value={`${trendPct}%`} />
+        )}
+        <StatCard label="Temuan Berulang" value={berulang} />
+        <StatCard label="Lewat Target" value={entries.filter((e) => e.status === 'Lewat Target').length} />
+      </div>
+
+      {/* Analisis */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Card>
+          <div className="text-xs font-bold text-slate-700 mb-3">Distribusi Temuan per Kategori</div>
+          {byKategori.length === 0 ? <EmptyState title="Belum ada data" /> : <DonutChart segments={byKategori} />}
+        </Card>
+        <Card>
+          <div className="text-xs font-bold text-slate-700 mb-3">Analisis Akar Masalah</div>
+          {akarMasalah.length === 0 ? <EmptyState title="Belum ada data" /> : <HorizontalMetricChart items={akarMasalah} />}
+        </Card>
+      </div>
+
+      {/* Rekomendasi Audit */}
       <Card>
-        <div className="text-xs font-bold text-slate-700 mb-3">Distribusi Kategori Temuan</div>
-        {byKategori.length === 0 ? <EmptyState title="Belum ada data" /> : <DonutChart segments={byKategori} />}
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-bold text-slate-700">Rekomendasi Audit</div>
+          <button onClick={onLihatSemuaRekomendasi} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat Semua</button>
+        </div>
+        <ul className="space-y-1.5">
+          {entries.slice(0, 3).map((e) => (
+            <li key={e.id} className="text-xs text-slate-600 flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+              <span><strong>{e.kode}</strong> — {e.rekomendasi}</span>
+            </li>
+          ))}
+          {entries.length === 0 && <EmptyState title="Belum ada rekomendasi" />}
+        </ul>
       </Card>
+
+      {/* Daftar Temuan (preview) */}
       <Card>
-        <div className="text-xs font-bold text-slate-700 mb-3">Analisis Akar Masalah</div>
-        {akarMasalah.length === 0 ? <EmptyState title="Belum ada data" /> : <HorizontalMetricChart items={akarMasalah} />}
-      </Card>
-      <Card className="lg:col-span-2">
-        <div className="text-xs font-bold text-slate-700 mb-2">Temuan Serupa</div>
-        <select
-          className="w-full h-10 rounded-[10px] border border-[var(--sd-outline-variant)] bg-white px-3 text-sm mb-3"
-          value={selected?.id ?? ''}
-          onChange={(e) => setSelected(entries.find((x) => x.id === e.target.value) ?? null)}
-        >
-          {entries.map((e) => <option key={e.id} value={e.id}>{e.kode} — {e.judul}</option>)}
-        </select>
-        {selected ? (
-          <ul className="space-y-2">
-            {similarFindings(selected).map((s) => (
-              <li key={s.id} className="text-xs rounded-[10px] border border-slate-100 p-2.5 flex items-center justify-between gap-3">
-                <div>
-                  <div className="font-bold text-slate-800">{s.kode}</div>
-                  <div className="text-slate-500">{s.judul}</div>
-                </div>
-                <Badge color={STATUS_COLOR[s.status]}>{s.status}</Badge>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-bold text-slate-700">Daftar Temuan</div>
+          <button onClick={onLihatSemuaTemuan} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat Semua</button>
+        </div>
+        {entries.length === 0 ? (
+          <EmptyState title="Belum ada temuan pada Satker ini" />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {entries.slice(0, 5).map((e) => (
+              <li key={e.id} className="py-2.5 flex items-center justify-between gap-3">
+                <button onClick={() => setDetailTarget(e)} className="text-left min-w-0 flex-1">
+                  <div className="text-xs font-bold text-slate-800 truncate hover:text-[var(--sd-primary)] hover:underline">{e.judul}</div>
+                  <div className="text-[11px] text-slate-400 font-mono">{e.kode}</div>
+                </button>
+                <Badge color={STATUS_COLOR[e.status]} className="shrink-0">{e.status}</Badge>
               </li>
             ))}
-            {similarFindings(selected).length === 0 && <EmptyState title="Tidak ditemukan temuan serupa dalam 24 bulan terakhir" />}
           </ul>
-        ) : (
-          <EmptyState title="Belum ada temuan pada Satker ini" />
         )}
       </Card>
+
+      {/* Monitoring Satker/Satwil (preview) */}
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-bold text-slate-700">Monitoring Satker / Satwil</div>
+          <button onClick={onLihatSemuaMonitoring} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">Lihat Semua</button>
+        </div>
+        {monitoring.length === 0 ? (
+          <EmptyState title="Belum ada data monitoring" />
+        ) : (
+          <MonitoringTable rows={monitoring.slice(0, 4)} />
+        )}
+      </Card>
+
+      {/* Dokumen Terkait */}
+      <Card>
+        <div className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Dokumen Terkait</div>
+        <ul className="text-xs text-slate-500 space-y-1">
+          {Array.from(new Set(entries.flatMap((e) => e.dokumenTerkait))).slice(0, 5).map((d) => <li key={d}>{d}</li>)}
+          {entries.length === 0 && <li className="text-slate-400">Belum ada dokumen terkait.</li>}
+        </ul>
+      </Card>
+
+      {detailTarget && <DetailTemuanModal entry={detailTarget} onClose={() => setDetailTarget(null)} />}
     </div>
   );
 };
 
+const MonitoringTable: React.FC<{ rows: MonitoringSatwilRow[] }> = ({ rows }) => {
+  const columns: TableColumn<MonitoringSatwilRow>[] = [
+    { key: 'nama', header: 'Nama Satker / Satwil', render: (r) => <span className="font-bold text-slate-800">{r.subSatker}</span> },
+    { key: 'jumlah', header: 'Jumlah Temuan', render: (r) => r.jumlahTemuan },
+    { key: 'selesai', header: 'Selesai', render: (r) => r.selesai },
+    { key: 'proses', header: 'Dalam Proses', render: (r) => r.dalamProses },
+    { key: 'persen', header: 'Persentase Penyelesaian', render: (r) => `${r.persenPenyelesaian}%` },
+    { key: 'status', header: 'Status', render: (r) => <Badge color={MONITORING_STATUS_COLOR[r.status]}>{r.status}</Badge> },
+  ];
+  return <Table columns={columns} data={rows} rowKey={(r) => r.subSatker} />;
+};
+
 /* ============================================================================================ *
- * Detail Temuan (SF-011..013) — read-only, tanpa edit status/upload
+ * Lihat Semua — Daftar Temuan
  * ============================================================================================ */
-const DetailTemuanTab: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string; entries: FindingLedgerEntry[] }> = ({ sumber, satkerNama, entries }) => {
+const DaftarTemuanFull: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string; entries: FindingLedgerEntry[]; onBack: () => void }> = ({ sumber, satkerNama, entries, onBack }) => {
   const [search, setSearch] = useState('');
   const [tingkatFilter, setTingkatFilter] = useState('');
   const [jenisAuditFilter, setJenisAuditFilter] = useState('');
   const [pageSizeChoice, setPageSizeChoice] = useState<5 | 10>(10);
   const [detailTarget, setDetailTarget] = useState<FindingLedgerEntry | null>(null);
-  const [fullList, setFullList] = useState(false);
 
   const filtered = entries.filter((e) => {
     if (tingkatFilter && e.tingkat !== tingkatFilter) return false;
@@ -302,7 +394,7 @@ const DetailTemuanTab: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string
     return true;
   });
 
-  const { pageItems, page, setPage } = usePagination(filtered, fullList ? 100 : pageSizeChoice);
+  const { pageItems, page, setPage } = usePagination(filtered, pageSizeChoice);
 
   const columns: TableColumn<FindingLedgerEntry>[] = [
     { key: 'kode', header: 'Kode', render: (e) => <div><span className="font-mono text-[11px] text-slate-400">{e.kode}</span>{e.label === 'Berulang' && <Badge color="warning" className="ml-1.5">Berulang</Badge>}</div> },
@@ -317,6 +409,7 @@ const DetailTemuanTab: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string
 
   return (
     <div className="space-y-3">
+      <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">&larr; Kembali</button>
       <FilterPanel
         search={{ value: search, onChange: setSearch, placeholder: 'Cari kode/judul temuan...' }}
         fields={[
@@ -326,7 +419,6 @@ const DetailTemuanTab: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string
         headerActions={
           <div className="flex items-center gap-2">
             <SegmentedControl options={[{ value: '5', label: '5/hal' }, { value: '10', label: '10/hal' }]} value={String(pageSizeChoice)} onChange={(v) => setPageSizeChoice(Number(v) as 5 | 10)} />
-            <Button variant="outline" size="sm" onClick={() => setFullList((v) => !v)}>{fullList ? 'Tampilkan Berpaginasi' : 'Lihat Semua'}</Button>
             <Button
               size="sm"
               onClick={() =>
@@ -336,7 +428,7 @@ const DetailTemuanTab: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string
                 })
               }
             >
-              Ekspor XLSX
+              Unduh
             </Button>
           </div>
         }
@@ -346,90 +438,92 @@ const DetailTemuanTab: React.FC<{ sumber: TemuanSumberLedger; satkerNama: string
       ) : (
         <Card>
           <Table columns={columns} data={pageItems} rowKey={(e) => e.id} />
-          {!fullList && <Pagination currentPage={page} totalItems={filtered.length} pageSize={pageSizeChoice} onPageChange={setPage} className="mt-2" itemLabel="temuan" />}
+          <Pagination currentPage={page} totalItems={filtered.length} pageSize={pageSizeChoice} onPageChange={setPage} className="mt-2" itemLabel="temuan" />
         </Card>
       )}
-
-      {detailTarget && (
-        <Modal isOpen onClose={() => setDetailTarget(null)} title={`Detail Temuan — ${detailTarget.kode}`} widthClassName="max-w-2xl" footer={<Button variant="outline" onClick={() => setDetailTarget(null)}>Tutup</Button>}>
-          <div className="space-y-3">
-            <div className="p-2.5 rounded-[8px] bg-slate-50 border border-slate-200 text-[11px] text-slate-500">Tampilan detail bersifat baca-saja. Perubahan status dilakukan pada tab "Tindak Lanjut".</div>
-            <div>
-              <div className="text-[10px] font-bold uppercase text-slate-400">Uraian Temuan</div>
-              <p className="text-sm font-bold text-slate-800 mt-0.5">{detailTarget.judul}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div><div className="text-[10px] font-bold uppercase text-slate-400">Kategori</div><div className="font-bold text-slate-700 mt-0.5">{detailTarget.kategori}</div></div>
-              <div><div className="text-[10px] font-bold uppercase text-slate-400">Tingkat</div><Badge color={TINGKAT_COLOR[detailTarget.tingkat]} className="mt-0.5">{detailTarget.tingkat}</Badge></div>
-              {detailTarget.nilaiRupiah && <div className="flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-slate-400" /><span className="font-bold text-slate-700">{detailTarget.nilaiRupiah}</span></div>}
-              <div><div className="text-[10px] font-bold uppercase text-slate-400">AI Insight (Confidence)</div><div className="font-bold text-slate-700 mt-0.5">{detailTarget.aiConfidence}%</div></div>
-            </div>
-            <div className="p-3 rounded-[10px] bg-blue-50 text-xs text-slate-800"><strong>Rekomendasi:</strong> {detailTarget.rekomendasi}</div>
-            <Timeline
-              items={[
-                { id: 'temuan', title: 'Temuan Ditetapkan', description: detailTarget.judul, timestamp: detailTarget.tglTemuan, tone: 'default' },
-                ...detailTarget.riwayatTindakLanjut.map((r, i) => ({ id: `tl-${i}`, title: r.status, description: r.catatan, timestamp: r.tgl, tone: (r.status === 'Selesai' ? 'success' : 'warning') as 'success' | 'warning' })),
-              ]}
-            />
-            {detailTarget.label === 'Berulang' && (
-              <div className="p-2.5 rounded-[8px] bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" /> Temuan ini merupakan pengulangan dari periode sebelumnya pada Satker yang sama.
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
+      {detailTarget && <DetailTemuanModal entry={detailTarget} onClose={() => setDetailTarget(null)} />}
     </div>
   );
 };
+
+const MonitoringFull: React.FC<{ rows: MonitoringSatwilRow[]; onBack: () => void }> = ({ rows, onBack }) => (
+  <div className="space-y-3">
+    <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">&larr; Kembali</button>
+    <Card>
+      <div className="text-xs font-bold text-slate-700 mb-2">Monitoring Satker / Satwil</div>
+      {rows.length === 0 ? <EmptyState title="Belum ada data monitoring" /> : <MonitoringTable rows={rows} />}
+    </Card>
+  </div>
+);
+
+const RekomendasiFull: React.FC<{ entries: FindingLedgerEntry[]; onBack: () => void }> = ({ entries, onBack }) => (
+  <div className="space-y-3">
+    <button onClick={onBack} className="text-xs font-bold text-[var(--sd-primary)] hover:underline">&larr; Kembali</button>
+    <Card>
+      <div className="text-xs font-bold text-slate-700 mb-3">Rekomendasi Audit</div>
+      {entries.length === 0 ? (
+        <EmptyState title="Belum ada rekomendasi" />
+      ) : (
+        <ul className="space-y-2.5">
+          {entries.map((e) => (
+            <li key={e.id} className="p-3 rounded-[10px] border border-slate-100 bg-slate-50">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-xs font-bold text-slate-800">{e.kode}</span>
+                <Badge color={TINGKAT_COLOR[e.tingkat]}>{e.tingkat}</Badge>
+              </div>
+              <p className="text-xs text-slate-600">{e.rekomendasi}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  </div>
+);
 
 /* ============================================================================================ *
- * Tindak Lanjut (SF-009/010) — monitoring per satker, satu-satunya tempat mengubah status
+ * Detail Temuan — read-only (BR: "Removed: status editing")
  * ============================================================================================ */
-const TindakLanjutTab: React.FC<{ entries: FindingLedgerEntry[] }> = ({ entries }) => {
-  const [, forceTick] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const columns: TableColumn<FindingLedgerEntry>[] = [
-    { key: 'kode', header: 'Kode', render: (e) => <span className="font-mono text-[11px] text-slate-400">{e.kode}</span> },
-    { key: 'judul', header: 'Uraian Temuan', render: (e) => <span className="font-bold text-slate-800">{e.judul}</span> },
-    { key: 'tenggat', header: 'Tenggat', render: (e) => e.tenggat },
-    {
-      key: 'status',
-      header: 'Status Tindak Lanjut',
-      render: (e) => (
-        <select
-          value={e.status}
-          onChange={(ev) => {
-            e.status = ev.target.value as TindakLanjutStatus;
-            e.riwayatTindakLanjut = [...e.riwayatTindakLanjut, { tgl: new Date().toLocaleDateString('id-ID'), status: e.status, catatan: `Status diperbarui menjadi "${e.status}".` }];
-            setToast(`Status temuan ${e.kode} diperbarui menjadi "${e.status}".`);
-            setTimeout(() => setToast(null), 3500);
-            forceTick((v) => v + 1);
-          }}
-          className="h-8 rounded-[8px] border border-[var(--sd-outline-variant)] bg-white px-2 text-xs font-bold"
-        >
-          {(['Belum Ditindaklanjuti', 'Dalam Proses', 'Selesai', 'Lewat Target'] as TindakLanjutStatus[]).map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-      ),
-    },
-  ];
-
-  const counts = (['Selesai', 'Dalam Proses', 'Belum Ditindaklanjuti', 'Lewat Target'] as TindakLanjutStatus[]).map((s) => ({ status: s, count: entries.filter((e) => e.status === s).length }));
-
-  return (
+const DetailTemuanModal: React.FC<{ entry: FindingLedgerEntry; onClose: () => void }> = ({ entry, onClose }) => (
+  <Modal isOpen onClose={onClose} title={`Detail Temuan — ${entry.kode}`} widthClassName="max-w-2xl" footer={<Button variant="outline" onClick={onClose}>Tutup</Button>}>
     <div className="space-y-3">
-      {toast && <div className="p-2.5 rounded-[10px] bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold">{toast}</div>}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {counts.map((c) => (
-          <StatCard key={c.status} label={c.status} value={c.count} />
-        ))}
+      <div className="p-2.5 rounded-[8px] bg-slate-50 border border-slate-200 text-[11px] text-slate-500">Tampilan detail bersifat baca-saja.</div>
+      <div>
+        <div className="text-[10px] font-bold uppercase text-slate-400">Uraian Temuan</div>
+        <p className="text-sm font-bold text-slate-800 mt-0.5">{entry.judul}</p>
       </div>
-      {entries.length === 0 ? (
-        <EmptyState title="Belum ada temuan pada Satker ini" icon={<CheckCircle2 className="w-6 h-6 text-emerald-400" />} />
-      ) : (
-        <Card><Table columns={columns} data={entries} rowKey={(e) => e.id} /></Card>
+      <div className="grid grid-cols-2 gap-3 text-xs">
+        <div><div className="text-[10px] font-bold uppercase text-slate-400">Kategori</div><div className="font-bold text-slate-700 mt-0.5">{entry.kategori}</div></div>
+        <div><div className="text-[10px] font-bold uppercase text-slate-400">Tingkat</div><Badge color={TINGKAT_COLOR[entry.tingkat]} className="mt-0.5">{entry.tingkat}</Badge></div>
+        {entry.nilaiRupiah && <div className="flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-slate-400" /><span className="font-bold text-slate-700">{entry.nilaiRupiah}</span></div>}
+        <div><div className="text-[10px] font-bold uppercase text-slate-400">AI Insight (Confidence)</div><div className="font-bold text-slate-700 mt-0.5">{entry.aiConfidence}%</div></div>
+      </div>
+      <div className="p-3 rounded-[10px] bg-blue-50 text-xs text-slate-800"><strong>Rekomendasi:</strong> {entry.rekomendasi}</div>
+      <div>
+        <div className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Status Tindak Lanjut</div>
+        <Timeline
+          items={[
+            { id: 'temuan', title: 'Temuan Ditetapkan', description: entry.judul, timestamp: entry.tglTemuan, tone: 'default' },
+            ...entry.riwayatTindakLanjut.map((r, i) => ({ id: `tl-${i}`, title: r.status, description: r.catatan, timestamp: r.tgl, tone: (r.status === 'Selesai' ? 'success' : 'warning') as 'success' | 'warning' })),
+          ]}
+        />
+      </div>
+      {entry.label === 'Berulang' && (
+        <div className="p-2.5 rounded-[8px] bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+          <RotateCcw className="w-3.5 h-3.5 shrink-0" /> Temuan ini merupakan pengulangan dari periode sebelumnya pada Satker yang sama.
+        </div>
       )}
+      <div>
+        <div className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Temuan Serupa (24 bulan terakhir)</div>
+        <ul className="space-y-1.5">
+          {similarFindings(entry).map((s) => (
+            <li key={s.id} className="text-xs rounded-[10px] border border-slate-100 p-2.5 flex items-center justify-between gap-3">
+              <div><div className="font-bold text-slate-800">{s.kode}</div><div className="text-slate-500">{s.judul}</div></div>
+              <Badge color={STATUS_COLOR[s.status]}>{s.status}</Badge>
+            </li>
+          ))}
+          {similarFindings(entry).length === 0 && <li className="text-xs text-slate-400">Tidak ditemukan temuan serupa.</li>}
+        </ul>
+      </div>
     </div>
-  );
-};
+  </Modal>
+);

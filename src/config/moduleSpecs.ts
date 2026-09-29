@@ -33,23 +33,34 @@ export const MODULE_SPECS: Partial<Record<ModuleId, ModuleSpec>> = {
     // Struktur nav 4-bagian sesuai mockup Plane (plane/assets/df3d4866-...png) dan FSD
     // b-12-functional-specification-document-fsd-audit-universe.md, F2 dan F3, F9 (Plan
     // "Align itwasum with Plane BA/SA", todo p1-b12-nav-master/p1-b12-collection/p1-b12-risk).
+    // Sejak Plan "Align itwasum with Figma" todo `b12-rest`: nav 4-bagian (section) dihapus —
+    // navigasi kini seluruhnya lewat Sidebar (`src/config/sidebarNav.ts`, grup Figma "Portal
+    // Satker" + grup tambahan "Audit Universe & Risiko"). `ModuleScreenShell` dipanggil dengan
+    // `hideTabs`, jadi field `section` di bawah ini tidak lagi dipakai untuk render tapi
+    // dipertahankan sebagai anotasi asal-FSD.
     screens: [
-      // -- Ringkasan --
-      { slug: 'dashboard', section: 'Ringkasan', nama: 'Dashboard Audit Universe', deskripsi: 'Ringkasan populasi Objek Audit, kelengkapan data, dan status pengumpulan/verifikasi (F2).', subFeatures: ['SF-201 KPI populasi & kelengkapan', 'SF-202 Status pengumpulan per Itwil'] },
-      { slug: 'objek-audit', section: 'Ringkasan', nama: 'Objek Audit', deskripsi: 'Populasi Objek Audit per Satker/tahun anggaran, status kesiapan skoring, dan detail tusi-struktur-anggaran (F3).', subFeatures: ['SF-301 Tabel populasi Objek Audit', 'SF-302 Filter status kesiapan', 'SF-303 Detail tusi-struktur-anggaran'] },
-      // -- Konfigurasi --
-      { slug: 'data-master', section: 'Konfigurasi', nama: 'Data Master Terpadu', deskripsi: 'Struktur Organisasi (4.1), Tipologi & Status Satker (4.2), Jenis Pengawasan & Bidjemen (4.3), Katalog Data & Dokumen (4.4).', subFeatures: ['SF-411 Struktur organisasi', 'SF-421 Tipologi satker', 'SF-431 Jenis pengawasan & bidjemen', 'SF-441 Katalog dokumen'] },
-      { slug: 'mapping', section: 'Konfigurasi', nama: 'Mapping Ketentuan Pengumpulan', deskripsi: 'Menentukan dokumen katalog yang wajib dikumpulkan per Jenis Pengawasan & Tipologi Satker (5.1).', subFeatures: ['SF-511 Daftar mapping', 'SF-512 Buat/ubah mapping'] },
+      // -- Figma "Portal Satker" (frames 3361:*, 3377:*-3388:*) --
+      { slug: 'dashboard-portal', nama: 'Dashboard Portal Itwasum', deskripsi: 'KPI populasi Satker, Master Katalog, dan penugasan berjalan; status penugasan audit dan aktivitas sistem terbaru.' },
+      { slug: 'portal-satker', nama: 'Dashboard Portal Satker', deskripsi: 'Status Per Bidang dan Daftar Dokumen Terbaru per Satker; permintaan data masuk dan laporan berkala SPIP/IKU (6.1).', subFeatures: ['SF-611 Dashboard PIC', 'SF-612 Permintaan masuk', 'SF-613 Unggah berkas', 'SF-614 Laporan SPIP', 'SF-615 Laporan IKU'] },
+      { slug: 'master-jenis-pengawasan', nama: 'Master Jenis Pengawasan', deskripsi: 'Jenis Pengawasan, Objek Pemeriksaan, dan Bidjemen (4.3).', subFeatures: ['SF-431 Jenis pengawasan & bidjemen'] },
+      { slug: 'master-tipologi', nama: 'Master Tipologi Satker', deskripsi: 'Daftar Tipologi dan penetapan Tipologi per Satker (4.2).', subFeatures: ['SF-421 Tipologi satker'] },
+      { slug: 'master-katalog', nama: 'Master Katalog Pra-Audit', deskripsi: 'Katalog dokumen/data pengumpulan pra-audit (4.4).', subFeatures: ['SF-441 Katalog dokumen'] },
+      { slug: 'master-template', nama: 'Master Template Dokumen', deskripsi: 'Skema field & contoh baku per dokumen katalog berjenis Data (4.4).' },
+      { slug: 'mapping', nama: 'Mapping Kebutuhan Dokumen', deskripsi: 'Menentukan dokumen katalog yang wajib dikumpulkan per Jenis Pengawasan & Tipologi Satker (5.1).', subFeatures: ['SF-511 Daftar mapping', 'SF-512 Buat/ubah mapping'] },
+      { slug: 'penugasan-audit', nama: 'Penugasan Audit', deskripsi: 'Admin membuat & mengirim penugasan/permintaan dokumen ke Satker sasaran, memantau progres, dan menutup penugasan (5.3).', subFeatures: ['SF-531 Daftar permintaan', 'SF-532 Buat/ubah permintaan', 'SF-533 Detail progres & log'] },
+      // -- Plane-only, dipindah ke grup tambahan "Audit Universe & Risiko" --
+      { slug: 'organisasi', nama: 'Struktur Organisasi & Unit Kerja', deskripsi: 'Hierarki organisasi Polri dan pengelolaan Itwil pengawas per unit (4.1).', subFeatures: ['SF-411 Struktur organisasi'] },
+      { slug: 'dashboard', section: 'Ringkasan', nama: 'Dashboard Audit Universe (F2)', deskripsi: 'Ringkasan populasi Objek Audit, kelengkapan data, dan status pengumpulan/verifikasi (F2).', subFeatures: ['SF-201 KPI populasi & kelengkapan', 'SF-202 Status pengumpulan per Itwil'] },
+      { slug: 'objek-audit', section: 'Ringkasan', nama: 'Objek Audit (F3)', deskripsi: 'Populasi Objek Audit per Satker/tahun anggaran, status kesiapan skoring, dan detail tusi-struktur-anggaran (F3).', subFeatures: ['SF-301 Tabel populasi Objek Audit', 'SF-302 Filter status kesiapan', 'SF-303 Detail tusi-struktur-anggaran'] },
       { slug: 'aturan-validasi', section: 'Konfigurasi', nama: 'Aturan Validasi', deskripsi: 'Format berkas, ukuran maksimum, kewajiban tanda tangan, dan ambang kelengkapan per dokumen (5.2).', subFeatures: ['SF-521 Daftar aturan validasi', 'SF-522 Ubah aturan per dokumen'] },
-      { slug: 'permintaan-data', section: 'Konfigurasi', nama: 'Permintaan Pengumpulan Data', deskripsi: 'Admin membuat & mengirim permintaan dokumen ke Satker sasaran, memantau progres, dan menutup permintaan (5.3).', subFeatures: ['SF-531 Daftar permintaan', 'SF-532 Buat/ubah permintaan', 'SF-533 Detail progres & log'] },
-      // -- Pengumpulan & Verifikasi --
-      { slug: 'portal-satker', section: 'Pengumpulan & Verifikasi', nama: 'Portal Satker', deskripsi: 'Dashboard PIC Satker: permintaan data masuk, unggah berkas, dan laporan berkala SPIP/IKU (6.1).', subFeatures: ['SF-611 Dashboard PIC', 'SF-612 Permintaan masuk', 'SF-613 Unggah berkas', 'SF-614 Laporan SPIP', 'SF-615 Laporan IKU'] },
-      { slug: 'tambahan-audit', section: 'Pengumpulan & Verifikasi', nama: 'Permintaan Tambahan Audit', deskripsi: 'Permintaan dokumen ad-hoc dari Kertas Kerja Audit Digital (Penugasan/Tim Audit), terpisah dari siklus berkala (6.2).', subFeatures: ['SF-621 Daftar permintaan tambahan', 'SF-622 Progres per Satker'] },
-      { slug: 'verifikasi-berkas', section: 'Pengumpulan & Verifikasi', nama: 'Antrean Verifikasi Berkas', deskripsi: 'Verifikator Itwil menerima atau meminta perbaikan atas berkas dan laporan yang dikirim Satker (F7).', subFeatures: ['SF-711 Antrean verifikasi', 'SF-712 Terima/minta perbaikan', 'SF-713 Klaim & pemisahan tugas (SoD)'] },
-      // -- Risiko & Perencanaan --
-      { slug: 'risiko-register', section: 'Risiko & Perencanaan', nama: 'Register Risiko', deskripsi: 'Penilaian 6 faktor risiko per Objek Audit siap dinilai, skor tertimbang otomatis (8.1).', subFeatures: ['SF-811 Tabel register risiko', 'SF-812 Form 6 faktor'] },
-      { slug: 'risiko-review', section: 'Risiko & Perencanaan', nama: 'Review & Persetujuan Risiko', deskripsi: 'Koordinator Pengendali menyetujui atau mengembalikan hasil penilaian risiko yang diajukan (8.2).', subFeatures: ['SF-821 Antrean review', 'SF-822 Setujui/kembalikan'] },
-      { slug: 'prioritas-pkpt', section: 'Risiko & Perencanaan', nama: 'Prioritas & Usulan PKPT', deskripsi: 'Peringkat prioritas seluruh Objek Audit dinilai dan penguncian baseline PKPT tahun berikutnya (F9), dikonsumsi B.13 sebagai referensi.', subFeatures: ['SF-901 Tabel peringkat prioritas', 'SF-902 Kunci baseline PKPT'] },
+      { slug: 'tambahan-audit', section: 'Pengumpulan & Verifikasi', nama: 'Dokumen Tambahan Audit', deskripsi: 'Permintaan dokumen ad-hoc dari Kertas Kerja Audit Digital (Penugasan/Tim Audit), terpisah dari siklus berkala (6.2).', subFeatures: ['SF-621 Daftar permintaan tambahan', 'SF-622 Progres per Satker'] },
+      { slug: 'verifikasi-berkas', section: 'Pengumpulan & Verifikasi', nama: 'Antrean Verifikasi Berkas (F7)', deskripsi: 'Verifikator Itwil menerima atau meminta perbaikan atas berkas dan laporan yang dikirim Satker (F7).', subFeatures: ['SF-711 Antrean verifikasi', 'SF-712 Terima/minta perbaikan', 'SF-713 Klaim & pemisahan tugas (SoD)'] },
+      { slug: 'risiko-register', section: 'Risiko & Perencanaan', nama: 'Register Risiko (8.1)', deskripsi: 'Penilaian 6 faktor risiko per Objek Audit siap dinilai, skor tertimbang otomatis (8.1).', subFeatures: ['SF-811 Tabel register risiko', 'SF-812 Form 6 faktor'] },
+      { slug: 'risiko-review', section: 'Risiko & Perencanaan', nama: 'Review & Persetujuan Risiko (8.2)', deskripsi: 'Koordinator Pengendali menyetujui atau mengembalikan hasil penilaian risiko yang diajukan (8.2).', subFeatures: ['SF-821 Antrean review', 'SF-822 Setujui/kembalikan'] },
+      { slug: 'prioritas-pkpt', section: 'Risiko & Perencanaan', nama: 'Prioritas & Usulan PKPT (F9)', deskripsi: 'Peringkat prioritas seluruh Objek Audit dinilai dan penguncian baseline PKPT tahun berikutnya (F9), dikonsumsi B.13 sebagai referensi.', subFeatures: ['SF-901 Tabel peringkat prioritas', 'SF-902 Kunci baseline PKPT'] },
+      // -- Rute lama (dipertahankan untuk redirect, lihat App.tsx) --
+      { slug: 'data-master', nama: 'Data Master Terpadu (lama)', deskripsi: 'Dialihkan ke master-jenis-pengawasan/master-tipologi/master-katalog/master-template.' },
+      { slug: 'permintaan-data', nama: 'Permintaan Pengumpulan Data (lama)', deskripsi: 'Dialihkan ke penugasan-audit.' },
     ],
   },
   b13: {
