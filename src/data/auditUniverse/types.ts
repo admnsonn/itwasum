@@ -258,7 +258,14 @@ export interface BerkasSatker {
   versi?: BerkasVersion[];
   /** Jika berkas ini dipakai kembali ("Pakai Berkas Lama") dari permintaan lain, id berkas asal. */
   asalBerkasId?: string;
+  /** Tahun data & periode isi berkas (Portal Data Satker, prototipe 29092026). */
+  tahunData?: string;
+  periodeDari?: string;
+  periodeSampai?: string;
 }
+
+/** Ember berkas unggahan mandiri (tidak terikat Permintaan). Bukan id permintaan sungguhan. */
+export const MANDIRI_REQ_ID = '__mandiri__';
 
 export type StageSatker = 'Belum Mulai' | 'Sedang Mengunggah' | 'Sudah Mengirim' | 'Selesai';
 

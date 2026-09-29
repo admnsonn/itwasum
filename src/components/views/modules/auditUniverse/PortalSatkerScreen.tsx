@@ -58,6 +58,7 @@ import { currentUserOrgId, displayNameForLog } from '../../../../data/auditUnive
 import { IND_IKU_DEFS } from '../../../../data/auditUniverse/seeds/laporan';
 import { Badge, Button, Card, Checkbox, EmptyState, Modal, Search, Select, SegmentedControl, StatCard, Table, Textarea, Timeline, Typography, UploadDropzone, type BadgeColor, type TableColumn } from '../../../ui';
 import { SimulasiItwasumModal } from './SimulasiItwasumModal';
+import { PortalPicDashboard } from './PortalPicDashboard';
 
 interface PortalSatkerScreenProps {
   currentUser: CurrentUserProfile;
@@ -65,17 +66,20 @@ interface PortalSatkerScreenProps {
   onNavigateDetail: (detail?: string) => void;
 }
 
-type PortalTab = 'dashboard' | 'masuk' | 'spip' | 'iku';
+type PortalTab = 'dashboard' | 'library' | 'masuk' | 'spip' | 'iku';
 
 export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentUser, detailPath, onNavigateDetail }) => {
   const state = useAuditUniverseStore();
-  const canPickOrg = currentUser.peran === 'super_admin';
   const fixedOrgId = currentUserOrgId(currentUser);
-  // Super Admin's own titik wilayah (Mabes Polri) is not a valid sasaran Satker for the portal
-  // preview, so default the picker to a populated Satker (Polda Riau) instead.
+  const fixedOrg = fixedOrgId ? getOrgById(fixedOrgId) : undefined;
+  // Mabes / peran tanpa satker sasaran tidak punya permintaan pengumpulan. Mereka memakai
+  // pemilih pratinjau (bawaan Polda Riau), sama seperti prototipe 29092026. PIC satker
+  // (auditee, admin polda) tetap terkunci ke satkernya.
+  const canPickOrg = currentUser.peran === 'super_admin' || !fixedOrg || !JENJANG_SASARAN.includes(fixedOrg.jenjang);
   const [pickedOrgId, setPickedOrgId] = useState('ORG-00300');
   const orgId = canPickOrg ? pickedOrgId : fixedOrgId;
-  const [tab, setTab] = useState<PortalTab>('dashboard');
+  const [tab, setTab] = useState<PortalTab>(detailPath === 'library' ? 'library' : 'dashboard');
+  const [libraryReqId, setLibraryReqId] = useState<string | undefined>();
   const [selectedReq, setSelectedReq] = useState<Permintaan | null>(null);
   const [showSimulasi, setShowSimulasi] = useState(false);
   // Drill-in dari Dashboard (Figma "Status Per Bidang"/"Daftar Dokumen Terbaru") — dibedakan
@@ -120,6 +124,7 @@ export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentU
           <SegmentedControl
             options={[
               { value: 'dashboard', label: 'Dashboard' },
+              { value: 'library', label: 'Library' },
               { value: 'masuk', label: 'Permintaan Masuk' },
               { value: 'spip', label: 'Laporan SPIP' },
               { value: 'iku', label: 'Laporan IKU' },
@@ -136,12 +141,13 @@ export const PortalSatkerScreen: React.FC<PortalSatkerScreenProps> = ({ currentU
         <UnduhBahanBantuAuditScreen onBack={() => onNavigateDetail(undefined)} />
       ) : (
         <>
-          {tab === 'dashboard' && (
-            <DashboardTab
+          {(tab === 'dashboard' || tab === 'library') && (
+            <PortalPicDashboard
               orgId={orgId}
-              onOpenPermintaan={() => setTab('masuk')}
-              onOpenBidang={(bjId) => onNavigateDetail(`per-bidang/${bjId}`)}
-              onOpenUnduhBantu={() => onNavigateDetail('unduh-bantu')}
+              currentUser={currentUser}
+              page={tab === 'library' ? 'library' : 'dash'}
+              libraryReqId={libraryReqId}
+              onOpenLibrary={(reqId) => { setLibraryReqId(reqId); setTab('library'); }}
             />
           )}
           {tab === 'masuk' && (

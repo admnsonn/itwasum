@@ -45,6 +45,7 @@ import type {
 } from './types';
 import { RISIKO_FAKTOR_LIST } from './types';
 import { addDaysIso, daysDiffFromToday, isoDateTime, startOfToday } from './dateUtils';
+import { MANDIRI_REQ_ID } from './types';
 import { ORG_UNITS_SEED } from './seeds/orgUnits';
 import { TIPOLOGI_SEED } from './seeds/tipologi';
 import { JENIS_PENGAWASAN_SEED } from './seeds/jenisPengawasan';
@@ -1142,6 +1143,70 @@ export function sendReminder(id: string, oleh: string, targetOrgId?: string): vo
 /* =====================================================================================
  * MUTATIONS — Portal Satker (6.1 unggah berkas, 6.2/6.3 laporan berkala)
  * ===================================================================================== */
+
+export interface PortalBerkasInput {
+  nama: string;
+  sizeBytes: number;
+  dokId: string;
+  keterangan?: string;
+  tahunData?: string;
+  periodeDari?: string;
+  periodeSampai?: string;
+  asalBerkasId?: string;
+}
+
+/** Unggah draft Portal Data Satker. `reqId` kosong = unggahan mandiri (`MANDIRI_REQ_ID`). */
+export function uploadPortalBerkas(orgId: string, reqId: string | null, files: PortalBerkasInput[], oleh: string): string[] {
+  const bucket = reqId || MANDIRI_REQ_ID;
+  const today = startOfToday().toISOString().slice(0, 10);
+  const created: BerkasSatker[] = files.map((f) => ({
+    id: uid(),
+    nama: f.nama,
+    sizeBytes: f.sizeBytes,
+    dokId: f.dokId,
+    keterangan: f.keterangan ?? '',
+    status: 'draft',
+    tgl: today,
+    terlambat: false,
+    catatan: '',
+    verifikatorOleh: '',
+    tglVerifikasi: null,
+    tahunData: f.tahunData,
+    periodeDari: f.periodeDari,
+    periodeSampai: f.periodeSampai,
+    asalBerkasId: f.asalBerkasId,
+  }));
+  const berkasForReq = { ...(state.berkas[bucket] ?? {}) };
+  berkasForReq[orgId] = [...(berkasForReq[orgId] ?? []), ...created];
+  const permintaan = reqId
+    ? state.permintaan.map((r) => (r.id === reqId ? addLog(r, `${getOrgById(orgId)?.sing ?? orgId} menambahkan ${files.length} berkas`, oleh, orgId) : r))
+    : state.permintaan;
+  setState({ ...state, berkas: { ...state.berkas, [bucket]: berkasForReq }, permintaan });
+  return created.map((f) => f.id);
+}
+
+/** Kirim berkas draft tertentu (bukan seluruh draft permintaan) ke antrean verifikasi. */
+export function sendPortalBerkas(orgId: string, reqId: string | null, fileIds: string[], oleh: string): number {
+  const bucket = reqId || MANDIRI_REQ_ID;
+  const idSet = new Set(fileIds);
+  const berkasForReq = { ...(state.berkas[bucket] ?? {}) };
+  const files = berkasForReq[orgId] ?? [];
+  const today = startOfToday().toISOString().slice(0, 10);
+  const req = reqId ? state.permintaan.find((r) => r.id === reqId) : undefined;
+  const late = !!(req && daysDiffFromToday(req.selesai) < 0);
+  let n = 0;
+  berkasForReq[orgId] = files.map((f) => {
+    if (!idSet.has(f.id) || f.status !== 'draft') return f;
+    n += 1;
+    return { ...f, status: 'wait' as const, tgl: today, terlambat: late };
+  });
+  if (!n) return 0;
+  const permintaan = reqId
+    ? state.permintaan.map((r) => (r.id === reqId ? addLog(r, `${getOrgById(orgId)?.sing ?? orgId} mengirim ${n} berkas`, oleh, orgId) : r))
+    : state.permintaan;
+  setState({ ...state, berkas: { ...state.berkas, [bucket]: berkasForReq }, permintaan });
+  return n;
+}
 
 export function uploadBerkas(reqId: string, orgId: string, files: { nama: string; sizeBytes: number; dokId: string; keterangan?: string }[], oleh: string): void {
   const today = startOfToday().toISOString().slice(0, 10);
